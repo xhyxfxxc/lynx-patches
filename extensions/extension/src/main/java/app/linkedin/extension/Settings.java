@@ -431,7 +431,10 @@ public final class Settings {
     }
 
     /**
-     * Applies an exported snapshot: booleans and strings are written, other JSON types are ignored.
+     * Replaces the preferences with an exported snapshot: every current preference goes first (except the last-seen
+     * version, as in {@link #resetAll()}), so a switch turned on after the export is off again unless the file has it.
+     * Booleans and strings are written, other JSON types are ignored. A file with nothing to write (some other JSON
+     * object) changes nothing, so a wrong file can't wipe the settings.
      *
      * @return how many preferences were written.
      * @throws org.json.JSONException if the text is not a JSON object.
@@ -440,21 +443,27 @@ public final class Settings {
         org.json.JSONObject in = new org.json.JSONObject(text.trim());
         SharedPreferences target = prefs();
         if (target == null) return 0;
-        SharedPreferences.Editor editor = target.edit();
-        int written = 0;
+        java.util.Map<String, Object> values = new java.util.LinkedHashMap<>();
         for (java.util.Iterator<String> keys = in.keys(); keys.hasNext(); ) {
             String key = keys.next();
             Object value = in.get(key);
-            if (value instanceof Boolean) {
-                editor.putBoolean(key, ((Boolean) value).booleanValue());
-                written++;
-            } else if (value instanceof String) {
-                editor.putString(key, (String) value);
-                written++;
+            if (!LAST_SEEN_VERSION.equals(key) && (value instanceof Boolean || value instanceof String)) {
+                values.put(key, value);
+            }
+        }
+        if (values.isEmpty()) return 0;
+        String seen = target.getString(LAST_SEEN_VERSION, null);
+        SharedPreferences.Editor editor = target.edit().clear();
+        if (seen != null) editor.putString(LAST_SEEN_VERSION, seen);
+        for (java.util.Map.Entry<String, Object> entry : values.entrySet()) {
+            if (entry.getValue() instanceof Boolean) {
+                editor.putBoolean(entry.getKey(), ((Boolean) entry.getValue()).booleanValue());
+            } else {
+                editor.putString(entry.getKey(), (String) entry.getValue());
             }
         }
         editor.apply();
-        return written;
+        return values.size();
     }
 
     /** Drops every preference except the last-seen version, which the "What's new" screen needs intact. */
