@@ -21,7 +21,12 @@ public final class PostActionActivity extends Activity {
         try {
             Uri uri = getIntent() == null ? null : getIntent().getData();
             if (uri != null && PostMenu.SCHEME.equals(uri.getScheme()) && PostMenu.HOST.equals(uri.getHost())) {
-                PostMenu.perform(this, uri);
+                // Another app can send this screen a link too; only the ones LinkedIn opens from our rows carry the key.
+                if (PostMenu.authorized(uri)) {
+                    PostMenu.perform(this, uri);
+                } else {
+                    Settings.debugLog("post action refused: the link has no valid key");
+                }
             }
         } catch (Throwable t) {
             Diagnostics.error("post action failed", t);

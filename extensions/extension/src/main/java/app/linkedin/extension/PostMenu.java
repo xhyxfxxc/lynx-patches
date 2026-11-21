@@ -6,8 +6,11 @@
 package app.linkedin.extension;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.Uri;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -47,6 +50,12 @@ final class PostMenu {
 
     private static final int MAX_POSTS = 300;
 
+    /** A file of its own: the key is no setting, so it is not in the backup, not restored and not reset. */
+    private static final String KEY_FILE = "lynx_internal";
+    private static final String KEY_NAME = "post_action_key";
+    private static final String KEY_PARAMETER = "k";
+    private static String actionKey;
+
     static final class Post {
         String text;
         /** The post has a commentary, even when its text could not be read: Copy text stays in the menu. */
@@ -64,6 +73,46 @@ final class PostMenu {
 
     private PostMenu() {
     }
+
+    // region The key of the links
+
+    /**
+     * The secret every link of our rows carries (as k=). PostActionActivity has to be exported, because from targetSdk
+     * 34 an implicit intent only reaches exported components, so any installed app could send it a lokipatches://post
+     * link; only links that carry this key are acted on. It is made once and kept, since the links are cached with the
+     * feed and have to stay valid after a restart.
+     *
+     * @return the key, or null while the app has no context to keep it in.
+     */
+    private static synchronized String actionKey() {
+        if (actionKey != null) return actionKey;
+        Context context = Settings.context();
+        if (context == null) return null;
+        SharedPreferences store = context.getSharedPreferences(KEY_FILE, Context.MODE_PRIVATE);
+        String saved = store.getString(KEY_NAME, null);
+        if (saved == null || saved.length() != 32) {
+            byte[] random = new byte[16];
+            new java.security.SecureRandom().nextBytes(random);
+            StringBuilder hex = new StringBuilder();
+            for (byte b : random) hex.append(String.format(java.util.Locale.ROOT, "%02x", b));
+            saved = hex.toString();
+            // Written before any link carries it, so a link is never signed with a key that is then lost.
+            store.edit().putString(KEY_NAME, saved).commit();
+        }
+        actionKey = saved;
+        return saved;
+    }
+
+    /** Whether the link carries our key. The bytes are compared in constant time. */
+    static boolean authorized(Uri uri) {
+        String expected = actionKey();
+        String given = uri.getQueryParameter(KEY_PARAMETER);
+        return expected != null && given != null
+                && java.security.MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8),
+                given.getBytes(StandardCharsets.UTF_8));
+    }
+
+    // endregion
 
     // region Remembering posts
 
@@ -144,9 +193,11 @@ final class PostMenu {
     static Object inject(Object component, byte[] bytes) {
         try {
             if (!Settings.postMenu() || bytes == null || !ProtoEdit.contains(bytes, PAGE)
-                    || !ProtoEdit.contains(bytes, TEMPLATE) || ProtoEdit.contains(bytes, SCHEME + "://")) {
+                    || !ProtoEdit.contains(bytes, TEMPLATE) || actionKey() == null) {
                 return component;
             }
+            // Rows of an earlier injection (a feed cached before the links carried a key) are signed, not added again.
+            if (ProtoEdit.contains(bytes, SCHEME + "://")) return sign(component, bytes);
             String urn = null;
             for (String s : ProtoScanner.scan(bytes).strings) {
                 Matcher m = POST_URN.matcher(s);
@@ -180,6 +231,29 @@ final class PostMenu {
             Diagnostics.error("post menu failed", t);
             return component;
         }
+    }
+
+    /**
+     * Gives the links of rows that are already in the menu the current key, so they are not left as rows that do
+     * nothing: a link without a key, or with an old one, is rewritten.
+     */
+    private static Object sign(Object component, byte[] bytes) throws ReflectiveOperationException {
+        String suffix = "&" + KEY_PARAMETER + "=" + actionKey();
+        if (ProtoEdit.contains(bytes, suffix)) return component;
+        String prefix = SCHEME + "://" + HOST + "/";
+        byte[] edited = bytes;
+        int signed = 0;
+        for (String s : ProtoScanner.scan(bytes).strings) {
+            if (!s.startsWith(prefix) || s.endsWith(suffix)) continue;
+            int old = s.indexOf("&" + KEY_PARAMETER + "=");
+            byte[] next = ProtoEdit.replaceString(edited, s, (old < 0 ? s : s.substring(0, old)) + suffix);
+            if (next != edited) signed++;
+            edited = next;
+        }
+        if (signed == 0) return component;
+        Object copy = component.getClass().getMethod("parseFrom", byte[].class).invoke(null, (Object) edited);
+        Settings.debugLog("post menu: signed " + signed + " links of a cached menu");
+        return copy != null ? copy : component;
     }
 
     /** Walks down to the message whose repeated field holds the rows and inserts the new rows after Save. */
@@ -279,7 +353,7 @@ final class PostMenu {
     }
 
     private static String url(String action, String urn) {
-        return SCHEME + "://" + HOST + "/" + action + "?u=" + Uri.encode(urn);
+        return SCHEME + "://" + HOST + "/" + action + "?u=" + Uri.encode(urn) + "&" + KEY_PARAMETER + "=" + actionKey();
     }
 
     /** { 1: { 5: { 1: ACTION_TYPE, 2: { 2: { 1: url, 2: External } } } }, 2: "" } as in LinkedIn's Help Center link. */
