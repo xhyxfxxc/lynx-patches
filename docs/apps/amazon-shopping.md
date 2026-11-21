@@ -1,9 +1,9 @@
 <!-- HEADER_START -->
 # <img src="../../assets/icons/com.amazon.mShop.android.shopping.png" width="36" height="36" align="top" alt=""> Amazon Shopping
 
-![version](https://img.shields.io/badge/version-32.20.2.100-2563eb?style=for-the-badge&labelColor=0d1117) ![patches](https://img.shields.io/badge/patches-8-14b8a6?style=for-the-badge&labelColor=0d1117) ![file](https://img.shields.io/badge/file-APKM%20%28Android%2012%2B%29-0ea5e9?style=for-the-badge&labelColor=0d1117) ![menu](https://img.shields.io/badge/menu-Home%20screen%20shortcut-6e7681?style=for-the-badge&labelColor=0d1117)
+![version](https://img.shields.io/badge/version-32.20.2.100-2563eb?style=for-the-badge&labelColor=0d1117) ![patches](https://img.shields.io/badge/patches-9-14b8a6?style=for-the-badge&labelColor=0d1117) ![file](https://img.shields.io/badge/file-APKM%20%28Android%2012%2B%29-0ea5e9?style=for-the-badge&labelColor=0d1117) ![menu](https://img.shields.io/badge/menu-Home%20screen%20shortcut-6e7681?style=for-the-badge&labelColor=0d1117)
 
-[← All apps](../../README.md#apps)&nbsp;&nbsp;•&nbsp;&nbsp;`com.amazon.mShop.android.shopping`&nbsp;&nbsp;•&nbsp;&nbsp;[v3.4.1](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.4.1)
+[← All apps](../../README.md#apps)&nbsp;&nbsp;•&nbsp;&nbsp;`com.amazon.mShop.android.shopping`&nbsp;&nbsp;•&nbsp;&nbsp;[v3.6.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.6.0)
 
 **🎯 Supported versions:** `32.19.0.100` · `32.20.2.100`
 <!-- HEADER_END -->
@@ -46,13 +46,14 @@ Hiding it is optional. Tick **Hide Alexa for Shopping tab** in Manager and patch
 <!-- PATCHES_START -->
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |---|---|---|
-| **Dark mode** | Force dark mode for Amazon Shopping. | • Dark mode |
+| **Change package name support (Amazon)** | Lets the copy made by "Change package name" install next to the real Amazon app: the sign-in provider authorities that do not contain the package name are renamed as well. Does nothing when "Change package name" is off. |  |
+| **Dark mode** | Lets Amazon Shopping follow your phone's dark mode, pages and bottom bar included. | • Dark mode |
 | **Disable search suggestions tracking** | Prevents search keypress and focus events from being sent with suggestion requests. |  |
-| **Disable video autoplay** | Prevents videos from autoplaying in Amazon's in-app WebView pages. |  |
+| **Disable video autoplay** | Stops videos in Amazon's in-app pages from starting on their own; a tap still plays them. |  |
 | **Fix Amazon manifest conflicts** | Updates shared Amazon permissions so other Amazon apps can coexist. |  |
 | **Hide Alexa for Shopping tab** | Removes the Alexa for Shopping (formerly Rufus) tab from the bottom navigation bar. |  |
 | **Open links in browser** | Opens non-Amazon URLs in the default browser instead of the in-app WebView. |  |
-| **Price history charts** | Injects Keepa and CamelCamelCamel price history charts on Amazon product pages. | • Chart period<br>• Show period toggle<br>• Toggle periods<br>• Keepa price lines<br>• CamelCamelCamel chart<br>• Hide zero-price gaps<br>• Chart size<br>• Start collapsed |
+| **Price history card** | Adds a price history card to Amazon product pages: lowest, average and highest price and a chart for 30 days, 90 days, 1 year or all time, from CamelCamelCamel. Nothing is requested until you tap it. |  |
 | **Remove ads** | Hides sponsored and ad content in Amazon Shopping via CSS injection. |  |
 <!-- PATCHES_END -->
 

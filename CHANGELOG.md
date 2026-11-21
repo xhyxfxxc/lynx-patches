@@ -1,3 +1,21 @@
+## 3.6.0 (2026-11-21)
+
+### New Features
+- Price history card in the style of Amazon's own, with 30 day, 90 day, 1 year and all-time views, lowest, average and highest price, powered by CamelCamelCamel.
+- Amazon Shopping joins the bundle - price history charts, ad-free pages, dark mode, no video autoplay, links open in your browser.
+
+### Fixes
+- The price chart drops CamelCamelCamel's unreadable built-in table for a clear color key.
+- The price history card shows lowest, average and highest price again (CamelCamelCamel refused the old browser name), says "near the lowest" unless it really is the lowest, and draws a readable chart.
+- The Lynx Patches shortcut no longer removes the app's own shortcuts and comes back after the app replaces them.
+- Fix Amazon manifest conflicts keeps the app's own and the sign-in library's permissions working.
+- Disable video autoplay now stops videos that start on their own.
+- Dark mode keeps pages readable, and Off leaves the app untouched.
+- Open links in browser leaves app links, phone and mail links and checkout payment pages to Amazon.
+- Change package name installs Amazon next to the real app instead of failing with a provider conflict.
+
+**55 patches for 7 apps.** Full list in the [README](https://github.com/[secure]/lynx-patches#apps).
+
 ## 3.5.0 (2026-11-21)
 
 ### New Features
