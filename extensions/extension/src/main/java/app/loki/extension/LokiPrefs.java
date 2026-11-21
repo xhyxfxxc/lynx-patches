@@ -38,6 +38,23 @@ public final class LokiPrefs {
         store(context).edit().putBoolean(KEY_DEBUG, on).apply();
     }
 
+    /** A stored switch, or [fallback] when it was never set. For apps whose switches do not default to on. */
+    public static boolean getBoolean(Context context, String key, boolean fallback) {
+        return context == null ? fallback : store(context).getBoolean(key, fallback);
+    }
+
+    public static void setBoolean(Context context, String key, boolean value) {
+        store(context).edit().putBoolean(key, value).apply();
+    }
+
+    public static String getString(Context context, String key, String fallback) {
+        return context == null ? fallback : store(context).getString(key, fallback);
+    }
+
+    public static void setString(Context context, String key, String value) {
+        store(context).edit().putString(key, value).apply();
+    }
+
     /** Everything stored, for a backup file. */
     public static JSONObject toJson(Context context) throws JSONException {
         JSONObject out = new JSONObject();

@@ -13,7 +13,7 @@
 | Feature | What you get |
 |---|---|
 | 🚫 **Ad-free pages** | Sponsored products, brand banners and video ads are hidden on search, product, cart and order pages. |
-| 📈 **Price history** | A collapsed "Price History" box under the price on product pages. Tap **Load price history** to see the Keepa and CamelCamelCamel charts, with buttons for 1 month up to all time. |
+| 📈 **Price history card** | A "Price history" card under the price on product pages, in the style of Amazon's own (which Amazon does not offer in Australia). Tap it to see whether the price is the lowest ever, a good price or higher than usual, the lowest, average and highest price with their dates, and the CamelCamelCamel chart for 30 days, 90 days, 1 year or all time. |
 | 🎨 **Dark mode** | While your phone is in dark mode, Amazon's pages and bottom bar are darkened by Android's own Force Dark. In light mode nothing changes. Manager lets you pick Off (the app is left untouched) or Follow system. |
 | ▶️ **No video autoplay** | Videos in Amazon's in-app pages wait until you tap them. |
 | 🛡️ **Quieter search** | Search keypress and focus events are no longer sent along with suggestion requests. |
@@ -24,8 +24,8 @@
 
 ## What to expect
 
-- **Price history is never loaded on its own.** Nothing is requested from Keepa or CamelCamelCamel until you tap **Load price history**. Loading it requests the chart for that one product straight from those sites, so they see the product's ASIN (Amazon's product id) and your IP address, but no Amazon cookies, account details or page content.
-- **Australia:** the global Amazon Shopping app is the one Amazon Australia uses. Keepa has no Australian prices, so there the box shows the CamelCamelCamel chart only.
+- **Price history is never loaded on its own.** Nothing is requested from CamelCamelCamel until you tap the card. Opening it fetches that product's page and chart from CamelCamelCamel, so they see the product's ASIN (Amazon's product id) and your IP address, but no Amazon cookies, account details or page content. **Amazon page → Load automatically** (off by default) loads it for every product page without a tap, which tells CamelCamelCamel about every product you look at. **Default range** picks the chart period the card opens with (90 days unless you change it), and **Price history card** switches the card off. They are on the **Amazon** page of Lynx Patches (long press the Amazon icon on your home screen).
+- **Australia:** the global Amazon Shopping app is the one Amazon Australia uses. CamelCamelCamel has current Australian prices; Keepa does not, so there is no Keepa link on the card. If CamelCamelCamel is busy or refuses the request, the card still shows the chart, without the numbers. Products it does not track say "No price history for this product yet".
 - **Ad hiding is a list of page rules.** It is built into the patch and never downloaded, so a change in Amazon's page layout can let an ad through until the patch is updated.
 - **Other Amazon apps** (Prime Video, Alexa and so on) can be installed beside it: the patch renames the permissions that Amazon's apps share, so they do not clash.
 - **A second copy beside the Amazon app:** turn on **Change package name** (off by default) to install the patched app next to the Amazon app from the Play Store. **Change package name support (Amazon)** renames Amazon's sign-in and file-sharing providers for you, so Android accepts the install. The copy is a separate app, so you sign in to it again.
@@ -33,7 +33,7 @@
 ## Questions
 
 **Does the Amazon app look different?**
-Only where a patch says so: hidden ads, the price history box, dark pages and, if you ticked it, no Alexa for Shopping tab. Everything else is Amazon's own app.
+Only where a patch says so: hidden ads, the price history card, dark pages and, if you ticked it, no Alexa for Shopping tab. Everything else is Amazon's own app.
 
 **A step that goes through another website (a bank or payment page, for example) does not open in my browser. Is that on purpose?**
 Yes. While you check out, pay or sign in, every page stays inside the app, including PayPal, Afterpay, Zip and your bank's confirmation page. The app goes back to opening outside links in your browser as soon as you are on an ordinary Amazon page again.

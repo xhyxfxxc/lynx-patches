@@ -69,7 +69,7 @@ public final class MenuInfo {
             rows.add(new String[]{"GmsCore support (Google Photos)", flag(flags, "app.loki.menu.gmscore")});
         } else if (pkg.startsWith("com.amazon.mShop.android.shopping")) {
             rows.add(new String[]{"Remove ads", flag(flags, "app.loki.menu.amazonadblock")});
-            rows.add(new String[]{"Price history charts", flag(flags, "app.loki.menu.amazonprice")});
+            rows.add(new String[]{"Price history card", flag(flags, "app.loki.menu.amazonprice")});
             rows.add(new String[]{"Dark mode", flag(flags, "app.loki.menu.amazondark")});
             rows.add(new String[]{"Disable video autoplay", flag(flags, "app.loki.menu.amazonautoplay")});
             rows.add(new String[]{"Disable search suggestions tracking", flag(flags, "app.loki.menu.amazonsuggest")});

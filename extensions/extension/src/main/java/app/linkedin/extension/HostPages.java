@@ -7,6 +7,7 @@ package app.linkedin.extension;
 
 import android.content.Context;
 
+import app.amazon.extension.AmazonSettings;
 import app.loki.extension.LokiSwitches;
 import app.loki.extension.MenuInfo;
 import app.loki.extension.SplitwiseFeatures;
@@ -30,11 +31,13 @@ final class HostPages {
         boolean docScanner = pkg.startsWith("com.cv.docscanner");
         boolean mx = pkg.startsWith("com.mxtech.videoplayer");
         boolean photos = pkg.startsWith("com.google.android.apps.photos");
+        boolean amazon = pkg.startsWith("com.amazon.mShop.android.shopping");
 
         if (on(context, "app.loki.menu.premium")) pages.add(premium(splitwise, truecaller, docScanner));
         if (splitwise && on(context, "app.loki.menu.amoled")) pages.add(appearance(context));
         if (truecaller && on(context, "app.loki.menu.aftercall")) pages.add(calls(context));
         if (photos && on(context, "app.loki.menu.pixelspoof")) pages.add(backup(context));
+        if (amazon && on(context, "app.loki.menu.amazonprice")) pages.add(amazon(context));
         if (mx && (on(context, "app.loki.menu.license") || on(context, "app.loki.menu.codec"))) {
             pages.add(player(context));
         }
@@ -46,6 +49,44 @@ final class HostPages {
         }
         if (on(context, "app.loki.menu.gmscore")) pages.add(signIn(truecaller));
         if (on(context, "app.loki.menu.clone")) pages.add(clone(context));
+    }
+
+    /**
+     * The Amazon page: the price history card. Its switches are read when a page is set up, so Load automatically
+     * and the range apply to the next product page; the card itself is added when Amazon starts.
+     */
+    private static SettingsActivity.Page amazon(Context context) {
+        SettingsActivity.Page page = new SettingsActivity.Page("Amazon", IconDrawable.HISTORY);
+        page.toggle("Price history card", "A card on product pages with the lowest, average and highest price and "
+                + "a chart, from CamelCamelCamel. Nothing is requested until you tap it. Restart Amazon to apply.",
+                new SettingsActivity.Toggle() {
+                    public boolean get() {
+                        return AmazonSettings.priceCard(context);
+                    }
+
+                    public void set(boolean on) {
+                        app.loki.extension.LokiPrefs.setBoolean(context, AmazonSettings.PRICE_CARD, on);
+                    }
+                }, true);
+        page.toggle("Load automatically", "Load the price history as soon as a product page opens, without a tap. "
+                + "CamelCamelCamel then sees the product and your IP address for every product you look at.",
+                new SettingsActivity.Toggle() {
+                    public boolean get() {
+                        return AmazonSettings.priceAuto(context);
+                    }
+
+                    public void set(boolean on) {
+                        app.loki.extension.LokiPrefs.setBoolean(context, AmazonSettings.PRICE_AUTO, on);
+                    }
+                }, false);
+        page.shown("Default range", () -> AmazonSettings.rangeLabels()[AmazonSettings.priceRangeIndex(context)],
+                () -> {
+                    if (!(context instanceof SettingsActivity)) return;
+                    ((SettingsActivity) context).chooseOne("Default range", AmazonSettings.rangeLabels(),
+                            AmazonSettings.priceRangeIndex(context),
+                            which -> AmazonSettings.setPriceRangeIndex(context, which));
+                }, SettingsActivity.YES);
+        return page;
     }
 
     private static SettingsActivity.Page premium(boolean splitwise, boolean truecaller, boolean docScanner) {

@@ -200,5 +200,11 @@
   "Don't remind me": "Don't remind me",
   "microG RE battery reminder": "microG RE battery reminder",
   "Lynx Patches cannot open here. Reinstall the patched app normally (not mounted).": "Lynx Patches cannot open here. Reinstall the patched app normally (not mounted).",
-  "Reminds you when Android limits microG RE in the background. Notifications and Google sign-in go through microG RE, so they can arrive late or fail while it is limited.": "Reminds you when Android limits microG RE in the background. Notifications and Google sign-in go through microG RE, so they can arrive late or fail while it is limited."
+  "Reminds you when Android limits microG RE in the background. Notifications and Google sign-in go through microG RE, so they can arrive late or fail while it is limited.": "Reminds you when Android limits microG RE in the background. Notifications and Google sign-in go through microG RE, so they can arrive late or fail while it is limited.",
+  "Amazon": "Amazon",
+  "Price history card": "Price history card",
+  "A card on product pages with the lowest, average and highest price and a chart, from CamelCamelCamel. Nothing is requested until you tap it. Restart Amazon to apply.": "A card on product pages with the lowest, average and highest price and a chart, from CamelCamelCamel. Nothing is requested until you tap it. Restart Amazon to apply.",
+  "Load automatically": "Load automatically",
+  "Load the price history as soon as a product page opens, without a tap. CamelCamelCamel then sees the product and your IP address for every product you look at.": "Load the price history as soon as a product page opens, without a tap. CamelCamelCamel then sees the product and your IP address for every product you look at.",
+  "Default range": "Default range"
 }

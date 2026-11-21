@@ -1467,6 +1467,25 @@ public class SettingsActivity extends Activity {
 
     // region Download location
 
+    /** Receives the index picked in a single-choice dialog. */
+    interface Pick {
+        void pick(int which);
+    }
+
+    /**
+     * A single-choice dialog for a page of another app: the choice goes to {@code pick}, then the page is drawn
+     * again so the row shows it.
+     */
+    void chooseOne(String title, String[] options, int checked, Pick pick) {
+        tinted(ask(title)
+                .setSingleChoiceItems(options, checked, (dialog, which) -> {
+                    pick.pick(which);
+                    refresh();
+                    dialog.dismiss();
+                })
+                .show());
+    }
+
     private void chooseBaseDir() {
         String[] baseDirs = Settings.DOWNLOAD_BASE_DIRS;
         int checked = Math.max(Arrays.asList(baseDirs).indexOf(Settings.downloadBaseDir()), 0);

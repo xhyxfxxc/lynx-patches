@@ -17,21 +17,16 @@ package app.amazon.extension;
  *   License: GPL-3.0
  *
  * Everything this helper executes or injects is vendored in this repository and
- * shipped inside the patch bundle. Nothing is downloaded at runtime, so the
- * JavaScript and CSS applied to an authenticated Amazon page are fully
- * determined by reviewed source at build time.
+ * shipped inside the patch bundle. No script or style is downloaded at runtime,
+ * so the JavaScript and CSS applied to an authenticated Amazon page are fully
+ * determined by reviewed source at build time. The one thing fetched at run
+ * time is data: the price numbers of the price history card (see PriceBridge),
+ * which reach the page as JSON through textContent only.
  */
 
 import android.content.Intent;
 import android.net.Uri;
 import android.webkit.WebView;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class AmazonHelper {
 
@@ -207,45 +202,9 @@ public class AmazonHelper {
         }
     }
 
-    // ---- Price history (explicitly user initiated) ----
+    // ---- Price history card ----
 
-    // graph.keepa.com takes a marketplace country code as its `domain`
-    // parameter, while keepa.com product links need Keepa's numeric marketplace
-    // id. Keepa serves no data for Amazon Australia, so `au` is absent here.
-    private static final Map<String, Integer> KEEPA_IDS = new HashMap<>();
-    static {
-        KEEPA_IDS.put("us", 1);  KEEPA_IDS.put("uk", 2);  KEEPA_IDS.put("de", 3);
-        KEEPA_IDS.put("fr", 4);  KEEPA_IDS.put("jp", 5);  KEEPA_IDS.put("ca", 6);
-        KEEPA_IDS.put("it", 8);  KEEPA_IDS.put("es", 9);  KEEPA_IDS.put("in", 10);
-        KEEPA_IDS.put("mx", 11); KEEPA_IDS.put("br", 12); KEEPA_IDS.put("nl", 14);
-    }
-
-    // CamelCamelCamel tracks fewer marketplaces; its link host is
-    // {code}.camelcamelcamel.com except the US, which has no subdomain.
-    private static final Set<String> CCC_CODES = new LinkedHashSet<>(Arrays.asList(
-        "us", "uk", "de", "fr", "jp", "ca", "it", "es", "au"));
-
-    private static final List<String> PERIODS =
-        Arrays.asList("1m", "6m", "1y", "3y", "5y", "all");
-    private static final Map<String, String> PERIOD_LABELS = new HashMap<>();
-    private static final Map<String, Integer> PERIOD_RANGES = new HashMap<>();
-    static {
-        PERIOD_LABELS.put("1m", "1M");  PERIOD_LABELS.put("6m", "6M");
-        PERIOD_LABELS.put("1y", "1Y");  PERIOD_LABELS.put("3y", "3Y");
-        PERIOD_LABELS.put("5y", "5Y");  PERIOD_LABELS.put("all", "ALL");
-        PERIOD_RANGES.put("1m", 30);    PERIOD_RANGES.put("6m", 180);
-        PERIOD_RANGES.put("1y", 365);   PERIOD_RANGES.put("3y", 1095);
-        PERIOD_RANGES.put("5y", 1826);
-    }
-
-    private static final Map<String, String> CCC_PNG = new HashMap<>();
-    static {
-        CCC_PNG.put("new_used", "amazon-new-used");
-        CCC_PNG.put("new", "amazon-new");
-        CCC_PNG.put("used", "amazon-used");
-    }
-
-    /** Containers the price-history block is inserted after, most specific first. */
+    /** Containers the price history card is inserted after, most specific first. */
     private static final String[] PLACEMENT_TARGETS = {
         "#buyBoxAccordion", "#corePriceDisplay_desktop_feature_div",
         "#corePrice_feature_div", "#unifiedPrice_feature_div",
@@ -256,169 +215,236 @@ public class AmazonHelper {
     };
 
     /**
-     * Static price-history UI.
+     * The price history card: a collapsed "Price history" row that opens to a verdict, the lowest, average and
+     * highest price, 30 day, 90 day, 1 year and all-time buttons and the CamelCamelCamel chart, in the style of
+     * Amazon's own price history (which is not offered in Australia).
      *
-     * Rendering it contacts nobody: the script only builds a disclosure and a
-     * "Load price history" button, and the provider <img> elements are created
-     * solely inside that button's click handler. Charts are then ordinary
-     * browser resource loads sent with no referrer, so no Amazon cookies,
-     * headers, account identifiers or page data are supplied to the providers.
-     *
-     * The script itself is a constant; every runtime value arrives as a
-     * JSON-encoded argument, never as concatenated JavaScript source.
+     * Rendering it contacts nobody. The numbers are asked for through window.lynxPrice (PriceBridge, which
+     * fetches the CamelCamelCamel product page in the background) and the chart image is created, with no
+     * referrer, only after the user taps the row, or at once when Load automatically is on. Everything the page
+     * receives goes through textContent, and every runtime value arrives as a JSON-encoded argument, never as
+     * concatenated JavaScript source. The script is a constant.
      */
-    private static final String PRICE_HISTORY_JS =
-        "function(cfg){"
-        + "var ID='morphe-price-history';"
-        + "var ASIN_RE=new RegExp('/(?:dp|gp/product|gp/aw/d)/([A-Za-z0-9]{10})(?![A-Za-z0-9])');"
-        + "function toLink(a,label){if(!a.querySelector('img'))return;"
-        + "a.textContent='Open price history on '+label;"
-        + "a.style.cssText='font-size:13px;color:#0066c0;text-decoration:underline';}"
-        + "function keepaChart(asin,period){if(!cfg.keepa)return null;"
-        + "var range=cfg.keepa.ranges[period];"
-        + "return cfg.keepa.chart+asin+(range?'&range='+range:'');}"
-        + "function camelChart(asin,period){if(!cfg.camel)return null;"
-        + "return cfg.camel.chart+asin+'/'+cfg.camel.png+'.png?force=1&legend=1&w='"
-        + "+cfg.camel.width+'&h=400'+cfg.camel.zero+'&tp='+period;}"
-        + "function addChart(parent,label,href,chartUrl,asin){"
-        + "var wrap=document.createElement('div');wrap.style.marginBottom='8px';"
-        + "var cap=document.createElement('div');"
-        + "cap.style.cssText='font-size:12px;color:#666;margin-bottom:4px';"
-        + "cap.textContent=label;wrap.appendChild(cap);"
-        + "var a=document.createElement('a');a.href=href;a.target='_blank';"
-        + "a.rel='noopener noreferrer';"
-        + "var img=document.createElement('img');img.referrerPolicy='no-referrer';"
-        + "img.style.cssText='width:100%;height:auto;border-radius:4px';"
-        + "img.onerror=function(){toLink(a,label);};"
-        + "img.src=chartUrl(asin,cfg.period)+'&t='+Date.now();"
-        + "a.appendChild(img);wrap.appendChild(a);parent.appendChild(wrap);"
-        + "if(cfg.showToggle&&cfg.periods.length){"
-        + "var row=document.createElement('div');row.style.marginTop='4px';"
-        + "cfg.periods.forEach(function(p){"
-        + "var b=document.createElement('button');b.type='button';b.textContent=p.label;"
-        + "b.style.cssText='margin-right:6px;padding:2px 8px;border:1px solid #ccc;"
-        + "border-radius:3px;background:#fff;font-size:11px;color:#333;cursor:pointer';"
-        + "b.onclick=function(){img.onerror=function(){toLink(a,label);};"
-        + "img.src=chartUrl(asin,p.value)+'&t='+Date.now();};"
-        + "row.appendChild(b);});"
-        + "wrap.appendChild(row);}}"
-        + "function loadCharts(parent,asin){"
-        + "if(cfg.keepa)addChart(parent,'Keepa',cfg.keepa.link+asin,keepaChart,asin);"
-        + "if(cfg.camel)addChart(parent,'CamelCamelCamel',cfg.camel.link+asin,camelChart,asin);}"
-        + "function place(box){for(var i=0;i<cfg.targets.length;i++){"
-        + "var el=document.querySelector(cfg.targets[i]);"
-        + "if(el&&el.parentNode){el.parentNode.insertBefore(box,el.nextSibling);return true;}}"
-        + "return false;}"
-        + "function build(asin){"
-        + "var old=document.getElementById(ID);"
-        + "if(old&&old.getAttribute('data-asin')===asin)return;"
-        + "if(old)old.remove();"
-        + "var box=document.createElement(cfg.collapsed?'details':'div');"
-        + "box.id=ID;box.setAttribute('data-asin',asin);"
-        + "box.style.cssText='margin:16px 0;padding:12px;border:1px solid #ddd;"
-        + "border-radius:8px;background:#fafafa';"
-        + "var head=document.createElement(cfg.collapsed?'summary':'div');"
-        + "head.style.cssText='font-weight:bold;font-size:14px;color:#333'"
-        + "+(cfg.collapsed?';cursor:pointer':';margin-bottom:8px');"
-        + "head.textContent='Price History';box.appendChild(head);"
-        + "var note=document.createElement('div');"
-        + "note.style.cssText='font-size:12px;color:#666;margin:6px 0';"
-        + "note.textContent=cfg.notice;box.appendChild(note);"
-        + "var charts=document.createElement('div');"
-        + "var btn=document.createElement('button');btn.type='button';"
-        + "btn.textContent=cfg.loadLabel;"
-        + "btn.style.cssText='padding:6px 12px;border:1px solid #ccc;border-radius:4px;"
-        + "background:#fff;font-size:13px;color:#333;cursor:pointer';"
-        + "btn.onclick=function(){btn.remove();loadCharts(charts,asin);};"
-        + "box.appendChild(btn);box.appendChild(charts);"
-        + "if(!place(box)){"
-        + "var fb=document.getElementById('dp')||document.getElementById('ppd');"
-        + "if(fb)fb.appendChild(box);"
-        + "else{var obs=new MutationObserver(function(_,o){if(place(box))o.disconnect();});"
-        + "obs.observe(document.body||document.documentElement,{childList:true,subtree:true});"
-        + "setTimeout(function(){obs.disconnect();"
-        + "if(!box.parentNode)document.body.appendChild(box);},10000);}}}"
-        + "function currentAsin(){var m=window.location.pathname.match(ASIN_RE);"
-        + "return m?m[1].toUpperCase():null;}"
-        + "build(currentAsin()||cfg.asin);"
-        + "if(!window.__morphePriceHistoryNav){window.__morphePriceHistoryNav=true;"
-        + "var onNav=function(){var a=currentAsin();if(a)build(a);};"
-        + "var ps=history.pushState,rs=history.replaceState;"
-        + "history.pushState=function(){ps.apply(this,arguments);setTimeout(onNav,0);};"
-        + "history.replaceState=function(){rs.apply(this,arguments);setTimeout(onNav,0);};"
-        + "window.addEventListener('popstate',onNav);}"
-        + "}";
+    private static final String PRICE_CARD_JS =
+        "function(cfg){\n"
+        + "var ID='lynx-price-card',STYLE_ID='lynx-price-style';\n"
+        + "var ASIN_RE=new RegExp('/(?:dp|gp/product|gp/aw/d)/([A-Za-z0-9]{10})(?![A-Za-z0-9])');\n"
+        + "var RANGES=[['1m','30 days'],['3m','90 days'],['1y','1 year'],['all','All']];\n"
+        + "var KINDS={low:1,near:1,good:1,high:1,typical:1};\n"
+        + "var CSS=[\n"
+        + "'#lynx-price-card{box-sizing:border-box;margin:12px;border:1px solid #d5d9d9;border-radius:12px;background:#fff;color:#0f1111;font:14px/1.4 \"Amazon Ember\",Arial,sans-serif;overflow:hidden}',\n"
+        + "'#lynx-price-card *{box-sizing:border-box}',\n"
+        + "'#lynx-price-card [hidden]{display:none!important}',\n"
+        + "'#lynx-price-card .lpc-head{display:flex;align-items:center;width:100%;margin:0;padding:12px 14px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}',\n"
+        + "'#lynx-price-card .lpc-title{font-weight:700;font-size:15px}',\n"
+        + "'#lynx-price-card .lpc-sub{margin-left:8px;font-size:11px;color:#565959;white-space:nowrap}',\n"
+        + "'#lynx-price-card .lpc-sum{flex:1;min-width:0;margin-left:10px;font-size:12px;color:#007185;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',\n"
+        + "'#lynx-price-card .lpc-chev{margin-left:auto;padding-left:10px;font-size:20px;line-height:1;color:#565959;transition:transform .15s}',\n"
+        + "'#lynx-price-card .lpc-sum:not(:empty)+.lpc-chev{margin-left:8px}',\n"
+        + "'#lynx-price-card.open .lpc-chev{transform:rotate(90deg)}',\n"
+        + "'#lynx-price-card .lpc-body{padding:0 14px 14px}',\n"
+        + "'#lynx-price-card .lpc-body[hidden]{display:none}',\n"
+        + "'#lynx-price-card .lpc-verdict{display:flex;align-items:center;margin:2px 0 6px;font-size:15px;font-weight:700}',\n"
+        + "'#lynx-price-card .lpc-verdict:before{content:\"\";flex:none;width:10px;height:10px;margin-right:8px;border-radius:50%;background:#565959}',\n"
+        + "'#lynx-price-card .lpc-verdict.k-low,#lynx-price-card .lpc-verdict.k-near,#lynx-price-card .lpc-verdict.k-good{color:#067d62}',\n"
+        + "'#lynx-price-card .lpc-verdict.k-low:before,#lynx-price-card .lpc-verdict.k-near:before,#lynx-price-card .lpc-verdict.k-good:before{background:#067d62}',\n"
+        + "'#lynx-price-card .lpc-verdict.k-high{color:#b12704}',\n"
+        + "'#lynx-price-card .lpc-verdict.k-high:before{background:#b12704}',\n"
+        + "'#lynx-price-card .lpc-series{margin:0 0 8px;font-size:12px;color:#565959}',\n"
+        + "'#lynx-price-card .lpc-tiles{display:flex;margin:0 -4px 12px}',\n"
+        + "'#lynx-price-card .lpc-tile{flex:1;min-width:0;margin:0 4px;padding:8px 10px;border-radius:8px;background:#f0f2f2}',\n"
+        + "'#lynx-price-card .lpc-tl{font-size:11px;color:#565959}',\n"
+        + "'#lynx-price-card .lpc-tv{font-size:16px;font-weight:700;white-space:nowrap}',\n"
+        + "'#lynx-price-card .lpc-td{min-height:15px;font-size:11px;color:#565959}',\n"
+        + "'#lynx-price-card .lpc-ranges{display:flex;margin:0 -3px 10px}',\n"
+        + "'#lynx-price-card .lpc-range{flex:1;margin:0 3px;padding:6px 2px;border:1px solid #adb1b8;border-radius:16px;background:#fff;color:#0f1111;font:inherit;font-size:12px;cursor:pointer}',\n"
+        + "'#lynx-price-card .lpc-range.on{border-color:#007185;background:#e3f1f4;color:#007185;font-weight:700}',\n"
+        + "'#lynx-price-card .lpc-chart{border-radius:8px;background:#fff;overflow:hidden}',\n"
+        + "'#lynx-price-card .lpc-chart img{display:block;width:100%;height:auto}',\n"
+        + "'#lynx-price-card .lpc-msg{padding:14px 8px;border-radius:8px;background:#f0f2f2;color:#565959;text-align:center}',\n"
+        + "'#lynx-price-card .lpc-links{display:flex;flex-wrap:wrap;margin:10px 0 0;font-size:13px}',\n"
+        + "'#lynx-price-card .lpc-links a{margin-right:16px;color:#007185;text-decoration:none}',\n"
+        + "'@media (prefers-color-scheme:dark){',\n"
+        + "'#lynx-price-card{border-color:#3b434b;background:#1b2025;color:#e7e9ea}',\n"
+        + "'#lynx-price-card .lpc-sub,#lynx-price-card .lpc-chev,#lynx-price-card .lpc-series,#lynx-price-card .lpc-tl,#lynx-price-card .lpc-td{color:#9aa4ad}',\n"
+        + "'#lynx-price-card .lpc-sum,#lynx-price-card .lpc-links a{color:#4fc3d9}',\n"
+        + "'#lynx-price-card .lpc-tile,#lynx-price-card .lpc-msg{background:#262d34}',\n"
+        + "'#lynx-price-card .lpc-msg{color:#9aa4ad}',\n"
+        + "'#lynx-price-card .lpc-verdict:before{background:#9aa4ad}',\n"
+        + "'#lynx-price-card .lpc-verdict.k-low,#lynx-price-card .lpc-verdict.k-near,#lynx-price-card .lpc-verdict.k-good{color:#3ec9a7}',\n"
+        + "'#lynx-price-card .lpc-verdict.k-low:before,#lynx-price-card .lpc-verdict.k-near:before,#lynx-price-card .lpc-verdict.k-good:before{background:#3ec9a7}',\n"
+        + "'#lynx-price-card .lpc-verdict.k-high{color:#ff8a75}',\n"
+        + "'#lynx-price-card .lpc-verdict.k-high:before{background:#ff8a75}',\n"
+        + "'#lynx-price-card .lpc-range{border-color:#59636d;background:#262d34;color:#e7e9ea}',\n"
+        + "'#lynx-price-card .lpc-range.on{border-color:#4fc3d9;background:#17323a;color:#4fc3d9}',\n"
+        + "'}'\n"
+        + "].join('');\n"
+        + "function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}\n"
+        + "function ensureStyle(){\n"
+        + "if(document.getElementById(STYLE_ID))return;\n"
+        + "var s=el('style');s.id=STYLE_ID;s.textContent=CSS;\n"
+        + "(document.head||document.documentElement).appendChild(s);}\n"
+        + "function tile(label){\n"
+        + "var t=el('div','lpc-tile');t.appendChild(el('div','lpc-tl',label));\n"
+        + "t.v=el('div','lpc-tv','–');t.d=el('div','lpc-td','');\n"
+        + "t.appendChild(t.v);t.appendChild(t.d);return t;}\n"
+        + "function setTile(t,x){t.v.textContent=x&&x.p?x.p:'–';t.d.textContent=x&&x.d?x.d:'';}\n"
+        + "function place(box){\n"
+        + "for(var i=0;i<cfg.targets.length;i++){\n"
+        + "var t=document.querySelector(cfg.targets[i]);\n"
+        + "if(t&&t.parentNode){t.parentNode.insertBefore(box,t.nextSibling);return true;}}\n"
+        + "return false;}\n"
+        + "function build(asin){\n"
+        + "var old=document.getElementById(ID);\n"
+        + "if(old&&old.getAttribute('data-asin')===asin)return;\n"
+        + "if(old)old.remove();\n"
+        + "ensureStyle();\n"
+        + "var st={asin:asin,range:cfg.range,loaded:false,status:'idle',data:null,chartFailed:false};\n"
+        + "var card=el('div','lpc');card.id=ID;card.setAttribute('data-asin',asin);\n"
+        + "var head=el('button','lpc-head');head.type='button';head.setAttribute('aria-expanded','false');\n"
+        + "var sum=el('span','lpc-sum','');\n"
+        + "head.appendChild(el('span','lpc-title','Price history'));\n"
+        + "head.appendChild(el('span','lpc-sub','CamelCamelCamel'));\n"
+        + "head.appendChild(sum);\n"
+        + "head.appendChild(el('span','lpc-chev','›'));\n"
+        + "var body=el('div','lpc-body');body.hidden=true;\n"
+        + "var verdict=el('div','lpc-verdict');verdict.hidden=true;\n"
+        + "var series=el('div','lpc-series');series.hidden=true;\n"
+        + "var tiles=el('div','lpc-tiles');tiles.hidden=true;\n"
+        + "var tl=tile('Lowest'),ta=tile('Average'),th=tile('Highest');\n"
+        + "tiles.appendChild(tl);tiles.appendChild(ta);tiles.appendChild(th);\n"
+        + "var ranges=el('div','lpc-ranges');ranges.setAttribute('role','group');\n"
+        + "var buttons=[];\n"
+        + "RANGES.forEach(function(r){\n"
+        + "var b=el('button','lpc-range',r[1]);b.type='button';\n"
+        + "b.onclick=function(){st.range=r[0];mark();if(st.loaded)loadChart();};\n"
+        + "buttons.push([r[0],b]);ranges.appendChild(b);});\n"
+        + "var chart=el('div','lpc-chart');\n"
+        + "var img=el('img');img.alt='Price history chart';img.referrerPolicy='no-referrer';\n"
+        + "chart.appendChild(img);\n"
+        + "var msg=el('div','lpc-msg','');msg.hidden=true;\n"
+        + "var links=el('div','lpc-links');\n"
+        + "function link(label,which,href){\n"
+        + "var a=el('a',null,label);a.href=href;a.target='_blank';a.rel='noopener noreferrer';\n"
+        + "a.onclick=function(e){\n"
+        + "var b=window.lynxPrice;\n"
+        + "if(b&&typeof b.open==='function'){e.preventDefault();try{b.open(which,st.asin,cfg.code);}catch(x){}}};\n"
+        + "return a;}\n"
+        + "links.appendChild(link('View on CamelCamelCamel','ccc',cfg.cccLink+asin));\n"
+        + "if(cfg.keepaLink)links.appendChild(link('Also on Keepa','keepa',cfg.keepaLink+asin));\n"
+        + "body.appendChild(verdict);body.appendChild(series);body.appendChild(tiles);\n"
+        + "body.appendChild(ranges);body.appendChild(chart);body.appendChild(msg);body.appendChild(links);\n"
+        + "card.appendChild(head);card.appendChild(body);\n"
+        + "function mark(){buttons.forEach(function(p){\n"
+        + "var on=p[0]===st.range;p[1].className=on?'lpc-range on':'lpc-range';\n"
+        + "p[1].setAttribute('aria-pressed',on?'true':'false');});}\n"
+        + "function render(){\n"
+        + "var none=st.status==='none';\n"
+        + "var ok=st.status==='ok'&&st.data;\n"
+        + "var kind=ok&&Object.prototype.hasOwnProperty.call(KINDS,st.data.kind)?st.data.kind:null;\n"
+        + "verdict.hidden=!(ok&&kind&&st.data.verdict);\n"
+        + "series.hidden=!ok;tiles.hidden=!ok;\n"
+        + "if(ok){\n"
+        + "verdict.className='lpc-verdict k-'+kind;verdict.textContent=st.data.verdict||'';\n"
+        + "series.textContent='Prices for '+(st.data.label||'Amazon');\n"
+        + "setTile(tl,st.data.lowest);setTile(ta,st.data.average);setTile(th,st.data.highest);}\n"
+        + "sum.textContent=ok&&kind&&st.data.verdict?st.data.verdict:'';\n"
+        + "ranges.hidden=none;\n"
+        + "chart.hidden=none||st.chartFailed;\n"
+        + "msg.hidden=!(none||st.chartFailed);\n"
+        + "msg.style.cursor=none?'default':'pointer';\n"
+        + "msg.textContent=none?'No price history for this product yet':\"Couldn't load price history. Tap to retry.\";}\n"
+        + "function chartSrc(){\n"
+        + "var css=card.getBoundingClientRect().width||(window.innerWidth-24);\n"
+        + "var w=Math.max(400,Math.min(1000,Math.round(css*(window.devicePixelRatio||1))));\n"
+        + "var h=Math.round(w*0.55);\n"
+        + "return cfg.chartBase+st.asin+'/amazon-new-used.png?force=1&legend=1&w='+w+'&h='+h+'&tp='+st.range;}\n"
+        + "function loadChart(){\n"
+        + "st.chartFailed=false;\n"
+        + "img.onerror=function(){st.chartFailed=true;render();};\n"
+        + "img.onload=function(){st.chartFailed=false;render();};\n"
+        + "img.src=chartSrc();render();}\n"
+        + "function requestStats(){\n"
+        + "var b=window.lynxPrice;\n"
+        + "if(!b||typeof b.request!=='function'){st.status='chart';render();return;}\n"
+        + "st.status='loading';render();\n"
+        + "try{b.request(st.asin,cfg.code);}catch(e){st.status='chart';render();return;}\n"
+        + "setTimeout(function(){if(st.status==='loading'){st.status='chart';render();}},15000);}\n"
+        + "function load(){st.loaded=true;loadChart();requestStats();}\n"
+        + "st.onData=function(p){\n"
+        + "if(!p||p.asin!==st.asin||p.code!==cfg.code)return;\n"
+        + "if(p.status==='ok'){st.status='ok';st.data=p;}\n"
+        + "else if(p.status==='none')st.status='none';\n"
+        + "else st.status='chart';\n"
+        + "render();};\n"
+        + "msg.onclick=function(){if(st.chartFailed){loadChart();if(st.status!=='ok')requestStats();}};\n"
+        + "head.onclick=function(){\n"
+        + "var open=body.hidden;body.hidden=!open;\n"
+        + "head.setAttribute('aria-expanded',open?'true':'false');\n"
+        + "card.className=open?'lpc open':'lpc';\n"
+        + "if(open&&!st.loaded)load();};\n"
+        + "card.__lynx=st;\n"
+        + "mark();render();\n"
+        + "if(!place(card)){\n"
+        + "var fb=document.getElementById('dp')||document.getElementById('ppd');\n"
+        + "if(fb)fb.appendChild(card);\n"
+        + "else{var obs=new MutationObserver(function(_,o){if(place(card))o.disconnect();});\n"
+        + "obs.observe(document.body||document.documentElement,{childList:true,subtree:true});\n"
+        + "setTimeout(function(){obs.disconnect();if(!card.parentNode)document.body.appendChild(card);},10000);}}\n"
+        + "if(cfg.auto)load();}\n"
+        + "window.__lynxPriceData=function(p){\n"
+        + "var c=document.getElementById(ID);\n"
+        + "if(c&&c.__lynx)c.__lynx.onData(p);};\n"
+        + "function currentAsin(){var m=window.location.pathname.match(ASIN_RE);return m?m[1].toUpperCase():null;}\n"
+        + "build(currentAsin()||cfg.asin);\n"
+        + "if(!window.__lynxPriceNav){window.__lynxPriceNav=true;\n"
+        + "var onNav=function(){var a=currentAsin();if(a)build(a);};\n"
+        + "var ps=history.pushState,rs=history.replaceState;\n"
+        + "history.pushState=function(){ps.apply(this,arguments);setTimeout(onNav,0);};\n"
+        + "history.replaceState=function(){rs.apply(this,arguments);setTimeout(onNav,0);};\n"
+        + "window.addEventListener('popstate',onNav);}\n"
+        + "}\n";
 
-    public static void injectPriceCharts(WebView webView, String url, String config) {
+    /**
+     * Adds the price history card to a product page. Does nothing for a page that is not an Amazon product page,
+     * for a marketplace CamelCamelCamel does not serve, or when the card is switched off in the Amazon page of the
+     * Lynx Patches screen.
+     */
+    public static void injectPriceCard(WebView webView, String url) {
         if (webView == null) return;
+        try {
+            if (!AmazonSettings.priceCard(webView.getContext())) return;
 
-        // Both trust and product identity come from the parsed URL.
-        String asin = AmazonUrls.productAsin(url);
-        if (asin == null) return;
-        String code = AmazonUrls.marketplaceCode(AmazonUrls.webHost(url));
-        if (code == null) return;
+            // Both trust and product identity come from the parsed URL.
+            String asin = AmazonUrls.productAsin(url);
+            if (asin == null) return;
+            String code = AmazonUrls.marketplaceCode(AmazonUrls.webHost(url));
+            if (!PriceLinks.cccSupports(code)) return;
 
-        // The patch packs its settings into one pipe-separated string:
-        // period|showToggle|togglePeriods|keepaSeries|cccType|hideZero|width|collapsed
-        String[] parts = config == null ? new String[0] : config.split("\\|", -1);
-        String period = oneOf(part(parts, 0), PERIODS, "1y");
-        boolean showToggle = !"0".equals(part(parts, 1));
-        String series = oneOf(part(parts, 3), Arrays.asList("new", "new_used", "all"), "all");
-        String cccType = oneOf(part(parts, 4), Arrays.asList("new_used", "new", "used"), "new_used");
-        boolean hideZero = "1".equals(part(parts, 5));
-        String width = oneOf(part(parts, 6), Arrays.asList("500", "625", "750"), "625");
-        boolean collapsed = !"0".equals(part(parts, 7));
+            // Created per WebView at construction; this covers a WebView that was not, for the next page it loads.
+            PriceBridge.attach(webView);
 
-        Integer keepaId = KEEPA_IDS.get(code);
-        boolean camel = CCC_CODES.contains(code);
-        if (keepaId == null && !camel) return;
+            boolean keepa = PriceLinks.keepaSupports(code);
+            StringBuilder cfg = new StringBuilder("{");
+            cfg.append("\"asin\":").append(jsonString(asin));
+            cfg.append(",\"code\":").append(jsonString(code));
+            cfg.append(",\"auto\":").append(AmazonSettings.priceAuto(webView.getContext()));
+            cfg.append(",\"range\":").append(jsonString(AmazonSettings.priceRange(webView.getContext())));
+            cfg.append(",\"targets\":").append(AmazonJson.array(PLACEMENT_TARGETS));
+            cfg.append(",\"chartBase\":").append(jsonString(PriceLinks.chartBase(code)));
+            cfg.append(",\"cccLink\":").append(jsonString("https://" + PriceLinks.cccHost(code) + "/product/"));
+            cfg.append(",\"keepaLink\":").append(keepa ? jsonString("https://keepa.com/#!product/") : "null");
+            cfg.append("}");
 
-        List<String> providers = new ArrayList<>();
-        if (keepaId != null) providers.add("Keepa");
-        if (camel) providers.add("CamelCamelCamel");
-
-        StringBuilder cfg = new StringBuilder("{");
-        cfg.append("\"asin\":").append(jsonString(asin));
-        cfg.append(",\"period\":").append(jsonString(period));
-        cfg.append(",\"showToggle\":").append(showToggle);
-        cfg.append(",\"collapsed\":").append(collapsed);
-        cfg.append(",\"periods\":").append(periodsJson(part(parts, 2)));
-        cfg.append(",\"targets\":").append(jsonArray(PLACEMENT_TARGETS));
-        cfg.append(",\"loadLabel\":").append(jsonString("Load price history"));
-        cfg.append(",\"notice\":").append(jsonString(
-            "Price history is not loaded. Loading it requests charts directly from "
-            + join(providers, " and ")
-            + ", which shares this product's ASIN with "
-            + (providers.size() > 1 ? "those providers." : "that provider.")));
-
-        if (keepaId != null) {
-            cfg.append(",\"keepa\":{\"chart\":").append(jsonString(
-                "https://graph.keepa.com/pricehistory.png?new=1"
-                + "&used=" + ("new".equals(series) ? "0" : "1")
-                + "&amazon=" + ("all".equals(series) ? "1" : "0")
-                + "&domain=" + code + "&asin="));
-            cfg.append(",\"link\":").append(jsonString(
-                "https://keepa.com/#!product/" + keepaId + "-"));
-            cfg.append(",\"ranges\":").append(rangesJson()).append("}");
-        } else {
-            cfg.append(",\"keepa\":null");
+            webView.evaluateJavascript("(" + PRICE_CARD_JS + ")(" + cfg + ");", null);
+        } catch (RuntimeException ignored) {
+            // A WebView that is being destroyed: there is no page left to add the card to.
         }
+    }
 
-        if (camel) {
-            cfg.append(",\"camel\":{\"chart\":").append(jsonString(
-                "https://charts.camelcamelcamel.com/" + code + "/"));
-            cfg.append(",\"link\":").append(jsonString(
-                "https://" + ("us".equals(code) ? "" : code + ".")
-                + "camelcamelcamel.com/product/"));
-            cfg.append(",\"png\":").append(jsonString(CCC_PNG.get(cccType)));
-            cfg.append(",\"width\":").append(jsonString(width));
-            cfg.append(",\"zero\":").append(jsonString(hideZero ? "&zero=0" : "")).append("}");
-        } else {
-            cfg.append(",\"camel\":null");
-        }
-        cfg.append("}");
-
-        webView.evaluateJavascript("(" + PRICE_HISTORY_JS + ")(" + cfg + ");", null);
+    /** Adds window.lynxPrice to a WebView as it is created. See PriceBridge. */
+    public static void attachPriceBridge(WebView webView) {
+        PriceBridge.attach(webView);
     }
 
     // ---- Dark mode (inspired by amznkiller dark_mode.js, GPL-3.0, hxreborn) ----
@@ -530,90 +556,8 @@ public class AmazonHelper {
 
     // ---- Encoding helpers ----
 
-    private static String part(String[] parts, int index) {
-        return index < parts.length ? parts[index] : null;
-    }
-
-    private static String oneOf(String value, List<String> allowed, String fallback) {
-        return value != null && allowed.contains(value) ? value : fallback;
-    }
-
-    private static String join(List<String> values, String separator) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < values.size(); i++) {
-            if (i > 0) sb.append(separator);
-            sb.append(values.get(i));
-        }
-        return sb.toString();
-    }
-
-    private static String periodsJson(String raw) {
-        Set<String> selected = new LinkedHashSet<>();
-        if (raw != null) {
-            for (String value : raw.split(",")) {
-                String v = value.trim();
-                if (PERIODS.contains(v)) selected.add(v);
-            }
-        }
-        if (selected.isEmpty()) selected.addAll(PERIODS);
-        StringBuilder sb = new StringBuilder("[");
-        boolean first = true;
-        for (String value : selected) {
-            if (!first) sb.append(",");
-            first = false;
-            sb.append("{\"label\":").append(jsonString(PERIOD_LABELS.get(value)))
-                .append(",\"value\":").append(jsonString(value)).append("}");
-        }
-        return sb.append("]").toString();
-    }
-
-    private static String rangesJson() {
-        StringBuilder sb = new StringBuilder("{");
-        boolean first = true;
-        for (Map.Entry<String, Integer> entry : PERIOD_RANGES.entrySet()) {
-            if (!first) sb.append(",");
-            first = false;
-            sb.append(jsonString(entry.getKey())).append(":").append(entry.getValue());
-        }
-        return sb.append("}").toString();
-    }
-
-    private static String jsonArray(String[] values) {
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < values.length; i++) {
-            if (i > 0) sb.append(",");
-            sb.append(jsonString(values[i]));
-        }
-        return sb.append("]").toString();
-    }
-
-    /**
-     * JSON-encodes a value for embedding in generated JavaScript. Quotes,
-     * backslashes, control characters, angle brackets, ampersands, apostrophes
-     * and the JS line terminators are escaped, so no runtime value (ASIN,
-     * marketplace, option string, label, CSS or selector) can be parsed as
-     * JavaScript syntax.
-     */
+    /** JSON-encodes a value for embedding in generated JavaScript. See AmazonJson. */
     private static String jsonString(String value) {
-        if (value == null) return "null";
-        StringBuilder sb = new StringBuilder("\"");
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            switch (c) {
-                case '"': sb.append("\\\""); break;
-                case '\\': sb.append("\\\\"); break;
-                case '\n': sb.append("\\n"); break;
-                case '\r': sb.append("\\r"); break;
-                case '\t': sb.append("\\t"); break;
-                default:
-                    if (c < 0x20 || c > 0x7e || c == '<' || c == '>' || c == '&'
-                        || c == '\'' || c == 0x2028 || c == 0x2029) {
-                        sb.append(String.format("\\u%04x", (int) c));
-                    } else {
-                        sb.append(c);
-                    }
-            }
-        }
-        return sb.append("\"").toString();
+        return AmazonJson.string(value);
     }
 }

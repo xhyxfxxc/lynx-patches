@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Ported from rushiranpise/morphe-patches (https://github.com/rushiranpise/morphe-patches), modified for
- * Lynx Patches on 2026-11-21.
+ * Lynx Patches on 2026-11-21: the Keepa and CamelCamelCamel chart blocks became one price history card.
  */
 
 package app.amazon.patches.pricecharts
@@ -13,11 +13,8 @@ import app.amazon.patches.shared.Constants.HELPER
 import app.loki.patches.universal.addMenuFlag
 import app.loki.patches.universal.menuPatch
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
-import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
-import app.morphe.patcher.patch.stringOption
-import app.morphe.patcher.patch.stringsOption
 
 private val priceChartsFlag = resourcePatch {
     execute {
@@ -25,122 +22,33 @@ private val priceChartsFlag = resourcePatch {
     }
 }
 
+/**
+ * A price history card on product pages, in the style of Amazon's own (which is not offered in Australia): a
+ * collapsed "Price history" row that opens to a verdict, the lowest, average and highest price, range buttons and
+ * the CamelCamelCamel chart. The numbers come from the CamelCamelCamel product page, fetched in the background
+ * when the user taps the card. The card, "Load automatically" and the default range are switches on the Amazon page
+ * of the Lynx Patches screen, not patch options, so they can be changed without patching again.
+ *
+ * Three hooks: the page is set up when it finishes loading (normal loads) and when its WebView is shown (pages
+ * loaded ahead of time), and `window.lynxPrice`, the object the card asks for the numbers through, is added to each
+ * WebView as it is created.
+ */
 @Suppress("unused")
 val amazonPriceChartsPatch = bytecodePatch(
-    name = "Price history charts",
-    description = "Injects Keepa and CamelCamelCamel price history charts on Amazon product pages.",
+    name = "Price history card",
+    description = "Adds a price history card to Amazon product pages: lowest, average and highest price and a " +
+        "chart for 30 days, 90 days, 1 year or all time, from CamelCamelCamel. Nothing is requested until you tap it.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_AMAZON)
     dependsOn(menuPatch, priceChartsFlag)
     extendWith("extensions/extension.mpe")
 
-    val period by stringOption(
-        key = "amazonPriceChartPeriod",
-        default = "1y",
-        values = mapOf(
-            "1 month" to "1m",
-            "6 months" to "6m",
-            "1 year" to "1y",
-            "3 years" to "3y",
-            "5 years" to "5y",
-            "All time" to "all",
-        ),
-        title = "Chart period",
-        description = "Default time range for the price history charts.",
-    )
-    val toggle by booleanOption(
-        key = "amazonPriceChartToggle",
-        default = true,
-        title = "Show period toggle",
-        description = "Add period buttons under each chart to switch views.",
-    )
-    val togglePeriods by stringsOption(
-        key = "amazonPriceChartTogglePeriods",
-        default = listOf("1m", "6m", "1y", "3y", "5y", "all"),
-        values = mapOf(
-            "1 month" to listOf("1m"),
-            "6 months" to listOf("6m"),
-            "1 year" to listOf("1y"),
-            "3 years" to listOf("3y"),
-            "5 years" to listOf("5y"),
-            "All time" to listOf("all"),
-        ),
-        title = "Toggle periods",
-        description = "Which periods appear in the toggle buttons.",
-    )
-    val series by stringOption(
-        key = "amazonKeepaSeries",
-        default = "all",
-        values = mapOf(
-            "New only" to "new",
-            "New + Used" to "new_used",
-            "New + Used + Amazon" to "all",
-        ),
-        title = "Keepa price lines",
-        description = "Which price series the Keepa chart shows.",
-    )
-    val chartType by stringOption(
-        key = "amazonCccChartType",
-        default = "new_used",
-        values = mapOf(
-            "New + Used" to "new_used",
-            "New only" to "new",
-            "Used only" to "used",
-        ),
-        title = "CamelCamelCamel chart",
-        description = "Which price lines the CCC chart shows.",
-    )
-    val hideZero by booleanOption(
-        key = "amazonCccHideZero",
-        default = false,
-        title = "Hide zero-price gaps",
-        description = "Omit flat zero-price segments on the CCC chart.",
-    )
-    val size by stringOption(
-        key = "amazonChartSize",
-        default = "625",
-        values = mapOf(
-            "Compact" to "500",
-            "Default" to "625",
-            "Large" to "750",
-        ),
-        title = "Chart size",
-        description = "Width of the CCC chart image (Keepa renders at a fixed size).",
-    )
-    val collapsed by booleanOption(
-        key = "amazonChartsCollapsed",
-        default = true,
-        title = "Start collapsed",
-        description = "Render the charts inside a collapsed section; tap to expand.",
-    )
-
     execute {
-        // Pack every setting into one pipe-separated string so both injection
-        // sites only need a single extra register (onFragmentPostShown is full
-        // at .locals 4 with v0-v3). Order: period|toggle|periods|series|type|zero|width|collapsed
-        val config = listOf(
-            period ?: "1y",
-            if (toggle ?: true) "1" else "0",
-            (togglePeriods ?: listOf("1m", "6m", "1y", "3y", "5y", "all")).joinToString(","),
-            series ?: "all",
-            chartType ?: "new_used",
-            if (hideZero ?: false) "1" else "0",
-            size ?: "625",
-            if (collapsed ?: true) "1" else "0",
-        ).joinToString("|")
-            // Option values are constrained to this charset before they reach a
-            // smali string; the extension additionally validates each field and
-            // JSON-encodes it before any JavaScript is generated.
-            .filter { it.isLetterOrDigit() || it == ',' || it == '|' || it == '_' }
-
-        // Non-jumpstarted: p1=WebView, p2=url (method has 10 registers, v0 free)
+        // Non-jumpstarted: p1=WebView, p2=url
         MShopWebViewClientOnPageFinishedFingerprint.method.addInstructions(
             0,
-            """
-                const-string v0, "$config"
-                invoke-static {p1, p2, v0}, $HELPER->injectPriceCharts(Landroid/webkit/WebView;Ljava/lang/String;Ljava/lang/String;)V
-            """.trimIndent(),
+            "invoke-static {p1, p2}, $HELPER->injectPriceCard(Landroid/webkit/WebView;Ljava/lang/String;)V",
         )
 
         // Jumpstarted + all: .locals 4, get mWebView + url via getNavRequestUrl
@@ -150,9 +58,14 @@ val amazonPriceChartsPatch = bytecodePatch(
                 iget-object v0, p0, Lcom/amazon/mobile/mash/MASHWebFragment;->mWebView:Lcom/amazon/mobile/mash/MASHWebView;
                 invoke-virtual {p0}, Lcom/amazon/mobile/mash/MASHWebFragment;->getNavRequestUrl()Ljava/lang/String;
                 move-result-object v1
-                const-string v2, "$config"
-                invoke-static {v0, v1, v2}, $HELPER->injectPriceCharts(Landroid/webkit/WebView;Ljava/lang/String;Ljava/lang/String;)V
+                invoke-static {v0, v1}, $HELPER->injectPriceCard(Landroid/webkit/WebView;Ljava/lang/String;)V
             """.trimIndent(),
+        )
+
+        // Every WebView, once, as it is created: p0=this. No register is needed.
+        MShopWebViewInitializeFingerprint.method.addInstructions(
+            0,
+            "invoke-static {p0}, $HELPER->attachPriceBridge(Landroid/webkit/WebView;)V",
         )
     }
 }
