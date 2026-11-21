@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "3.4.1",
+  "version": "3.5.0",
   "patches": [
     {
       "name": "AMOLED black (Splitwise)",
@@ -622,6 +622,49 @@
     {
       "name": "Feed filters",
       "description": "Adds a set of filters that are off until turned on in Lynx Patches: focus mode, celebrations, job cards, reposts, posts from other people's activity, \"Recommended for you\", video posts, games, the \"New posts\" pill and \"See translation\".",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.linkedin.android",
+          "name": "LinkedIn",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#0A66C2",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "4.1.1272",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": "4.1.1275",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Fit videos to screen",
+      "description": "Shows the whole video in full screen instead of cutting off the sides, sized to your screen.",
       "default": true,
       "category": null,
       "dependencies": [

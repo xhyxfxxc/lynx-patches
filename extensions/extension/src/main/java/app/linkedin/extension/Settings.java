@@ -50,6 +50,7 @@ public final class Settings {
     static final String KEEP_FEED = "keep_feed";
     static final String POST_MENU = "post_menu";
     static final String VIEWER_TAP_TO_HIDE = "viewer_tap_to_hide";
+    static final String FIT_VIDEOS = "fit_videos";
     static final String SWIPE_FEEDS = "swipe_feeds";
     static final String HIDE_TAB_NETWORK = "hide_tab_network";
     static final String HIDE_TAB_JOBS = "hide_tab_jobs";
@@ -158,6 +159,10 @@ public final class Settings {
         return false;
     }
 
+    public static boolean isFitVideosIncluded() {
+        return false;
+    }
+
     public static boolean isPostMenuIncluded() {
         return false;
     }
@@ -236,6 +241,11 @@ public final class Settings {
 
     static boolean viewerTapToHide() {
         return includedAnd(isViewerTapToHideIncluded(), VIEWER_TAP_TO_HIDE, true);
+    }
+
+    /** Full-screen videos are fitted to the screen instead of cropped at the sides. */
+    static boolean fitVideos() {
+        return includedAnd(isFitVideosIncluded(), FIT_VIDEOS, true);
     }
 
     static boolean keepFeed() {
