@@ -1,10 +1,10 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "patches": [
     {
       "name": "AMOLED black (Splitwise)",
-      "description": "Real black instead of dark grey in Splitwise's dark mode: backgrounds, screens, bottom sheets, the status and navigation bars and the group charts. Cards stay a shade lighter so they stand out. AMOLED screens switch black pixels off, which saves battery. Light mode is unchanged. Can be switched off in Loki Patches > Appearance.",
+      "description": "Real black instead of dark grey in Splitwise's dark mode: backgrounds, screens, bottom sheets, the status and navigation bars and the group charts. Cards stay a shade lighter so they stand out. AMOLED screens switch black pixels off, which saves battery. Light mode is unchanged. Can be switched off in Lynx Patches > Appearance.",
       "default": true,
       "category": null,
       "dependencies": [
@@ -57,14 +57,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -186,14 +186,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -229,14 +229,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -294,14 +294,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -335,14 +335,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -423,14 +423,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -466,14 +466,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -574,7 +574,7 @@
     },
     {
       "name": "Enable premium features (Truecaller)",
-      "description": "Makes the premium features the app decides on the device available, the plan read as Gold instead of Free, hides the after-call screen (switch in Loki Patches > Calls) and lets you view profiles and search numbers without the other person being told (switches in Loki Patches > Privacy). Call Assistant and Family Sharing stay off. Who viewed me, who searched for me, caller ID for unknown numbers and fraud insurance show only what Truecaller's servers send to the account.",
+      "description": "Makes the premium features the app decides on the device available, the plan read as Gold instead of Free, hides the after-call screen (switch in Lynx Patches > Calls) and lets you view profiles and search numbers without the other person being told (switches in Lynx Patches > Privacy). Call Assistant and Family Sharing stay off. Who viewed me, who searched for me, caller ID for unknown numbers and fraud insurance show only what Truecaller's servers send to the account.",
       "default": true,
       "category": null,
       "dependencies": [
@@ -621,7 +621,7 @@
     },
     {
       "name": "Feed filters",
-      "description": "Adds a set of filters that are off until turned on in Loki Patches: focus mode, celebrations, job cards, reposts, posts from other people's activity, \"Recommended for you\", video posts, games, the \"New posts\" pill and \"See translation\".",
+      "description": "Adds a set of filters that are off until turned on in Lynx Patches: focus mode, celebrations, job cards, reposts, posts from other people's activity, \"Recommended for you\", video posts, games, the \"New posts\" pill and \"See translation\".",
       "default": true,
       "category": null,
       "dependencies": [
@@ -637,14 +637,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -761,14 +761,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -916,14 +916,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -996,14 +996,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1127,14 +1127,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1170,14 +1170,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1213,14 +1213,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1293,14 +1293,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1339,14 +1339,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1382,14 +1382,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1409,7 +1409,7 @@
     },
     {
       "name": "Only real camera photos count as Camera",
-      "description": "Google Photos treats everything under DCIM as Camera, so screenshots and other apps' DCIM folders are always backed up with it. Only DCIM/Camera counts; the rest become normal device folders you choose in Photos' own Backup settings. A switch in Loki Patches restores Photos' rule.",
+      "description": "Google Photos treats everything under DCIM as Camera, so screenshots and other apps' DCIM folders are always backed up with it. Only DCIM/Camera counts; the rest become normal device folders you choose in Photos' own Backup settings. A switch in Lynx Patches restores Photos' rule.",
       "default": true,
       "category": null,
       "dependencies": [
@@ -1462,14 +1462,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1505,14 +1505,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1627,14 +1627,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1670,14 +1670,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1745,14 +1745,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -1788,14 +1788,14 @@
           "signatures": null,
           "targets": [
             {
-              "version": "4.1.1270",
+              "version": "4.1.1272",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "4.1.1272",
+              "version": "4.1.1275",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,

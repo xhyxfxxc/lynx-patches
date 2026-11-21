@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-20T21:56:36",
-  "description": "## 3.4.0 (2026-11-20)\n\n### New Features\n- **Google Photos:** Google Photos joins the bundle - unlimited original-quality backup as a Pixel XL, only real camera photos count as Camera, MicroG-RE sign-in, installs next to the stock app.\n\n### Fixes\n- Diagnostic reports always start with a line saying the patches loaded, so a report is never empty.\n\n**45 patches for 6 apps.** Full list in the [README](https://github.com/lokesh-sparrow/loki-patches#apps).",
-  "download_url": "https://github.com/lokesh-sparrow/loki-patches/releases/download/v3.4.0/patches-3.4.0.mpp",
+  "created_at": "2026-11-21T08:59:05",
+  "description": "## 3.4.1 (2026-11-21)\n\n### Fixes\n- **LinkedIn:** Opening Lynx Patches on a mounted install shows a hint instead of closing LinkedIn.\n- **LinkedIn:** The MicroG-RE check also runs on the welcome and sign-in screens, before Continue with Google.\n- **LinkedIn:** Post menu actions only run when LinkedIn itself asks, not when another app sends the link.\n- **LinkedIn:** Restoring a backup now replaces the current settings instead of keeping switches the backup does not mention.\n- **LinkedIn:** Swipe between feeds never taps the feed when the For you / Network tabs are scrolled away.\n- **LinkedIn:** Anonymous profile viewing also keeps company page visits out of the page's visitor analytics.\n- **LinkedIn:** Notifications also register on a build with Change package name, Firebase now sees LinkedIn's own package name.\n\n### Updated App Support\n- **LinkedIn:** LinkedIn 4.1.1275 is supported, next to 4.1.1272.\n\n**45 patches for 6 apps.** Full list in the [README](https://github.com/[secure]/lynx-patches#apps).",
+  "download_url": "https://github.com/xhyxfxxc/lynx-patches/releases/download/v3.4.1/patches-3.4.1.mpp",
   "signature_download_url": "",
-  "version": "3.4.0"
+  "version": "3.4.1"
 }

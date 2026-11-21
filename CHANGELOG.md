@@ -1,3 +1,19 @@
+## 3.4.1 (2026-11-21)
+
+### Fixes
+- **LinkedIn:** Opening Lynx Patches on a mounted install shows a hint instead of closing LinkedIn.
+- **LinkedIn:** The MicroG-RE check also runs on the welcome and sign-in screens, before Continue with Google.
+- **LinkedIn:** Post menu actions only run when LinkedIn itself asks, not when another app sends the link.
+- **LinkedIn:** Restoring a backup now replaces the current settings instead of keeping switches the backup does not mention.
+- **LinkedIn:** Swipe between feeds never taps the feed when the For you / Network tabs are scrolled away.
+- **LinkedIn:** Anonymous profile viewing also keeps company page visits out of the page's visitor analytics.
+- **LinkedIn:** Notifications also register on a build with Change package name, Firebase now sees LinkedIn's own package name.
+
+### Updated App Support
+- **LinkedIn:** LinkedIn 4.1.1275 is supported, next to 4.1.1272.
+
+**45 patches for 6 apps.** Full list in the [README](https://github.com/[secure]/lynx-patches#apps).
+
 ## 3.4.0 (2026-11-20)
 
 ### New Features
