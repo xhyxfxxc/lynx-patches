@@ -26,6 +26,7 @@
 | 🖤 **Dark app icon** | Black launcher icon with the white "in", instead of LinkedIn's blue (optional) |
 | 👆 **Swipe between feeds** | Swipe left or right to switch For you and Network, and Grow and Catch up |
 | 🖼️ **Tap to hide in viewers** | Tap a document or video in full screen to hide its caption and buttons |
+| 📺 **Fit videos to screen** | Full-screen videos show whole instead of cut off at the sides, sized to your screen |
 | ⋯ **Post menu items** | Copy text, Download media and Save as PDF in a post's menu |
 | 🧭 **Hide bottom tabs** | Take My Network, Jobs and More out of the bottom bar (More hidden by default) |
 | 🔑 **Google sign-in** | "Continue with Google" through MicroG-RE |

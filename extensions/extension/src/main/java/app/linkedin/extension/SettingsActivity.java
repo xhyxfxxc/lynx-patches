@@ -275,6 +275,11 @@ public class SettingsActivity extends Activity {
             page.sw(Settings.VIEWER_TAP_TO_HIDE, true, "Tap to hide in viewers",
                     "Tap a video or document in full screen to hide the caption and buttons, like photos.");
         }
+        if (Settings.isFitVideosIncluded()) {
+            page.sw(Settings.FIT_VIDEOS, true, "Fit videos to screen",
+                    "Show the whole video in full screen instead of cutting off the sides. "
+                            + "Works out the fit from your screen, on any phone.");
+        }
         if (Settings.isKeepFeedIncluded()) {
             page.sw(Settings.KEEP_FEED, true, "Keep feed on reopen",
                     "Stay where you were when you come back. Pull down or tap \"New posts\" for new posts.");
@@ -596,6 +601,7 @@ public class SettingsActivity extends Activity {
                 entry("Keep feed on reopen", Settings.isKeepFeedIncluded()),
                 entry("Post menu items", Settings.isPostMenuIncluded()),
                 entry("Tap to hide in viewers", Settings.isViewerTapToHideIncluded()),
+                entry("Fit videos to screen", Settings.isFitVideosIncluded()),
                 entry("Swipe between feeds", Settings.isSwipeFeedsIncluded()),
                 entry("Hide the My Network tab", Settings.isHideTabsIncluded()),
                 entry("Hide the Jobs tab", Settings.isHideTabsIncluded()),
