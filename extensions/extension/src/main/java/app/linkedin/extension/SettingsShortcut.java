@@ -42,6 +42,13 @@ public final class SettingsShortcut {
     public static void onMainActivityCreated(Activity activity) {
         published = true;
         publish();
+        // Also here, not only from the feed: signed out, the launcher activity hands over to the sign-in screen and no
+        // feed screen ever resumes, but "Continue with Google" needs a working microG RE.
+        try {
+            GmsCoreCheck.check(activity);
+        } catch (Throwable failure) {
+            Diagnostics.error("GmsCore check failed to start", failure);
+        }
         try {
             View root = activity.getWindow().getDecorView();
             Runnable offerNotes = () -> {

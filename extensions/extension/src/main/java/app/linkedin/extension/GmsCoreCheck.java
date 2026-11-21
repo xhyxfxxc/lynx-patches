@@ -7,6 +7,7 @@ package app.linkedin.extension;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Application;
 import android.content.ContentProviderClient;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
@@ -17,9 +18,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
 
+import java.lang.ref.WeakReference;
+
 /**
  * With GmsCore support, checks once per start that microG RE is installed, recent enough, allowed to run in the
  * background and running, and says what to do when it is not. Without it "Continue with Google" fails silently.
+ * It starts from the launcher activity, so it also runs before sign-in, and from the first feed screen.
  * <p>
  * The package name, the gservices provider and the version codes are read from microG RE's own APK
  * (https://github.com/MorpheApp/MicroG-RE, release 7.3.0: app.revanced.android.gms, provider
@@ -34,15 +38,69 @@ final class GmsCoreCheck {
     private static final String DONT_KILL_MY_APP_URL = "https://dontkillmyapp.com/?app=MicroG";
 
     private static boolean checked;
+    /** The screen in front. Signed out, the launcher activity finishes right after it starts the sign-in screen. */
+    private static WeakReference<Activity> resumed = new WeakReference<>(null);
 
     private GmsCoreCheck() {
     }
 
-    /** Called when a screen of the app resumes; does its work once, a moment later so the screen is ready. */
+    /**
+     * Called when a screen of the app starts or resumes; does its work once per process, a moment later so the
+     * screen is ready. Without the GmsCore patch it does nothing, and a second call does nothing either.
+     */
     static void check(Activity activity) {
         if (checked || !Settings.isGmsCoreSupportIncluded()) return;
         checked = true;
-        new Handler(Looper.getMainLooper()).postDelayed(() -> run(activity), 1500);
+        resumed = new WeakReference<>(activity);
+        Application application = activity.getApplication();
+        if (application != null) application.registerActivityLifecycleCallbacks(new Front());
+        new Handler(Looper.getMainLooper()).postDelayed(() -> inFront(activity, 3), 1500);
+    }
+
+    /** Runs the check on the screen in front: the one that started it may be gone (signed out) or not the one to see. */
+    private static void inFront(Activity started, int retries) {
+        Activity front = resumed.get();
+        if (front == null || front.isFinishing() || front.isDestroyed()) {
+            if (retries > 0) {
+                new Handler(Looper.getMainLooper()).postDelayed(() -> inFront(started, retries - 1), 1000);
+                return;
+            }
+            front = started;
+        }
+        run(front);
+    }
+
+    /** Remembers which screen of the app is resumed. */
+    private static final class Front implements Application.ActivityLifecycleCallbacks {
+        @Override
+        public void onActivityResumed(Activity activity) {
+            resumed = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void onActivityPaused(Activity activity) {
+            if (resumed.get() == activity) resumed = new WeakReference<>(null);
+        }
+
+        @Override
+        public void onActivityCreated(Activity activity, android.os.Bundle savedInstanceState) {
+        }
+
+        @Override
+        public void onActivityStarted(Activity activity) {
+        }
+
+        @Override
+        public void onActivityStopped(Activity activity) {
+        }
+
+        @Override
+        public void onActivitySaveInstanceState(Activity activity, android.os.Bundle outState) {
+        }
+
+        @Override
+        public void onActivityDestroyed(Activity activity) {
+        }
     }
 
     private static void run(Activity activity) {
