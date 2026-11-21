@@ -37,7 +37,7 @@ val cameraFolderPatch = bytecodePatch(
     name = "Only real camera photos count as Camera",
     description = "Google Photos treats everything under DCIM as Camera, so screenshots and other apps' DCIM " +
         "folders are always backed up with it. Only DCIM/Camera counts; the rest become normal device folders you " +
-        "choose in Photos' own Backup settings. A switch in Loki Patches restores Photos' rule.",
+        "choose in Photos' own Backup settings. A switch in Lynx Patches restores Photos' rule.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GPHOTOS)

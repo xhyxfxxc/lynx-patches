@@ -12,7 +12,7 @@ import android.content.SharedPreferences;
 import android.util.Log;
 
 /**
- * Every switch Loki Patches owns, read from and written to one private preference file.
+ * Every switch Lynx Patches owns, read from and written to one private preference file.
  *
  * The {@code is…Included()} answers start out as {@code false}. Each patch that gets applied flips the
  * one it owns to {@code true} while LinkedIn is being patched, so at runtime these methods say which

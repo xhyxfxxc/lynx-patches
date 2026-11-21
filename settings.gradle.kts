@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-rootProject.name = "loki-patches"
+rootProject.name = "lynx-patches"
 
 pluginManagement {
     repositories {

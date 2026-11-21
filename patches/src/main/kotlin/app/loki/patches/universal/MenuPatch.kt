@@ -33,7 +33,7 @@ private val menuManifestPatch = resourcePatch {
                 "activity",
                 "android:name" to "$MENU.MenuActivity",
                 "android:exported" to "true",
-                "android:label" to "Loki Patches",
+                "android:label" to "Lynx Patches",
                 "android:theme" to "@android:style/Theme.DeviceDefault.DayNight",
             ))
             application.appendChild(document.node(
@@ -42,7 +42,7 @@ private val menuManifestPatch = resourcePatch {
                 "android:targetActivity" to "$MENU.MenuActivity",
                 "android:enabled" to "false",
                 "android:exported" to "true",
-                "android:label" to "Loki Patches",
+                "android:label" to "Lynx Patches",
                 "android:icon" to LOKI_ICON,
                 children = listOf(document.node(
                     "intent-filter",
@@ -102,9 +102,9 @@ private fun bundleVersion(): String {
     val manifests = object {}.javaClass.classLoader.getResources("META-INF/MANIFEST.MF")
     while (manifests.hasMoreElements()) {
         val main = manifests.nextElement().openStream().use { java.util.jar.Manifest(it).mainAttributes }
-        // The bundle is Loki Patches now; the old name is kept so a Doc Scanner bundle still stamps its
+        // The bundle is Lynx Patches now; the old name is kept so a Doc Scanner bundle still stamps its
         // own version. Without one of these the screen shows "Patches dev".
-        if (main.getValue("Name") !in setOf("Loki Patches", "Doc Scanner Patches")) continue
+        if (main.getValue("Name") !in setOf("Lynx Patches", "Doc Scanner Patches")) continue
         return main.getValue("Version") ?: "dev"
     }
     return "dev"

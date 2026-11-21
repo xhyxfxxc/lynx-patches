@@ -5,14 +5,14 @@
 
 group = "app.loki"
 
-private val REPO = "https://github.com/lokesh-sparrow/loki-patches"
+private val REPO = "https://github.com/xhyxfxxc/lynx-patches"
 
 patches {
     about {
-        name = "Loki Patches"
-        description = "LinkedIn, Splitwise, Truecaller, Doc Scanner, MX Player Pro and Google Photos patches, plus patches that work on any app, for use with Morphe"
+        name = "Lynx Patches"
+        description = "LinkedIn, Splitwise, Truecaller, Doc Scanner, MX Player Pro and Google Photos patches, plus patches that work on any app, for use with Morphe. Based on Loki Patches by Lokesh Sparrow."
         source = REPO
-        author = "Lokesh Sparrow"
+        author = "xhyxfxxc"
         contact = "na"
         website = REPO
         license = "GPLv3"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (C) 2026 Lokesh Sparrow
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Release notes in the Loki Patches format, printed to stdout for semantic-release.
+"""Release notes in the Lynx Patches format, printed to stdout for semantic-release.
 
 semantic-release (@semantic-release/exec generateNotesCmd) uses the output as the notes of the
 release; the same text becomes the CHANGELOG entry, the description Morphe Manager shows

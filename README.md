@@ -1,40 +1,42 @@
 <p align="center">
-  <img src=".github/assets/header.jpg" alt="Loki Patches: No Ads. No Clutter. Open-source Morphe patches" width="100%">
+  <img src="patches-bundle.png" alt="Lynx Patches logo" width="120">
 </p>
+
+<h1 align="center">Lynx Patches</h1>
 
 <div align="center">
 
-### Your apps. Your rules. One Loki experience.
+### Your apps. Your rules. One Lynx experience.
 
 A growing collection of open-source Android patches for Morphe. Remove clutter, take control of your privacy and
 make everyday apps work the way you want.
 
-**Every patched app gets the same Loki Patches menu.**
+**Every patched app gets the same Lynx Patches menu.**
 
 <br/>
 
-[![Latest release](https://img.shields.io/github/v/release/lokesh-sparrow/loki-patches?sort=semver&style=for-the-badge&label=release&labelColor=0d1117&color=22d3ee)](https://github.com/lokesh-sparrow/loki-patches/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/lokesh-sparrow/loki-patches/total?style=for-the-badge&labelColor=0d1117&color=0ea5e9)](https://github.com/lokesh-sparrow/loki-patches/releases)
+[![Latest release](https://img.shields.io/github/v/release/xhyxfxxc/lynx-patches?sort=semver&style=for-the-badge&label=release&labelColor=0d1117&color=22d3ee)](https://github.com/xhyxfxxc/lynx-patches/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/xhyxfxxc/lynx-patches/total?style=for-the-badge&labelColor=0d1117&color=0ea5e9)](https://github.com/xhyxfxxc/lynx-patches/releases)
 <!-- BADGES_START -->
 [![apps](https://img.shields.io/badge/apps-6-2563eb?style=for-the-badge&labelColor=0d1117)](#apps) [![patches](https://img.shields.io/badge/patches-45-14b8a6?style=for-the-badge&labelColor=0d1117)](#apps)
 <!-- BADGES_END -->
 [![Morphe](https://img.shields.io/badge/patches%20for-Morphe-06b6d4?style=for-the-badge&labelColor=0d1117)](https://morphe.software)
-[![License](https://img.shields.io/github/license/lokesh-sparrow/loki-patches?style=for-the-badge&labelColor=0d1117&color=6e7681)](LICENSE)
+[![License](https://img.shields.io/github/license/xhyxfxxc/lynx-patches?style=for-the-badge&labelColor=0d1117&color=6e7681)](LICENSE)
 
 <br/>
 
-[**Apps**](#apps) · [**Install**](#install) · [**Loki Patches menu**](#loki-patches-menu) · [**FAQ**](#faq) · [**Report a bug**](https://github.com/lokesh-sparrow/loki-patches/issues/new/choose)
+[**Apps**](#apps) · [**Install**](#install) · [**Lynx Patches menu**](#lynx-patches-menu) · [**FAQ**](#faq) · [**Report a bug**](https://github.com/xhyxfxxc/lynx-patches/issues/new/choose)
 
 <br/>
 
-<a href="https://morphe.software/add-source?github=lokesh-sparrow/loki-patches&name=Loki%20Patches"><img src=".github/assets/add-to-morphe.svg" alt="Add to Morphe" height="55"/></a>
+<a href="https://morphe.software/add-source?github=xhyxfxxc/lynx-patches&name=Lynx%20Patches"><img src=".github/assets/add-to-morphe.svg" alt="Add to Morphe" height="55"/></a>
 
 <sub>Stable releases. Turn off Play Store auto-update for every app you patch, or it replaces the patched one.</sub>
 
 </div>
 
 > [!NOTE]
-> Built and maintained by **Lokesh Sparrow**. You patch the apps on your own phone with Morphe Manager; nothing is
+> Maintained by **xhyxfxxc**, based on [Loki Patches by Lokesh Sparrow](https://github.com/lokesh-sparrow/loki-patches). You patch the apps on your own phone with Morphe Manager; nothing is
 > sent anywhere. Not affiliated with the developers of the apps listed here, or with the Morphe project.
 
 ---
@@ -45,7 +47,7 @@ Every app with its highlights, the version it is built for, and which file to do
 for its features, patches and FAQ.
 
 <!-- APPS_START -->
-> **[v3.4.0](https://github.com/lokesh-sparrow/loki-patches/releases/tag/v3.4.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**6** apps&nbsp;&nbsp;•&nbsp;&nbsp;**45** patches
+> **[v3.4.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.4.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**6** apps&nbsp;&nbsp;•&nbsp;&nbsp;**45** patches
 
 ### Featured
 
@@ -63,7 +65,7 @@ for its features, patches and FAQ.
 
 <sub>💎&nbsp;premium&nbsp;&nbsp;🚫&nbsp;ads&nbsp;&nbsp;🛡️&nbsp;tracking&nbsp;&nbsp;🎨&nbsp;look&nbsp;&nbsp;⬇️&nbsp;downloads&nbsp;&nbsp;🧹&nbsp;clutter&nbsp;&nbsp;📵&nbsp;call screens&nbsp;&nbsp;👯&nbsp;clone&nbsp;&nbsp;🔑&nbsp;Google sign-in&nbsp;&nbsp;🎞️&nbsp;codecs&nbsp;&nbsp;💾&nbsp;backup</sub>
 
-| App | Highlights | Patches | Version | File | Loki Patches menu |
+| App | Highlights | Patches | Version | File | Lynx Patches menu |
 |---|---|:---:|---|---|---|
 | <img src="assets/icons/com.cv.docscanner.png" width="20" height="20" align="top" alt=""> [**Doc Scanner**](docs/apps/doc-scanner.md) | 💎 🧹 👯 🔑 | 5 | `6.9.14` | **APKM** | Side menu |
 | <img src="assets/icons/com.google.android.apps.photos.png" width="20" height="20" align="top" alt=""> [**Google Photos**](docs/apps/google-photos.md) | 💾 🔑 👯 | 4 | `8.1.0.1023737660` | **APKM (Android 8+)** | Account menu |
@@ -85,8 +87,8 @@ Off by default; tick them in Manager for any app.
 
 ## Install
 
-1. Install [Morphe Manager](https://morphe.software), then tap **[Add to Morphe](https://morphe.software/add-source?github=lokesh-sparrow/loki-patches&name=Loki%20Patches)**
-   (or add `https://github.com/lokesh-sparrow/loki-patches` by hand). It gets stable releases only.
+1. Install [Morphe Manager](https://morphe.software), then tap **[Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches&name=Lynx%20Patches)**
+   (or add `https://github.com/xhyxfxxc/lynx-patches` by hand). It gets stable releases only.
 2. Pick the app. Download the version Manager recommends from APKMirror, in the format the **File** column of
    [Apps](#apps) says: **APK** = the plain APK, **APKM** = the bundle.
 3. Patch it and install it.
@@ -95,11 +97,11 @@ Use one patch source per app. Two sources for the same app apply the same patche
 install.
 
 > [!NOTE]
-> **Already using Loki Patches for LinkedIn?** Nothing changes for you: same source, same patches, same settings.
+> **Already using Lynx Patches for LinkedIn?** Nothing changes for you: same source, same patches, same settings.
 
-## Loki Patches menu
+## Lynx Patches menu
 
-Every patched app gets the same **Loki Patches** menu. Open it from the entry shown in the [Apps](#apps) table, or
+Every patched app gets the same **Lynx Patches** menu. Open it from the entry shown in the [Apps](#apps) table, or
 long press the app's icon on your home screen.
 
 | Page | What it does |
@@ -116,7 +118,7 @@ long press the app's icon on your home screen.
 
 ## FAQ
 
-**I can't find the Loki Patches menu.**
+**I can't find the Lynx Patches menu.**
 The home screen shortcut appears once the app has been opened at least once, and some launchers hide shortcuts.
 Use the entry inside the app (see [Apps](#apps)), or turn on **General → Show in the app drawer**.
 
@@ -134,8 +136,8 @@ Questions about one app (LinkedIn autoplay, anonymous viewing and so on) are on 
 
 ## Reporting a bug
 
-In the Loki Patches menu, open **Diagnostics**, switch on **Diagnostic logging**, repeat the problem, then use
-**Copy report** (or **Share report**) and paste the text into a [bug report](https://github.com/lokesh-sparrow/loki-patches/issues/new/choose),
+In the Lynx Patches menu, open **Diagnostics**, switch on **Diagnostic logging**, repeat the problem, then use
+**Copy report** (or **Share report**) and paste the text into a [bug report](https://github.com/xhyxfxxc/lynx-patches/issues/new/choose),
 choosing the app. Links, IDs and e-mail addresses are removed from the report before it is copied.
 
 ## Building from source
@@ -149,17 +151,17 @@ You need JDK 17 or newer, the Android SDK, and a GitHub token with `read:package
 
 ## Disclaimer
 
-Loki Patches is an independent project. The apps it patches, their names and their trademarks belong to their
-owners; neither they nor the Morphe project made, endorse or are involved in Loki Patches. Modifying an app can
+Lynx Patches is an independent project. The apps it patches, their names and their trademarks belong to their
+owners; neither they nor the Morphe project made, endorse or are involved in Lynx Patches. Modifying an app can
 conflict with that app's terms of service, and you install the result at your own risk.
 
 ## License
 
-Loki Patches © 2026 Lokesh Sparrow. Free and open-source software under [GPLv3](LICENSE), with additional project terms and third-party attributions in [NOTICE](NOTICE).
+Lynx Patches is maintained by xhyxfxxc. It is a modified version of **Loki Patches by Lokesh Sparrow** ([upstream](https://github.com/lokesh-sparrow/loki-patches)), forked on 2026-11-21 from v3.4.0 and changed since. Free and open-source software under [GPLv3](LICENSE), with additional project terms and third-party attributions in [NOTICE](NOTICE). Not made or endorsed by Lokesh Sparrow, the Morphe project, or the makers of the patched apps.
 
 ---
 
 <p align="center">
-  Built and maintained by <b>Lokesh Sparrow</b> —
-  questions or issues? <a href="https://github.com/lokesh-sparrow/loki-patches/issues">Open an issue</a>.
+  Maintained by <b>xhyxfxxc</b>, based on Loki Patches by Lokesh Sparrow.
+  Questions or issues? <a href="https://github.com/xhyxfxxc/lynx-patches/issues">Open an issue</a>.
 </p>

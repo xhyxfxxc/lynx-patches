@@ -16,7 +16,7 @@ import android.view.View;
 import java.util.Collections;
 
 /**
- * Puts "Loki Patches" on the launcher's long-press menu for LinkedIn, opening the extension's own
+ * Puts "Lynx Patches" on the launcher's long-press menu for LinkedIn, opening the extension's own
  * settings activity.
  *
  * <p>This is the entry point that works on every build: the "Me" panel row depends on server
@@ -26,7 +26,7 @@ import java.util.Collections;
 public final class SettingsShortcut {
     /** Keep the id stable: republishing updates the installed shortcut instead of adding a second. */
     private static final String SHORTCUT_ID = "loki_settings";
-    private static final String SHORTCUT_LABEL = "Loki Patches";
+    private static final String SHORTCUT_LABEL = "Lynx Patches";
     /** LinkedIn publishes its own shortcuts while starting up, so ours is republished after that. */
     private static final long REPUBLISH_DELAY_MS = 5000;
 

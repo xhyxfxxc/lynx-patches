@@ -1,3 +1,23 @@
+Lynx Patches NOTICE
+===================
+
+Copyright (C) 2026 xhyxfxxc
+
+Lynx Patches is a modified version of Loki Patches by Lokesh Sparrow
+(https://github.com/lokesh-sparrow/loki-patches). It was forked on 2026-11-21
+from Loki Patches v3.4.0 and has been changed since then. It is not the
+unchanged Loki Patches and is not made or endorsed by Lokesh Sparrow or by
+the Morphe project.
+
+Changes made in Lynx Patches (2026-11-21): renamed to Lynx Patches with its
+own logo, and update checks, links and credits pointing at this repository.
+Later changes are recorded in CHANGELOG.md and the git history.
+
+Lynx Patches is licensed under the GNU General Public License, version 3 or
+later (GPL-3.0-or-later). The Morphe NOTICE and the Loki Patches NOTICE below
+apply in full and are kept unchanged, including their section 7 terms. Anyone
+redistributing Lynx Patches, or a modified version of it, must follow them too.
+
 Morphe NOTICE
 =============
 

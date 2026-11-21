@@ -65,7 +65,7 @@ private val isStatusIncluded = Fingerprint(
     filters = listOf(fieldAccess(definingClass = STATUS, name = "INCLUDED")),
 )
 
-/** Tells the Loki Patches screen this install is unlocked (its Premium page and Patch status read it). */
+/** Tells the Lynx Patches screen this install is unlocked (its Premium page and Patch status read it). */
 private val premiumFlag = resourcePatch {
     execute {
         document("AndroidManifest.xml").use { it.addMenuFlag("app.loki.menu.premium") }
@@ -81,8 +81,8 @@ private const val ANSWER_YES = """
 val enablePremiumFeaturesPatch = bytecodePatch(
     name = "Enable premium features (Truecaller)",
     description = "Makes the premium features the app decides on the device available, the plan read as Gold " +
-        "instead of Free, hides the after-call screen (switch in Loki Patches > Calls) and lets you " +
-        "view profiles and search numbers without the other person being told (switches in Loki Patches > " +
+        "instead of Free, hides the after-call screen (switch in Lynx Patches > Calls) and lets you " +
+        "view profiles and search numbers without the other person being told (switches in Lynx Patches > " +
         "Privacy). Call Assistant and Family Sharing stay off. Who viewed me, who searched for me, caller ID for " +
         "unknown numbers and fraud insurance show only what Truecaller's servers send to the account.",
     default = true,

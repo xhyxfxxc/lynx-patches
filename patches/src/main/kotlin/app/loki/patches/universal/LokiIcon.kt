@@ -7,10 +7,10 @@ package app.loki.patches.universal
 
 import app.morphe.patcher.patch.ResourcePatchContext
 
-/** Resource name of the Loki Patches mark written by [writeLokiLogo]: the L, the brand, in the app drawer too. */
+/** Resource name of the Lynx Patches mark written by [writeLokiLogo]: the L, the brand, in the app drawer too. */
 internal const val LOKI_ICON = "@drawable/loki_logo"
 
-/** Material's puzzle piece ("extension"), the Loki Patches mark, on a 24x24 grid. */
+/** Material's puzzle piece ("extension"), the Lynx Patches mark, on a 24x24 grid. */
 internal const val PUZZLE =
     "M20.5,11H19V7c0,-1.1 -0.9,-2 -2,-2h-4V3.5C13,2.12 11.88,1 10.5,1S8,2.12 8,3.5V5H4c-1.1,0 -1.99,0.9 " +
         "-1.99,2v3.8H3.5c1.49,0 2.7,1.21 2.7,2.7s-1.21,2.7 -2.7,2.7H2V20c0,1.1 0.9,2 2,2h3.8v-1.5c0,-1.49 1.21,-2.7 " +
@@ -34,7 +34,7 @@ internal fun ResourcePatchContext.writeLokiLogo() {
 internal object LokiIconSource
 
 /**
- * Writes the launcher icon of the optional "Loki Patches" app-drawer entry: the teal tile with the white puzzle
+ * Writes the launcher icon of the optional "Lynx Patches" app-drawer entry: the teal tile with the white puzzle
  * piece, the same mark as the long-press shortcut. A vector, so one file serves every screen density; it
  * replaces the framework info glyph the alias used to borrow.
  */

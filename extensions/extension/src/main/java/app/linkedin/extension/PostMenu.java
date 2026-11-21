@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
  * The menu is a server driven page (feed-control-menu-page) with one row per item (feed-control-menu-save, ...).
  * The Save row is copied with its label replaced and its tap action (the component's triggers) replaced by a
  * navigate to URL action for lokipatches://post/{action}?u={post}, which PostActionActivity handles. LinkedIn
- * starts external URLs with an ACTION_VIEW intent, the same way Loki Patches' Settings row worked.
+ * starts external URLs with an ACTION_VIEW intent, the same way Lynx Patches' Settings row worked.
  * <p>
  * The text, media and document of a post are remembered when the feed loads it (feed-full-update), by the post's
  * URNs, which the menu page carries too.

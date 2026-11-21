@@ -36,7 +36,7 @@ private val queueSearchReport = Fingerprint(
     strings = listOf("ExtraSearchTerm", "ExtraIsInPhonebookContact", "ExactSearchLoggerWorker"),
 )
 
-/** Lets the Loki Patches screen show the switches and report the patches (Privacy page, Patch status). */
+/** Lets the Lynx Patches screen show the switches and report the patches (Privacy page, Patch status). */
 private val anonymousFlag = resourcePatch {
     execute {
         document("AndroidManifest.xml").use {
@@ -48,7 +48,7 @@ private val anonymousFlag = resourcePatch {
 
 /**
  * Opening someone's profile no longer tells them you looked. Internal: it ships with the premium patch, and a switch
- * in Loki Patches > Privacy (on by default) decides at run time. Off, Truecaller sends the view as usual.
+ * in Lynx Patches > Privacy (on by default) decides at run time. Off, Truecaller sends the view as usual.
  */
 internal val anonymousProfileViewing = bytecodePatch {
     dependsOn(menuPatch, anonymousFlag)

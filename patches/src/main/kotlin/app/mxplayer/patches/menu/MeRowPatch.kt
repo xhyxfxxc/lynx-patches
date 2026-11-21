@@ -20,7 +20,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 private const val ME_LAYOUT_ID = 0x7f0d00ee
 
 /**
- * The Me page's fragment hands back a view binding; the injected call builds a "Loki Patches" row and puts it above
+ * The Me page's fragment hands back a view binding; the injected call builds a "Lynx Patches" row and puts it above
  * MX's Settings row. The row is built at runtime from that Settings row - same layout params, background, padding,
  * text colour, size and typeface, and a copy of its icon and chevron - so it follows whatever theme is active.
  * Nothing is added to res/layout/fragment_me.xml: an extra row there sent MX's skin inflater down a fallback path

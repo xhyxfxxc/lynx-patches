@@ -16,7 +16,7 @@ import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import org.w3c.dom.Element
 
-/** Material's outlined puzzle piece ("extension"), the Loki Patches mark, on Truecaller's 24x24 icon grid. */
+/** Material's outlined puzzle piece ("extension"), the Lynx Patches mark, on Truecaller's 24x24 icon grid. */
 private const val PUZZLE_OUTLINE =
     "M10.5,4.5c0.28,0 0.5,0.22 0.5,0.5v2h6v6h2c0.28,0 0.5,0.22 0.5,0.5s-0.22,0.5 -0.5,0.5h-2v6h-2.12" +
         "c-0.68,-1.75 -2.39,-3 -4.38,-3s-3.7,1.25 -4.38,3H4v-2.12c1.75,-0.68 3,-2.39 3,-4.38 0,-1.99 -1.24,-3.7 " +
@@ -28,7 +28,7 @@ private const val PUZZLE_OUTLINE =
 /**
  * Truecaller's "Android watch" entries name a companion app most people never install: the profile menu item
  * (MenuItem.ANDROID_WATCH, string usershome_menu_item_android_watch) and the "Truecaller for Wear OS" row in
- * Settings (settings_watch). Both become "Loki Patches" with the puzzle icon, in every language the app ships.
+ * Settings (settings_watch). Both become "Lynx Patches" with the puzzle icon, in every language the app ships.
  */
 private val watchEntryResources = resourcePatch {
     execute {
@@ -41,7 +41,7 @@ private val watchEntryResources = resourcePatch {
                 val strings = document.getElementsByTagName("string")
                 for (index in 0 until strings.length) {
                     val string = strings.item(index) as? Element ?: continue
-                    if (string.getAttribute("name") in names) string.textContent = "Loki Patches"
+                    if (string.getAttribute("name") in names) string.textContent = "Lynx Patches"
                 }
             }
         }
@@ -82,7 +82,7 @@ private val watchFragmentViewCreated = Fingerprint(
 )
 
 /**
- * The Loki Patches entry inside Truecaller. Branding, so it is internal: it applies with every Truecaller patch
+ * The Lynx Patches entry inside Truecaller. Branding, so it is internal: it applies with every Truecaller patch
  * and never shows as a checkbox in Manager, and no launcher icon is added.
  */
 internal val truecallerMenuEntry = bytecodePatch {

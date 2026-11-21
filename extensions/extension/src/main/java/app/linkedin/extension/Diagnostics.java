@@ -143,10 +143,10 @@ final class Diagnostics {
      */
     static String report(Context context) {
         StringBuilder sb = new StringBuilder();
-        sb.append("### Loki Patches diagnostic report\n")
+        sb.append("### Lynx Patches diagnostic report\n")
                 .append("Links, IDs, and e-mail addresses were removed. Please check it before posting.\n\n")
                 .append("```\n");
-        sb.append("Loki Patches ").append(Settings.patchesVersion())
+        sb.append("Lynx Patches ").append(Settings.patchesVersion())
                 .append(" • LinkedIn ").append(linkedInVersion(context)).append('\n');
         sb.append("Android ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT)
                 .append(") • ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL)

@@ -9,7 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * The language of the Loki Patches screens.
+ * The language of the Lynx Patches screens.
  *
  * <p>Code always passes English text; that English text is the key into the table the build
  * generates from src/main/translations. An unknown key, an empty translation or a language without

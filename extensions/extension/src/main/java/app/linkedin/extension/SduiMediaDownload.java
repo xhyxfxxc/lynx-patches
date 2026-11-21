@@ -38,7 +38,7 @@ import java.util.concurrent.Executors;
 
 /**
  * The download button of the server driven media screens: the photo viewer (MediaUpdateDetail), the video
- * viewer (VideoViewer), the profile photo and the banner. A long press opens the Loki Patches settings.
+ * viewer (VideoViewer), the profile photo and the banner. A long press opens the Lynx Patches settings.
  *
  * These screens are composed off the main thread a moment after their fragment resumes, so media found in a
  * payload is remembered against the screen in front, or held briefly for the screen that is about to resume.

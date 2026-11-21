@@ -68,7 +68,7 @@
   "Import settings": "Импорт настроек",
   "Restore settings from a backup in the clipboard.": "Восстановить настройки из резервной копии в буфере обмена.",
   "Reset to defaults": "Сбросить настройки",
-  "Reset all Loki Patches settings.": "Сбрасывает все настройки Loki Patches.",
+  "Reset all Lynx Patches settings.": "Сбрасывает все настройки Lynx Patches.",
   "Diagnostic logging": "Диагностический журнал",
   "Records extra detail for the diagnostic report. Switch it on, reproduce the issue, then copy the report.": "Записывает дополнительные сведения для диагностического отчёта. Включите, воспроизведите проблему и скопируйте отчёт.",
   "Copy diagnostic report": "Скопировать диагностический отчёт",

@@ -14,7 +14,7 @@ import app.loki.extension.SplitwiseFeatures;
 import java.util.List;
 
 /**
- * The app's own pages on the Loki Patches screen, for every app except LinkedIn (whose pages are its feature
+ * The app's own pages on the Lynx Patches screen, for every app except LinkedIn (whose pages are its feature
  * switches). Each page reads what the patches wrote into the manifest, so it only appears, and only says
  * "unlocked" or "hidden", when that patch really ran. These patches have no switches of their own: what they
  * do is chosen in Manager, so the pages report status.

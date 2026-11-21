@@ -51,8 +51,8 @@ private fun FieldReference.smali() = "$definingClass->$name:$type"
 private fun Instruction.method() = (this as? ReferenceInstruction)?.reference as? MethodReference
 
 /**
- * "Loki Patches" row in the Google Photos account menu, between "Your data in Google Photos" and "Photos settings",
- * in the same style as those rows, with the teal Loki puzzle piece. Tapping it opens the Loki Patches screen.
+ * "Lynx Patches" row in the Google Photos account menu, between "Your data in Google Photos" and "Photos settings",
+ * in the same style as those rows, with the teal Loki puzzle piece. Tapping it opens the Lynx Patches screen.
  *
  * The row is copied from how Photos builds its own "Photos settings" row (found by its label resource,
  * `og_app_settings`), so it uses the same builder, group and style. Each step checks the code is shaped as expected

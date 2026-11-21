@@ -68,7 +68,7 @@
   "Import settings": "นำเข้าการตั้งค่า",
   "Restore settings from a backup in the clipboard.": "กู้คืนการตั้งค่าจากข้อมูลสำรองในคลิปบอร์ด",
   "Reset to defaults": "คืนค่าเริ่มต้น",
-  "Reset all Loki Patches settings.": "รีเซ็ตการตั้งค่าทั้งหมดของ Loki Patches",
+  "Reset all Lynx Patches settings.": "รีเซ็ตการตั้งค่าทั้งหมดของ Lynx Patches",
   "Diagnostic logging": "บันทึกการวินิจฉัย",
   "Records extra detail for the diagnostic report. Switch it on, reproduce the issue, then copy the report.": "เก็บรายละเอียดเพิ่มเติมสำหรับรายงานการวินิจฉัย เปิดตัวเลือกนี้ ทำให้ปัญหาเกิดขึ้นอีกครั้ง แล้วคัดลอกรายงาน",
   "Copy diagnostic report": "คัดลอกรายงานการวินิจฉัย",

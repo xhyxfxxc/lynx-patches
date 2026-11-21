@@ -48,7 +48,7 @@ private fun Document.node(tag: String, vararg attributes: Pair<String, String>, 
 
 /**
  * Two activities of the extension that LinkedIn's manifest has to declare, since the extension ships none:
- * the Loki Patches settings screen, and an invisible activity that receives the `lokipatches://post/...`
+ * the Lynx Patches settings screen, and an invisible activity that receives the `lokipatches://post/...`
  * links behind the rows added to a post's ⋯ menu.
  */
 private val extensionActivitiesManifestPatch = resourcePatch {
@@ -63,7 +63,7 @@ private val extensionActivitiesManifestPatch = resourcePatch {
                     "activity",
                     "android:name" to "$EXT_JAVA_PACKAGE.SettingsActivity",
                     "android:exported" to "false",
-                    "android:label" to "Loki Patches",
+                    "android:label" to "Lynx Patches",
                     "android:theme" to "@android:style/Theme.DeviceDefault.DayNight",
                 )
             )
@@ -75,7 +75,7 @@ private val extensionActivitiesManifestPatch = resourcePatch {
                     "android:targetActivity" to "$EXT_JAVA_PACKAGE.SettingsActivity",
                     "android:enabled" to "false",
                     "android:exported" to "true",
-                    "android:label" to "Loki Patches",
+                    "android:label" to "Lynx Patches",
                     "android:icon" to LOKI_ICON,
                     children = listOf(
                         manifest.node(
@@ -161,7 +161,7 @@ private fun MutableMethod.callOnVoidReturns(hook: String) = positionsOf(Opcode.R
 }
 
 /**
- * Base of every other patch: bundles the extension, adds the Loki Patches entry points (a row in the "Me"
+ * Base of every other patch: bundles the extension, adds the Lynx Patches entry points (a row in the "Me"
  * panel, a launcher shortcut) and lets the extension follow SduiFragment's lifecycle for the download button.
  */
 val settingsPatch = bytecodePatch {
@@ -244,7 +244,7 @@ fun bundleVersion(): String {
     val manifests = object {}.javaClass.classLoader.getResources("META-INF/MANIFEST.MF")
     while (manifests.hasMoreElements()) {
         val main = manifests.nextElement().openStream().use { java.util.jar.Manifest(it).mainAttributes }
-        if (main.getValue("Name") != "Loki Patches") continue
+        if (main.getValue("Name") != "Lynx Patches") continue
         return main.getValue("Version") ?: "dev"
     }
     return "dev"

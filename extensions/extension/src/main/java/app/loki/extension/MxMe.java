@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A "Loki Patches" row on MX Player's Me page, built at runtime from MX's own Settings row so it follows whatever
+ * A "Lynx Patches" row on MX Player's Me page, built at runtime from MX's own Settings row so it follows whatever
  * theme is active: the same layout params, background, padding, text colour, text size and typeface, with the icon
  * and chevron copied from that row.
  *
@@ -116,7 +116,7 @@ public final class MxMe {
             if (template == null) template = candidate;
         }
         TextView label = new TextView(context);
-        label.setText("Loki Patches");
+        label.setText("Lynx Patches");
         label.setSingleLine(true);
         label.setEllipsize(TextUtils.TruncateAt.END);
         if (template != null) {

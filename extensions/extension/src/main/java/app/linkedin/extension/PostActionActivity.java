@@ -10,7 +10,7 @@ import android.net.Uri;
 import android.os.Bundle;
 
 /**
- * Invisible screen behind the items Loki Patches adds to a post's ⋯ menu (lokipatches://post/...): does the action
+ * Invisible screen behind the items Lynx Patches adds to a post's ⋯ menu (lokipatches://post/...): does the action
  * and closes. LinkedIn opens the item's URL with an ACTION_VIEW intent.
  */
 @SuppressWarnings("unused")

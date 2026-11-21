@@ -162,10 +162,10 @@ public final class LokiLog {
     /** The bug report: versions, patch list, saved settings and the newest log lines, redacted. */
     public static String report(Context context) {
         StringBuilder sb = new StringBuilder();
-        sb.append("### Loki Patches diagnostic report\n")
+        sb.append("### Lynx Patches diagnostic report\n")
                 .append("Links, ids and e-mail addresses were removed. Please check it before posting.\n\n")
                 .append("```\n");
-        sb.append("Loki Patches ").append(MenuInfo.patchesVersion())
+        sb.append("Lynx Patches ").append(MenuInfo.patchesVersion())
                 .append(" • ").append(appLabel(context)).append(' ').append(appVersion(context)).append('\n');
         sb.append("Android ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT)
                 .append(") • ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL).append('\n');

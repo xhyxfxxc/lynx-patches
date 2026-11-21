@@ -68,7 +68,7 @@
   "Import settings": "Nhập cài đặt",
   "Restore settings from a backup in the clipboard.": "Khôi phục cài đặt từ bản sao lưu trong bộ nhớ tạm.",
   "Reset to defaults": "Khôi phục mặc định",
-  "Reset all Loki Patches settings.": "Đặt lại toàn bộ cài đặt của Loki Patches.",
+  "Reset all Lynx Patches settings.": "Đặt lại toàn bộ cài đặt của Lynx Patches.",
   "Diagnostic logging": "Nhật ký chẩn đoán",
   "Records extra detail for the diagnostic report. Switch it on, reproduce the issue, then copy the report.": "Ghi thêm chi tiết cho báo cáo chẩn đoán. Bật lên, tái hiện sự cố, rồi sao chép báo cáo.",
   "Copy diagnostic report": "Sao chép báo cáo chẩn đoán",

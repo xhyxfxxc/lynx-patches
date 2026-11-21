@@ -137,7 +137,7 @@ def check_row_builders():
     """A host row built beside the app's own rows must copy its neighbour's layout params, margins included."""
     for path in walk(EXTENSION, ".java"):
         text = read(path)
-        if "Loki Patches" not in text or "setOnClickListener" not in text:
+        if "Lynx Patches" not in text or "setOnClickListener" not in text:
             continue
         # Only a row placed among the host's own rows: a floating button sets its own FrameLayout params.
         # A row placed among the host's rows is inserted at an index; an overlay is simply added on top.
@@ -195,19 +195,19 @@ def check_docs_claims():
 
 
 def check_brand():
-    """The logo Manager shows for this source and the logo the app draws are one file: the Loki L."""
+    """The logo Manager shows for this source and the logo the app draws are one file: the Lynx logo."""
     bundle = os.path.join(ROOT, "patches-bundle.png")
     logo = os.path.join(ROOT, "patches", "src", "main", "resources", "loki", "loki_logo.png")
     for path in (bundle, logo):
         if not os.path.exists(path):
-            fail("brand", os.path.relpath(path, ROOT), "missing - the Loki L must ship")
+            fail("brand", os.path.relpath(path, ROOT), "missing - the Lynx logo must ship")
             return
     with open(bundle, "rb") as a, open(logo, "rb") as b:
         if a.read() != b.read():
             fail("brand", "patches-bundle.png", "differs from loki/loki_logo.png - Manager and the app would show two logos")
     icon = os.path.join(PATCHES, "app", "loki", "patches", "universal", "LokiIcon.kt")
     if 'LOKI_ICON = "@drawable/loki_logo"' not in read(icon):
-        fail("brand", os.path.relpath(icon, ROOT), "LOKI_ICON no longer points at the L (@drawable/loki_logo)")
+        fail("brand", os.path.relpath(icon, ROOT), "LOKI_ICON no longer points at the Lynx logo (@drawable/loki_logo)")
 
 
 def check_private():

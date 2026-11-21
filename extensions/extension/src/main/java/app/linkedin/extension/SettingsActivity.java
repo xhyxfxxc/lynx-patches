@@ -64,7 +64,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Loki Patches' own settings screen, the same in every app: LinkedIn opens it as SettingsActivity, every other
+ * Lynx Patches' own settings screen, the same in every app: LinkedIn opens it as SettingsActivity, every other
  * app as app.loki.extension.MenuActivity (a subclass with nothing of its own). The app's own pages are chosen
  * from the package the screen runs in; the standard pages (patch status, backup, diagnostics, general, about)
  * are shared.
@@ -75,8 +75,11 @@ import java.util.Locale;
  */
 @SuppressWarnings("unused")
 public class SettingsActivity extends Activity {
-    static final String AUTHOR = "Lokesh Sparrow";
-    static final String BRAND = "Loki Patches";
+    static final String AUTHOR = "xhyxfxxc";
+    static final String BRAND = "Lynx Patches";
+    /** The project Lynx Patches is based on: its credit line stays on every About and Credits screen. */
+    static final String ORIGINAL_CREDIT = "Loki Patches by Lokesh Sparrow";
+    static final String ORIGINAL_URL = "https://github.com/lokesh-sparrow/loki-patches";
 
     /** Fallback accent when the wallpaper has no usable colour: teal, lifted on dark, deeper on light. */
     static final int ACCENT_DARK = 0xFF2DBCB1;
@@ -822,7 +825,8 @@ public class SettingsActivity extends Activity {
         icon.setImageDrawable(lokiMark());
         card.addView(icon, square(64));
         card.addView(placed(label(BRAND, 24, ink, true), Gravity.CENTER, 10, 0));
-        card.addView(placed(label(f("Made by %1$s", AUTHOR), 15, accent, false), Gravity.CENTER, 2, 0));
+        card.addView(placed(label(f("Maintained by %1$s", AUTHOR), 15, accent, false), Gravity.CENTER, 2, 0));
+        card.addView(placed(label(f("Based on %1$s", ORIGINAL_CREDIT), 13, inkMuted, false), Gravity.CENTER, 2, 0));
         card.addView(placed(label(BRAND + " " + version() + "  •  " + appName() + " " + appVersion(), 13,
                 inkMuted, false), Gravity.CENTER, 4, 0));
         TextView state = placed(label("Checking for updates…", 14, accent, true), Gravity.CENTER, 10, 0);
@@ -1049,7 +1053,7 @@ public class SettingsActivity extends Activity {
         card.addView(icon, square(88));
 
         card.addView(placed(label(BRAND, 26, ink, true), Gravity.CENTER, 16, 4));
-        card.addView(placed(label("Loki Patches  •  built for Morphe", 14, inkMuted, false),
+        card.addView(placed(label("Lynx Patches  •  built for Morphe", 14, inkMuted, false),
                 Gravity.CENTER, 0, 20));
 
         // Update box: shows this build until the GitHub check answers, then the answer.
@@ -1064,7 +1068,7 @@ public class SettingsActivity extends Activity {
         update.addView(updateBody);
         card.addView(update, wide());
         String thisBuild = BRAND + " " + version() + "  •  " + appName() + " " + appVersion()
-                + "\n" + f("Made by %1$s", AUTHOR);
+                + "\n" + f("Maintained by %1$s", AUTHOR) + "\n" + f("Based on %1$s", ORIGINAL_CREDIT);
         UpdateChecker.check((status, latest) -> {
             switch (status) {
                 case UPDATE_AVAILABLE:
@@ -1108,8 +1112,11 @@ public class SettingsActivity extends Activity {
 
     private void drawCredits() {
         LinearLayout card = titledCard(null, f("Who made %1$s possible.", BRAND));
-        card.addView(credit(IconDrawable.PEOPLE, AUTHOR, f("Creator of %1$s", BRAND),
-                "github.com/lokesh-sparrow", "https://github.com/lokesh-sparrow"));
+        card.addView(credit(IconDrawable.PEOPLE, AUTHOR, f("Maintainer of %1$s", BRAND),
+                "github.com/xhyxfxxc", "https://github.com/xhyxfxxc"));
+        card.addView(credit(IconDrawable.PEOPLE, "Lokesh Sparrow",
+                f("%1$s: the original project %2$s is based on", ORIGINAL_CREDIT, BRAND),
+                "github.com/lokesh-sparrow/loki-patches", ORIGINAL_URL));
         card.addView(credit(IconDrawable.CODE, "Morphe", "The patcher engine, Morphe Manager and the patch template",
                 "morphe.software", MORPHE_WEBSITE));
         card.addView(credit(IconDrawable.INFO, appName(),

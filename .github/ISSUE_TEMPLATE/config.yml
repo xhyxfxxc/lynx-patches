@@ -5,12 +5,6 @@
 # a blank issue.
 blank_issues_enabled: false
 contact_links:
-  - name: 💬 Questions and help
-    url: https://github.com/lokesh-sparrow/loki-patches/discussions/categories/q-a
-    about: Ask a "how do I" question in Discussions; other users often answer faster than I can.
-  - name: 📣 Announcements
-    url: https://github.com/lokesh-sparrow/loki-patches/discussions/categories/announcements
-    about: Release news, and what is coming next.
-  - name: 📖 How to use Loki Patches
-    url: https://github.com/lokesh-sparrow/loki-patches#install
-    about: Adding the source to Morphe, which file and version to download, and where the Loki Patches menu is.
+  - name: 📖 How to use Lynx Patches
+    url: https://github.com/xhyxfxxc/lynx-patches#install
+    about: Adding the source to Morphe, which file and version to download, and where the Lynx Patches menu is.

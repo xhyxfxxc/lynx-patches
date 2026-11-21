@@ -15,7 +15,7 @@ import android.graphics.drawable.Drawable;
 import app.linkedin.extension.IconDrawable;
 
 /**
- * The Loki Patches mark: Material's puzzle piece ("extension"), the same glyph Splitwise's Account row and the
+ * The Lynx Patches mark: Material's puzzle piece ("extension"), the same glyph Splitwise's Account row and the
  * Truecaller menu row use. Drawn from path data because an extension ships no resources.
  */
 final class LokiArt {

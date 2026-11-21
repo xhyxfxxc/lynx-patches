@@ -9,13 +9,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        <p align="center"><b>🧩 Loki Patches · Bug report</b></p>
+        <p align="center"><b>🧩 Lynx Patches · Bug report</b></p>
 
         Thanks for taking the time to write this up. Before you fill in the form:
 
-        - 🔎 **Look for an existing report first.** The [open and closed bug reports](https://github.com/lokesh-sparrow/loki-patches/issues?q=label%3A%22Bug+report%22) already cover most problems.
-        - ⚙️ **Where are the options?** Long press the app's icon on your home screen → **Loki Patches**, or use the entry inside the app (LinkedIn: Me panel · Splitwise: Account tab · Truecaller: profile menu or Settings · Doc Scanner: side menu).
-        - 📦 **Check your app version.** The [README](https://github.com/lokesh-sparrow/loki-patches#patches) lists the versions this bundle is built for; anything else is experimental.
+        - 🔎 **Look for an existing report first.** The [open and closed bug reports](https://github.com/xhyxfxxc/lynx-patches/issues?q=label%3A%22Bug+report%22) already cover most problems.
+        - ⚙️ **Where are the options?** Long press the app's icon on your home screen → **Lynx Patches**, or use the entry inside the app (LinkedIn: Me panel · Splitwise: Account tab · Truecaller: profile menu or Settings · Doc Scanner: side menu).
+        - 📦 **Check your app version.** The [README](https://github.com/xhyxfxxc/lynx-patches#patches) lists the versions this bundle is built for; anything else is experimental.
         - 🚫 **Never attach a patched APK**, or a link to one, to an issue.
 
   - type: dropdown
@@ -42,8 +42,8 @@ body:
   - type: input
     id: patches-version
     attributes:
-      label: Loki Patches version
-      description: Loki Patches → About.
+      label: Lynx Patches version
+      description: Lynx Patches → About.
       placeholder: "1.0.1"
     validations:
       required: true
@@ -86,13 +86,13 @@ body:
       description: |
         This lists which patches were applied and what failed, and it is the single most useful thing in a report:
 
-        1. Loki Patches → **Diagnostics** → turn on **Diagnostic logging**
+        1. Lynx Patches → **Diagnostics** → turn on **Diagnostic logging**
         2. Close the app, reopen it, then **repeat the bug**
-        3. Loki Patches → **Diagnostics** → **Copy report**
+        3. Lynx Patches → **Diagnostics** → **Copy report**
         4. Paste the result here
 
         Personal data such as links, IDs and e-mail addresses is stripped from the report, but read it before you post it.
-      placeholder: "### Loki Patches diagnostic report ..."
+      placeholder: "### Lynx Patches diagnostic report ..."
 
   - type: textarea
     id: screenshots
@@ -114,7 +114,7 @@ body:
       options:
         - label: I searched the existing issues and this is not a duplicate.
           required: true
-        - label: I'm using Morphe with the Loki Patches source, not a pre-patched APK from somewhere else.
+        - label: I'm using Morphe with the Lynx Patches source, not a pre-patched APK from somewhere else.
           required: true
         - label: The title says what is broken, and I filled in every field above.
           required: true

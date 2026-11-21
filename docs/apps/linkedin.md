@@ -3,7 +3,7 @@
 
 ![version](https://img.shields.io/badge/version-4.1.1272-2563eb?style=for-the-badge&labelColor=0d1117) ![patches](https://img.shields.io/badge/patches-23-14b8a6?style=for-the-badge&labelColor=0d1117) ![file](https://img.shields.io/badge/file-APK%20%28Android%2010%2B%29-0ea5e9?style=for-the-badge&labelColor=0d1117) ![menu](https://img.shields.io/badge/menu-Me%20panel-6e7681?style=for-the-badge&labelColor=0d1117)
 
-[← All apps](../../README.md#apps)&nbsp;&nbsp;•&nbsp;&nbsp;`com.linkedin.android`&nbsp;&nbsp;•&nbsp;&nbsp;[v3.4.0](https://github.com/lokesh-sparrow/loki-patches/releases/tag/v3.4.0)
+[← All apps](../../README.md#apps)&nbsp;&nbsp;•&nbsp;&nbsp;`com.linkedin.android`&nbsp;&nbsp;•&nbsp;&nbsp;[v3.4.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.4.0)
 
 **🎯 Supported versions:** `4.1.1270` · `4.1.1272`
 <!-- HEADER_END -->
@@ -32,9 +32,9 @@
 
 ## How-to
 
-### Open the Loki Patches menu
+### Open the Lynx Patches menu
 
-Open it from the **Me** panel (tap your profile photo), or long press the LinkedIn icon on your home screen → **Loki Patches**.
+Open it from the **Me** panel (tap your profile photo), or long press the LinkedIn icon on your home screen → **Lynx Patches**.
 
 ### Sign in with Google
 
@@ -44,7 +44,7 @@ Open it from the **Me** panel (tap your profile photo), or long press the Linked
 
 ### Copy text
 
-LinkedIn doesn't let you copy what people write. With Loki Patches you can:
+LinkedIn doesn't let you copy what people write. With Lynx Patches you can:
 
 1. **Long press** any text: a post, a comment, a profile's About, a job description.
 2. The word under your finger is selected **right where it is**, with Android's selection handles and
@@ -59,7 +59,7 @@ A tap or a scroll works as usual.
 
 Visit a profile without it appearing in that member's "Who viewed your profile", or in company page visitor lists.
 
-1. Turn on **Anonymous profile viewing** in the Loki Patches settings, under **Privacy**. It is off by default and
+1. Turn on **Anonymous profile viewing** in the Lynx Patches settings, under **Privacy**. It is off by default and
    marked experimental.
 2. Open profiles as usual. The app leaves out the analytics events that profile pages send, so the visit is not counted.
 
@@ -69,7 +69,7 @@ sends in any update; if a visit still appears, please report it with the diagnos
 ## FAQ
 
 **How do I stop videos playing on their own, or hide that I'm online?**
-LinkedIn has its own settings for both, and Loki Patches leaves them to LinkedIn: **Settings → Account preferences →
+LinkedIn has its own settings for both, and Lynx Patches leaves them to LinkedIn: **Settings → Account preferences →
 Autoplay videos → Never**, and **Settings → Visibility → Manage active status → No one**.
 
 **Is anonymous profile viewing reliable?**
@@ -97,7 +97,7 @@ The colors are read when the app is patched, and a few older screens in LinkedIn
 | **Dark app icon** | Black launcher icon with the white "in", instead of LinkedIn's blue. Chosen when patching: a launcher icon cannot switch with dark mode on its own. |  |
 | **Disable double-tap like** | A double tap on a post or a photo no longer likes it. |  |
 | **Download media** | Puts a download button in the full screen photo, video and document viewer; documents (PDFs and carousels) are saved as a single PDF. |  |
-| **Feed filters** | Adds a set of filters that are off until turned on in Loki Patches: focus mode, celebrations, job cards, reposts, posts from other people's activity, "Recommended for you", video posts, games, the "New posts" pill and "See translation". |  |
+| **Feed filters** | Adds a set of filters that are off until turned on in Lynx Patches: focus mode, celebrations, job cards, reposts, posts from other people's activity, "Recommended for you", video posts, games, the "New posts" pill and "See translation". |  |
 | **GmsCore support (LinkedIn)** | Routes "Continue with Google" and Firebase push through MicroG-RE (GmsCore) instead of Google Play services. Signs the FCM registration with LinkedIn's original certificate, so notifications still arrive on a re-signed build. MicroG-RE has to be installed and signed in to a Google account. |  |
 | **Hide ads** | Removes sponsored (promoted) posts from the feed. |  |
 | **Hide bottom tabs** | Adds switches to take My Network, Jobs and More out of the bottom bar (More is hidden by default). |  |

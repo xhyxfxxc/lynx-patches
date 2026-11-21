@@ -15,11 +15,11 @@ import android.content.res.Configuration;
  */
 final class WhatsNew {
     /** Entry for the first release. English like every other string here: it is a translation key. */
-    private static final String FIRST_RELEASE = "The first release of Loki Patches.\n\n"
+    private static final String FIRST_RELEASE = "The first release of Lynx Patches.\n\n"
             + "• Copy text: long press a post, comment, or any text to select and copy it, like on Reddit\n"
             + "• Hide ads, promoted jobs, suggested posts, and Premium promotions\n"
             + "• Download photos and videos, feed filters, ghost mode in chat, and more\n\n"
-            + "Open the settings from the Me panel → Loki Patches, or long press the LinkedIn icon → Loki Patches.";
+            + "Open the settings from the Me panel → Lynx Patches, or long press the LinkedIn icon → Lynx Patches.";
 
     /** Newest first: {version, notes}. One entry per release worth announcing. */
     static final String[][] NOTES = {

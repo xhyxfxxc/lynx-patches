@@ -9,11 +9,11 @@ body:
   - type: markdown
     attributes:
       value: |
-        <p align="center"><b>🧩 Loki Patches · Feature request</b></p>
+        <p align="center"><b>🧩 Lynx Patches · Feature request</b></p>
 
         An idea is welcome. Two things to read first:
 
-        - 🔎 **Check the [existing requests](https://github.com/lokesh-sparrow/loki-patches/issues?q=label%3A%22Feature+request%22).** If yours is already there, a 👍 on it counts more than a second issue.
+        - 🔎 **Check the [existing requests](https://github.com/xhyxfxxc/lynx-patches/issues?q=label%3A%22Feature+request%22).** If yours is already there, a 👍 on it counts more than a second issue.
         - 🧭 **Out of scope:** anything that gathers other people's data, and paid content (courses, articles behind a paywall). Those requests are closed.
 
   - type: dropdown

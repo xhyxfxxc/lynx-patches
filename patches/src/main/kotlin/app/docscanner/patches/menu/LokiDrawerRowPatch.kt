@@ -139,7 +139,7 @@ private val addStringResource = resourcePatch {
             }
             val row = document.createElement("string")
             row.setAttribute("name", STRING_RES)
-            row.textContent = "Loki Patches"
+            row.textContent = "Lynx Patches"
             root.appendChild(row)
         }
     }
@@ -162,7 +162,7 @@ private fun app.morphe.patcher.patch.ResourcePatchContext.isOurApp(): Boolean {
 }
 
 /**
- * One "Loki Patches" row in the app's own side menu, right under "About us". Internal and unnamed:
+ * One "Lynx Patches" row in the app's own side menu, right under "About us". Internal and unnamed:
  * it ships with the menu and never appears as a choice in Manager, the same way the LinkedIn row is
  * just part of its extension. The row is built and the click handled by DrawerSupport, configured
  * from this build's obfuscated names; a version that renames them only loses the row, never the app.
@@ -177,7 +177,7 @@ internal val drawerRowPatch = bytecodePatch {
         // A version whose drawer is built differently (6.8.x, or a future one) only loses this row: the menu still
         // opens from the long-press shortcut, and the patches that depend on the menu must still apply.
         val builder = findMethod { it.isDrawerBuilder() }?.first ?: run {
-            println("WARNING: Doc Scanner drawer: no row builder found, the Loki Patches row is skipped")
+            println("WARNING: Doc Scanner drawer: no row builder found, the Lynx Patches row is skipped")
             return@execute
         }
         val shape = builder.rowShape() ?: run {
@@ -221,7 +221,7 @@ internal val drawerRowPatch = bytecodePatch {
             ExternalLabel("loki_row_done", builder.getInstruction(shape.insertAt)),
         )
 
-        // Route clicks on the row (identifier 7331) to the Loki Patches screen. A 2-parameter instance method with
+        // Route clicks on the row (identifier 7331) to the Lynx Patches screen. A 2-parameter instance method with
         // four locals keeps its arguments in v5 and v6.
         click.addInstructionsWithLabels(
             0,

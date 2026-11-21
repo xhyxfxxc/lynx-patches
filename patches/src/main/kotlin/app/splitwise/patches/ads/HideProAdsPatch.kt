@@ -33,7 +33,7 @@ private val proSubscriptionConfig = Fingerprint(
     parameters = listOf(),
 )
 
-/** Tells the Loki Patches screen this patch was applied. */
+/** Tells the Lynx Patches screen this patch was applied. */
 private val proAdsFlag = resourcePatch {
     execute {
         document("AndroidManifest.xml").use { it.addMenuFlag("app.loki.menu.proads") }

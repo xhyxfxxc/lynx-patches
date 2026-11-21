@@ -3,7 +3,7 @@
 
 ![version](https://img.shields.io/badge/version-1.93.4-2563eb?style=for-the-badge&labelColor=0d1117) ![patches](https://img.shields.io/badge/patches-3-14b8a6?style=for-the-badge&labelColor=0d1117) ![file](https://img.shields.io/badge/file-APK-0ea5e9?style=for-the-badge&labelColor=0d1117) ![menu](https://img.shields.io/badge/menu-Settings-6e7681?style=for-the-badge&labelColor=0d1117)
 
-[← All apps](../../README.md#apps)&nbsp;&nbsp;•&nbsp;&nbsp;`com.mxtech.videoplayer.pro`&nbsp;&nbsp;•&nbsp;&nbsp;[v3.4.0](https://github.com/lokesh-sparrow/loki-patches/releases/tag/v3.4.0)
+[← All apps](../../README.md#apps)&nbsp;&nbsp;•&nbsp;&nbsp;`com.mxtech.videoplayer.pro`&nbsp;&nbsp;•&nbsp;&nbsp;[v3.4.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.4.0)
 
 **🎯 Supported versions:** `1.93.4`
 <!-- HEADER_END -->
@@ -18,16 +18,16 @@
 
 ## How-to
 
-### Open the Loki Patches menu
+### Open the Lynx Patches menu
 
 Three ways in, all opening the same menu:
 
-- **Me page** (long press done for you: MX Player → the account icon at the top right) → **Loki Patches**, the row
+- **Me page** (long press done for you: MX Player → the account icon at the top right) → **Lynx Patches**, the row
   above Settings.
-- **Settings** → **Loki Patches** (first row).
-- Long press the MX Player icon on your home screen → **Loki Patches**.
+- **Settings** → **Lynx Patches** (first row).
+- Long press the MX Player icon on your home screen → **Lynx Patches**.
 
-The Loki Patches menu takes its colours from the same theme setting MX uses: Amoled Black, Dark Theme and the
+The Lynx Patches menu takes its colours from the same theme setting MX uses: Amoled Black, Dark Theme and the
 Classic dark skins give a dark page, Light Theme and the Classic light skins a light one, and Adaptive follows the
 system. Change the theme in MX and reopen the menu; the two screens stay in step.
 
@@ -40,7 +40,7 @@ and refuses it unless its SHA-256 matches the one that release publishes.
 ### Check the codec is in use
 
 MX Player → **Settings** → **Decoder** → **Custom codec** now reads **1.87.0**: that is the packed-in library, and
-the Loki Patches menu says the same under **Player** → **All codecs**.
+the Lynx Patches menu says the same under **Player** → **All codecs**.
 
 ### Patch offline, or use a different pack
 

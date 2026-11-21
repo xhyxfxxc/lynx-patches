@@ -22,7 +22,7 @@ import java.nio.charset.StandardCharsets;
  * thread, because the caller is a screen the user is looking at.
  */
 public final class UpdateChecker {
-    static final String REPO = "lokesh-sparrow/loki-patches";
+    static final String REPO = "xhyxfxxc/lynx-patches";
     private static final String LATEST_RELEASE_URL = "https://api.github.com/repos/" + REPO + "/releases/latest";
     private static final String GITHUB_JSON_TYPE = "application/vnd.github+json";
     private static final int TIMEOUT_MS = 8000;

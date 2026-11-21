@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
  * comparing the latest release's version, as before.
  */
 final class UpdateChecker {
-    static final String REPO = "lokesh-sparrow/loki-patches";
+    static final String REPO = "xhyxfxxc/lynx-patches";
     private static final String LATEST_RELEASE_URL = "https://api.github.com/repos/" + REPO + "/releases/latest";
     /** The file Morphe Manager reads for its per-app update badge. */
     private static final String CHANGELOG_URL = "https://raw.githubusercontent.com/" + REPO + "/main/CHANGELOG.md";

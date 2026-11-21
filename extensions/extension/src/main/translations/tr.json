@@ -68,7 +68,7 @@
   "Import settings": "Ayarları içe aktar",
   "Restore settings from a backup in the clipboard.": "Ayarları panodaki bir yedekten geri yükle.",
   "Reset to defaults": "Varsayılanlara sıfırla",
-  "Reset all Loki Patches settings.": "Tüm Loki Patches ayarlarını sıfırlar.",
+  "Reset all Lynx Patches settings.": "Tüm Lynx Patches ayarlarını sıfırlar.",
   "Diagnostic logging": "Tanılama günlüğü",
   "Records extra detail for the diagnostic report. Switch it on, reproduce the issue, then copy the report.": "Tanılama raporu için ek ayrıntı kaydeder. Açın, sorunu yeniden oluşturun, ardından raporu kopyalayın.",
   "Copy diagnostic report": "Tanılama raporunu kopyala",

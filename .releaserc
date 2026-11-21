@@ -27,7 +27,7 @@ plugins:
           scope: Needs bump
           release: patch
 
-  # Release notes in the Loki Patches format (### Fixes / - **App:** text / patch count). The same text
+  # Release notes in the Lynx Patches format (### Fixes / - **App:** text / patch count). The same text
   # becomes the CHANGELOG entry, the description in patches-bundle.json and the GitHub release body.
   # The bundle is built first so the patch count in the last line is the released one; Gradle's
   # output goes to stderr because stdout is the notes.

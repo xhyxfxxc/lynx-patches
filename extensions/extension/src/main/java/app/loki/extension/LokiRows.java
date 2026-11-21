@@ -12,7 +12,7 @@ import android.content.Intent;
 import android.view.View;
 
 /**
- * The "Loki Patches" rows that patches add inside an app's own screens (the Google Photos
+ * The "Lynx Patches" rows that patches add inside an app's own screens (the Google Photos
  * account menu). The row is built by the app's own code; this supplies its text, icon and what a tap does.
  */
 public final class LokiRows {
@@ -20,7 +20,7 @@ public final class LokiRows {
     }
 
     public static String title() {
-        return "Loki Patches";
+        return "Lynx Patches";
     }
 
 

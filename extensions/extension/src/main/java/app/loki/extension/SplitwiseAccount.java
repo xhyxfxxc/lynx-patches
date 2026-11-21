@@ -11,11 +11,11 @@ import android.content.Intent;
 import java.util.ArrayList;
 
 /**
- * The "Loki Patches" row in Splitwise's Account tab.
+ * The "Lynx Patches" row in Splitwise's Account tab.
  *
  * The Account list only knows the actions in its own ButtonAction enum, so the row borrows GetPro: that row
  * ("Splitwise Pro") is removed by the Pro-ads patch, and the Pro cards that also fire GetPro are hidden too. A tap
- * on GetPro opens the Loki Patches screen instead of the subscription page.
+ * on GetPro opens the Lynx Patches screen instead of the subscription page.
  */
 @SuppressWarnings("unused")
 public final class SplitwiseAccount {
@@ -99,7 +99,7 @@ public final class SplitwiseAccount {
                 }
             }
             list.add(row);
-            if (!quiet) LokiLog.debug("Account tab: Loki Patches row added");
+            if (!quiet) LokiLog.debug("Account tab: Lynx Patches row added");
         } catch (Throwable error) {
             LokiLog.note("Account tab: row could not be added: " + error);
         }
@@ -116,7 +116,7 @@ public final class SplitwiseAccount {
             if (context == null) return false;
             context.startActivity(new Intent(context, MenuActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            LokiLog.debug("Account tab: Loki Patches row tapped");
+            LokiLog.debug("Account tab: Lynx Patches row tapped");
             return true;
         } catch (Throwable error) {
             android.util.Log.e("Loki", "account row: could not open the menu", error);

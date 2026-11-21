@@ -19,7 +19,7 @@ import android.os.Build;
 import java.util.Collections;
 
 /**
- * Starts with the app and puts "Loki Patches" on the launcher's long-press menu. Declared by the menu patch;
+ * Starts with the app and puts "Lynx Patches" on the launcher's long-press menu. Declared by the menu patch;
  * the extension itself ships no manifest entries.
  */
 public final class MenuProvider extends ContentProvider {

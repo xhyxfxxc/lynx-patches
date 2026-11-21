@@ -18,7 +18,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * The "Loki Patches" row in LinkedIn's native "Me" panel, directly under "Saved posts".
+ * The "Lynx Patches" row in LinkedIn's native "Me" panel, directly under "Saved posts".
  *
  * <p>The row is a copy of the panel's own section view data, so it looks like the rows around it,
  * and its header click is redirected to the extension's settings activity.
@@ -26,7 +26,7 @@ import java.util.List;
 @SuppressWarnings("unused")
 public final class NavPanelPatch {
     private static final String PANEL_TYPES = "com.linkedin.android.home.navpanel.";
-    static final String TITLE = "Loki Patches";
+    static final String TITLE = "Lynx Patches";
 
     /** Injected before every return of HomeNavPanelTransformer.transform(...). */
     public static AbstractList<Object> addSettingsItem(Object panel) {

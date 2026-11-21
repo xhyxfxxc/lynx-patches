@@ -136,7 +136,7 @@ def main(argv):
     legend = "&nbsp;&nbsp;".join(f"{k}&nbsp;{v}" for k, v in meta.get("legend", {}).items())
 
     def rows(packages):
-        out = ["| App | Highlights | Patches | Version | File | Loki Patches menu |", "|---|---|:---:|---|---|---|"]
+        out = ["| App | Highlights | Patches | Version | File | Lynx Patches menu |", "|---|---|:---:|---|---|---|"]
         for p in packages:
             a, vs = info[p], versions(apps[p]["targets"])
             out.append(f'| <img src="{icon(p, root)}" width="20" height="20" align="top" alt=""> '

@@ -9,9 +9,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        <p align="center"><b>🧩 Loki Patches · Translation</b></p>
+        <p align="center"><b>🧩 Lynx Patches · Translation</b></p>
 
-        Every language is one JSON file in [`extensions/extension/src/main/translations`](https://github.com/lokesh-sparrow/loki-patches/tree/main/extensions/extension/src/main/translations), keyed by the English text. If you prefer, open a pull request with the file instead of an issue.
+        Every language is one JSON file in [`extensions/extension/src/main/translations`](https://github.com/xhyxfxxc/lynx-patches/tree/main/extensions/extension/src/main/translations), keyed by the English text. If you prefer, open a pull request with the file instead of an issue.
 
   - type: input
     id: language

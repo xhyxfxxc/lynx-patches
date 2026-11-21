@@ -68,7 +68,7 @@
   "Import settings": "Importer les paramètres",
   "Restore settings from a backup in the clipboard.": "Restaurer les paramètres à partir d'une sauvegarde du presse-papiers.",
   "Reset to defaults": "Réinitialiser",
-  "Reset all Loki Patches settings.": "Réinitialise tous les paramètres de Loki Patches.",
+  "Reset all Lynx Patches settings.": "Réinitialise tous les paramètres de Lynx Patches.",
   "Diagnostic logging": "Journal de diagnostic",
   "Records extra detail for the diagnostic report. Switch it on, reproduce the issue, then copy the report.": "Enregistre plus de détails pour le rapport de diagnostic. Activez-le, reproduisez le souci, puis copiez le rapport.",
   "Copy diagnostic report": "Copier le rapport de diagnostic",

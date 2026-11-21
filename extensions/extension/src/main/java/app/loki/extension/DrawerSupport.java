@@ -10,7 +10,7 @@ import android.content.Intent;
 import android.view.View;
 
 /**
- * Wires a "Loki Patches" row into an app's own navigation drawer. The drawer item class of the host
+ * Wires a "Lynx Patches" row into an app's own navigation drawer. The drawer item class of the host
  * app is obfuscated, so everything is done through reflection with the names the patch read out of
  * this build. Every failure is swallowed: a renamed host class only costs the row, never the app.
  */

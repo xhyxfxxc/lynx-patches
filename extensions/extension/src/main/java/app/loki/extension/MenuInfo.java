@@ -15,10 +15,10 @@ import java.util.List;
 
 /** What the menu screen is allowed to know: brand, and which patches wrote a flag into the manifest. */
 public final class MenuInfo {
-    public static final String BRAND = "Loki Patches";
-    public static final String AUTHOR = "Lokesh Sparrow";
-    public static final String GITHUB = "https://github.com/lokesh-sparrow/loki-patches";
-    public static final String REPO = "lokesh-sparrow/loki-patches";
+    public static final String BRAND = "Lynx Patches";
+    public static final String AUTHOR = "xhyxfxxc";
+    public static final String GITHUB = "https://github.com/xhyxfxxc/lynx-patches";
+    public static final String REPO = "xhyxfxxc/lynx-patches";
 
     private MenuInfo() {
     }

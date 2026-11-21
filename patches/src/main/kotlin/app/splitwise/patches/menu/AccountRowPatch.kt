@@ -34,7 +34,7 @@ private val buttonTapped = Fingerprint(
 )
 
 /**
- * A "Loki Patches" row in Splitwise's Account tab that opens the Loki Patches screen. Unnamed: it is branding,
+ * A "Lynx Patches" row in Splitwise's Account tab that opens the Lynx Patches screen. Unnamed: it is branding,
  * applied with every Splitwise patch through their menu dependency, and a no-op on any other app.
  */
 internal val splitwiseAccountRowPatch = bytecodePatch {

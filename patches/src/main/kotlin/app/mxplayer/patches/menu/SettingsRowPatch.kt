@@ -23,7 +23,7 @@ private const val ICON_COLOR_LIGHT_THEME = "#FF35344C"
 private const val ICON_COLOR_DARK_THEME = "#FFFFFFFF"
 
 /**
- * A "Loki Patches" entry at the top of MX Player's settings. Phones use the preference screen
+ * A "Lynx Patches" entry at the top of MX Player's settings. Phones use the preference screen
  * (res/xml/preferences.xml), tablets the header list (res/xml/pro_preference_header.xml); both get the row.
  */
 internal val settingsRowPatch = resourcePatch {
@@ -53,7 +53,7 @@ internal val settingsRowPatch = resourcePatch {
         val pkg = document("AndroidManifest.xml").use { it.documentElement.getAttribute("package") }
 
         fun Document.row(tag: String): Element = createElement(tag).apply {
-            setAttribute("android:title", "Loki Patches")
+            setAttribute("android:title", "Lynx Patches")
             setAttribute("android:icon", "@drawable/$ICON")
             appendChild(createElement("intent").apply {
                 setAttribute("android:targetPackage", pkg)

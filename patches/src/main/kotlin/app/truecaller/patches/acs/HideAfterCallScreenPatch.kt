@@ -36,7 +36,7 @@ private fun afterCallActivity(type: String) = Fingerprint(
 private val fullScreen = afterCallActivity("Lcom/truecaller/acs/ui/fullscreen/AfterCallScreenActivity;")
 private val popup = afterCallActivity("Lcom/truecaller/acs/ui/popup/AfterCallPopupActivity;")
 
-/** Lets the Loki Patches screen show the after-call screen as hidden (Calls page). */
+/** Lets the Lynx Patches screen show the after-call screen as hidden (Calls page). */
 private val afterCallFlag = resourcePatch {
     execute {
         document("AndroidManifest.xml").use { it.addMenuFlag("app.loki.menu.aftercall") }

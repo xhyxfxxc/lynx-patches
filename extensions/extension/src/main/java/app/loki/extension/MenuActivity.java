@@ -16,7 +16,7 @@ import android.view.View;
 import app.linkedin.extension.SettingsActivity;
 
 /**
- * The Loki Patches screen in every app other than LinkedIn. It is the same screen LinkedIn has (one engine,
+ * The Lynx Patches screen in every app other than LinkedIn. It is the same screen LinkedIn has (one engine,
  * one look); only the app's own pages differ, and those are chosen from the package it runs in.
  */
 public final class MenuActivity extends SettingsActivity {

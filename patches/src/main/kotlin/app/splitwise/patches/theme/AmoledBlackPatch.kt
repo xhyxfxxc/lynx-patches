@@ -96,7 +96,7 @@ val amoledBlackPatch = bytecodePatch(
     description = "Real black instead of dark grey in Splitwise's dark mode: backgrounds, screens, bottom sheets, " +
         "the status and navigation bars and the group charts. Cards stay a shade lighter so they stand out. " +
         "AMOLED screens switch black pixels off, which saves battery. Light mode is unchanged. Can be switched " +
-        "off in Loki Patches > Appearance.",
+        "off in Lynx Patches > Appearance.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_SPLITWISE)

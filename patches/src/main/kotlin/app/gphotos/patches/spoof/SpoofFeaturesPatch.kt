@@ -71,7 +71,7 @@ private fun identityReads(method: Method): List<Pair<Int, String>> {
     return hits
 }
 
-/** Lets the Loki Patches screen show the switch and report the patch. */
+/** Lets the Lynx Patches screen show the switch and report the patch. */
 private val spoofFlag = resourcePatch {
     execute {
         document("AndroidManifest.xml").use { it.addMenuFlag("app.loki.menu.pixelspoof") }
@@ -79,7 +79,7 @@ private val spoofFlag = resourcePatch {
 }
 
 /**
- * Device spoof (Pixel XL), on by default with a switch in Loki Patches.
+ * Device spoof (Pixel XL), on by default with a switch in Lynx Patches.
  *
  * Answers the feature question ourselves: `NEXUS_PRELOAD` reads as present, which is what Google Photos checks to
  * grant the original Pixel's unlimited original-quality backup, and every newer Pixel feature reads as absent so

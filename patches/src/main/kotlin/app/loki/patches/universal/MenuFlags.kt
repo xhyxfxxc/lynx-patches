@@ -9,7 +9,7 @@ import org.w3c.dom.Document
 import org.w3c.dom.Element
 
 /**
- * Marks a patch as applied in the manifest, where the Loki Patches screen reads it. Every patch that
+ * Marks a patch as applied in the manifest, where the Lynx Patches screen reads it. Every patch that
  * has something to say about itself calls this so the screen can list it as applied.
  */
 internal fun Document.addMenuFlag(name: String) {

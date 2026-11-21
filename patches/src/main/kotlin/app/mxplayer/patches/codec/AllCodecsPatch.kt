@@ -220,7 +220,7 @@ private fun downloadOfficial(abi: String): ByteArray {
     if (library.sha256() != official.librarySha256) {
         throw PatchException("The $abi library in ${official.archive} does not match the published SHA-256.")
     }
-    println("Loki Patches: downloaded ${official.archive}, SHA-256 verified")
+    println("Lynx Patches: downloaded ${official.archive}, SHA-256 verified")
     return library
 }
 
@@ -346,7 +346,7 @@ private val codecPatch = rawResourcePatch {
         if (file != null) {
             if (!file.isFile || !file.canRead()) throw PatchException("The codec file cannot be read: ${file.path}")
             if (file.length() > 128L * 1024 * 1024) throw PatchException("The codec file is larger than 128 MB.")
-            println("Loki Patches: using codec pack ${file.path}")
+            println("Lynx Patches: using codec pack ${file.path}")
             collectCodecs(file.name, file.readBytes(), 0, codecs, Budget())
             if (codecs.isEmpty()) {
                 throw PatchException("No libffmpeg.mx.so was found in '${file.name}'. Pick mx_aio.zip or the .so itself.")
@@ -371,13 +371,13 @@ private val codecPatch = rawResourcePatch {
 
         for (abi in apkAbis.sorted()) {
             val official = OFFICIAL[abi]?.librarySha256 == codecs.getValue(abi).sha256()
-            println("Loki Patches: $abi codec is ${if (official) "the official 1.87.0 build" else "a custom build"}")
+            println("Lynx Patches: $abi codec is ${if (official) "the official 1.87.0 build" else "a custom build"}")
         }
 
         for (abi in apkAbis.sorted()) {
             val codec = codecs.getValue(abi)
             get("lib/$abi/$DECODER_ENTRY", copy = false).writeBytes(codec)
-            println("Loki Patches: $DECODER_ENTRY $CODEC_VERSION for $abi, ${codec.size / 1024 / 1024} MB")
+            println("Lynx Patches: $DECODER_ENTRY $CODEC_VERSION for $abi, ${codec.size / 1024 / 1024} MB")
         }
         document("AndroidManifest.xml").use { it.addMenuFlag("app.loki.menu.codec") }
     }

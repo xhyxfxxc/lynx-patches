@@ -90,7 +90,7 @@ internal val integrityPatch = rawResourcePatch {
             val bytes = file.readBytes()
             val hash = bytes.sha256()
             if (hash == target.patchedSha256) {
-                println("Loki Patches: $LIBRARY for $abi is already patched")
+                println("Lynx Patches: $LIBRARY for $abi is already patched")
                 continue
             }
             if (hash != target.stockSha256) {
@@ -105,7 +105,7 @@ internal val integrityPatch = rawResourcePatch {
             val replacement = target.replacement.hexToBytes()
             replacement.copyInto(bytes, at)
             file.writeBytes(bytes)
-            println("Loki Patches: $LIBRARY for $abi no longer refuses a patched install")
+            println("Lynx Patches: $LIBRARY for $abi no longer refuses a patched install")
         }
     }
 }

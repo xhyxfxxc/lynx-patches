@@ -47,7 +47,7 @@ val hidePromotedJobsPatch = bytecodePatch(
 @Suppress("unused")
 val feedFiltersPatch = bytecodePatch(
     name = "Feed filters",
-    description = "Adds a set of filters that are off until turned on in Loki Patches: focus mode, celebrations, " +
+    description = "Adds a set of filters that are off until turned on in Lynx Patches: focus mode, celebrations, " +
         "job cards, reposts, posts from other people's activity, \"Recommended for you\", video posts, games, " +
         "the \"New posts\" pill and \"See translation\".",
     default = true

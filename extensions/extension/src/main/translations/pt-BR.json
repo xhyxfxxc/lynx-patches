@@ -68,7 +68,7 @@
   "Import settings": "Importar configurações",
   "Restore settings from a backup in the clipboard.": "Restaura as configurações a partir de um backup na área de transferência.",
   "Reset to defaults": "Restaurar padrões",
-  "Reset all Loki Patches settings.": "Restaura todas as configurações do Loki Patches.",
+  "Reset all Lynx Patches settings.": "Restaura todas as configurações do Lynx Patches.",
   "Diagnostic logging": "Log de diagnóstico",
   "Records extra detail for the diagnostic report. Switch it on, reproduce the issue, then copy the report.": "Registra detalhes extras para o relatório de diagnóstico. Ative, reproduza o problema e depois copie o relatório.",
   "Copy diagnostic report": "Copiar relatório de diagnóstico",

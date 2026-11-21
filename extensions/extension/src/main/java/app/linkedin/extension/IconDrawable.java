@@ -118,9 +118,9 @@ public final class IconDrawable extends Drawable {
             + ".4,-1.4zM14.6,16.6l4.6,-4.6 -4.6,-4.6L16"
             + ",6l6,6 -6,6 -1.4,-1.4z";
 
-    // Shared Loki Patches screen (every app). Material icons, 24x24 grid.
+    // Shared Lynx Patches screen (every app). Material icons, 24x24 grid.
 
-    /** The Loki Patches mark: a puzzle piece (Material "extension"). */
+    /** The Lynx Patches mark: a puzzle piece (Material "extension"). */
     public static final String EXTENSION = "M20.5,11H19V7c0,-1.1 -0.9,-2 -2,-2h-4V3.5C13,2.12 11.88,1 10.5,1S8,2.12 8,3.5V5H4"
             + "c-1.1,0 -1.99,0.9 -1.99,2v3.8H3.5c1.49,0 2.7,1.21 2.7,2.7s-1.21,2.7 -2.7,2.7H2V20c0,1.1 0.9,2 2,2h3.8v-1.5"
             + "c0,-1.49 1.21,-2.7 2.7,-2.7 1.49,0 2.7,1.21 2.7,2.7V22H17c1.1,0 2,-0.9 2,-2v-4h1.5c1.38,0 2.5,-1.12 2.5,-2.5"
