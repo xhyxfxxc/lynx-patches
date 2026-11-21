@@ -16,6 +16,14 @@ final class PriceVerdict {
     static final String GOOD = "good";
     static final String HIGH = "high";
     static final String TYPICAL = "typical";
+    /** CamelCamelCamel's data is too old to judge a price by. */
+    static final String STALE = "stale";
+
+    /** Data CamelCamelCamel last scanned more than this long ago gets no verdict. */
+    static final long STALE_AFTER_MILLIS = 7L * 24L * 60L * 60L * 1000L;
+
+    private static final long HOUR_MILLIS = 60L * 60L * 1000L;
+    private static final long DAY_MILLIS = 24L * HOUR_MILLIS;
 
     /** Prices are cents, so a boundary such as 100 * 1.1 must not be decided by floating point rounding. */
     private static final double EPSILON = 1e-9;
@@ -90,9 +98,48 @@ final class PriceVerdict {
         return series != null && series.current != null && series.current.hasValue();
     }
 
-    /** The verdict for a chosen series. */
-    static PriceVerdict forSeries(CccParser.Series series) {
-        return of(value(series.current), value(series.lowest), value(series.average));
+    /**
+     * The verdict for a chosen series. The price judged is [pagePrice] (what the Amazon page shows now) when it is
+     * usable, else the series' own current price from CamelCamelCamel. When CamelCamelCamel last scanned the product
+     * more than a week ago ([scannedAt] is epoch millis, -1 when unknown) there is no verdict, only the reason.
+     */
+    static PriceVerdict forSeries(CccParser.Series series, double pagePrice, long scannedAt, long now) {
+        if (isStale(scannedAt, now)) {
+            return new PriceVerdict(STALE, "No verdict: CamelCamelCamel last checked " + agePhrase(scannedAt, now));
+        }
+        double current = usable(pagePrice) ? pagePrice : value(series.current);
+        return of(current, value(series.lowest), value(series.average));
+    }
+
+    /** True when the scan is known and older than a week (exactly a week is still fresh). Unknown is not stale. */
+    static boolean isStale(long scannedAt, long now) {
+        return scannedAt >= 0 && now - scannedAt > STALE_AFTER_MILLIS;
+    }
+
+    /** How long ago the scan was, in words: "less than an hour ago", "6 hours ago", "5 days ago", "2 months ago". */
+    static String agePhrase(long scannedAt, long now) {
+        long age = Math.max(0, now - scannedAt);
+        if (age < HOUR_MILLIS) return "less than an hour ago";
+        if (age < 2 * DAY_MILLIS) return count(age / HOUR_MILLIS, "hour") + " ago";
+        long days = age / DAY_MILLIS;
+        if (days < 60) return count(days, "day") + " ago";
+        if (days < 730) return count(days / 30, "month") + " ago";
+        return count(days / 365, "year") + " ago";
+    }
+
+    private static String count(long n, String unit) {
+        return n + " " + unit + (n == 1 ? "" : "s");
+    }
+
+    /**
+     * The number in the price the Amazon page shows ("$269.00"), or NaN when there is none worth trusting: nothing,
+     * more than 40 characters, no readable number, zero or below, or ten million and up.
+     */
+    static double pagePrice(String text) {
+        if (text == null || text.isEmpty() || text.length() > 40) return Double.NaN;
+        double value = CccParser.amount(text);
+        if (Double.isNaN(value) || Double.isInfinite(value) || value <= 0 || value >= 10_000_000) return Double.NaN;
+        return value;
     }
 
     private static double value(CccParser.Price price) {

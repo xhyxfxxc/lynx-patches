@@ -7,6 +7,7 @@ package app.amazon.extension;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -110,7 +111,7 @@ public class PriceSupportTest {
 
     @Test
     public void theCacheKeepsAnswersUntilTheyExpire() {
-        PriceCache cache = new PriceCache(2);
+        PriceCache<String> cache = new PriceCache<>(2);
         cache.put("au:A", "one", 1000, 0);
         assertEquals("one", cache.get("au:A", 999));
         assertNull(cache.get("au:A", 1000));
@@ -120,7 +121,7 @@ public class PriceSupportTest {
 
     @Test
     public void theCacheDropsTheOldestWhenFull() {
-        PriceCache cache = new PriceCache(2);
+        PriceCache<String> cache = new PriceCache<>(2);
         cache.put("a", "1", 1000, 0);
         cache.put("b", "2", 1000, 0);
         cache.put("c", "3", 1000, 0);
@@ -173,21 +174,47 @@ public class PriceSupportTest {
         + "<tr data-field=\"amazon\"><td>Amazon</td><td>$100.00 <small>(Nov 20, 2026)</small></td><td>$250.00</td>"
         + "<td>$100.00</td><td>$180.00</td></tr></table>";
 
+    private static final long NOW = 1_800_000_000_000L;
+
     @Test
     public void aReadablePageGivesTheNumbersAndIsKeptLong() {
-        PriceFetch.Result result = PriceFetch.classify("B076P3QK6K", "au", 200, TABLE);
-        assertTrue(result.json, result.json.contains("\"status\":\"ok\""));
-        assertTrue(result.json, result.json.contains("\"verdict\":\"Lowest price ever\""));
+        PriceFetch.Result result = PriceFetch.classify("B076P3QK6K", "au", 200, TABLE, NOW);
+        assertEquals(PricePayload.OK, result.status);
+        assertNotNull(result.stats);
         assertEquals(PriceFetch.KEEP_MILLIS, result.keepMillis);
+        String json = PricePayload.of("B076P3QK6K", "au", result, Double.NaN, NOW);
+        assertTrue(json, json.contains("\"status\":\"ok\""));
+        assertTrue(json, json.contains("\"verdict\":\"Lowest price ever\""));
+        assertTrue(json, json.contains("\"updated\":null"));
+        assertTrue(json, json.contains("\"stale\":false"));
     }
 
     @Test
     public void aMissingProductMeansNoHistory() {
         for (int status : new int[]{404, 410}) {
-            PriceFetch.Result result = PriceFetch.classify("B076P3QK6K", "au", status, null);
-            assertTrue(result.json.contains("\"status\":\"none\""));
+            PriceFetch.Result result = PriceFetch.classify("B076P3QK6K", "au", status, null, NOW);
+            assertEquals(PricePayload.NONE, result.status);
+            assertNull(result.stats);
             assertEquals(PriceFetch.KEEP_MILLIS, result.keepMillis);
+            assertTrue(PricePayload.of("B076P3QK6K", "au", result, Double.NaN, NOW).contains("\"status\":\"none\""));
         }
+    }
+
+    @Test
+    public void aTableWithNothingInItMeansNoHistoryAndOneWithNoUsableRowIsJustTheChart() {
+        String dashes = "<table><tr><th>Lowest Ever</th></tr>"
+            + "<tr data-field=\"amazon\"><td>Amazon</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></table>";
+        PriceFetch.Result none = PriceFetch.classify("B076P3QK6K", "au", 200, dashes, NOW);
+        assertEquals(PricePayload.NONE, none.status);
+        assertEquals(PriceFetch.KEEP_MILLIS, none.keepMillis);
+
+        String onlyUsed = "<table><tr><th>Lowest Ever</th></tr>"
+            + "<tr data-field=\"used\"><td>Used</td><td>$5.00</td><td>$9.00</td><td>$6.00</td><td>$7.00</td></tr></table>";
+        PriceFetch.Result chart = PriceFetch.classify("B076P3QK6K", "au", 200, onlyUsed, NOW);
+        assertEquals(PricePayload.CHART, chart.status);
+        assertNull(chart.stats);
+        assertEquals(PriceFetch.KEEP_MILLIS, chart.keepMillis);
+        assertTrue(PricePayload.of("B076P3QK6K", "au", chart, Double.NaN, NOW).contains("\"status\":\"chart\""));
     }
 
     @Test
@@ -195,15 +222,31 @@ public class PriceSupportTest {
         String challenge = "<html><title>Just a moment...</title><body>cf-chl</body></html>";
         int[] statuses = {403, 429, 500, 502, 503, 0};
         for (int status : statuses) {
-            PriceFetch.Result result = PriceFetch.classify("B076P3QK6K", "au", status, challenge);
-            assertTrue(status + " " + result.json, result.json.contains("\"status\":\"chart\""));
+            PriceFetch.Result result = PriceFetch.classify("B076P3QK6K", "au", status, challenge, NOW);
+            assertEquals(String.valueOf(status), PricePayload.CHART, result.status);
+            assertNull(result.stats);
             assertEquals(PriceFetch.RETRY_MILLIS, result.keepMillis);
         }
         // A 200 that is a challenge page, not the table.
-        PriceFetch.Result page = PriceFetch.classify("B076P3QK6K", "au", 200, challenge);
-        assertTrue(page.json.contains("\"status\":\"chart\""));
+        PriceFetch.Result page = PriceFetch.classify("B076P3QK6K", "au", 200, challenge, NOW);
+        assertEquals(PricePayload.CHART, page.status);
         assertEquals(PriceFetch.RETRY_MILLIS, page.keepMillis);
         // A 403 is never read as a table, even if the body happens to hold one.
-        assertTrue(PriceFetch.classify("B076P3QK6K", "au", 403, TABLE).json.contains("\"status\":\"chart\""));
+        assertEquals(PricePayload.CHART, PriceFetch.classify("B076P3QK6K", "au", 403, TABLE, NOW).status);
+    }
+
+    @Test
+    public void theCacheHoldsAnAnswerWhoseAgeIsCountedAtEachDelivery() {
+        String page = TABLE + "<table><tr><td>Last update scan</td><td>6 hours ago</td></tr></table>";
+        PriceCache<PriceFetch.Result> cache = new PriceCache<>(4);
+        cache.put("au:B076P3QK6K", PriceFetch.classify("B076P3QK6K", "au", 200, page, NOW), PriceFetch.KEEP_MILLIS, NOW);
+        PriceFetch.Result later = cache.get("au:B076P3QK6K", NOW + 20 * 60_000L);
+        assertNotNull(later);
+        String first = PricePayload.of("B076P3QK6K", "au", later, Double.NaN, NOW);
+        String second = PricePayload.of("B076P3QK6K", "au", later, Double.NaN, NOW + 20 * 60_000L);
+        assertTrue(first, first.contains("\"updated\":\"6 hours ago\""));
+        assertTrue(second, second.contains("\"updated\":\"6 hours ago\""));
+        String muchLater = PricePayload.of("B076P3QK6K", "au", later, Double.NaN, NOW + 3 * 60 * 60_000L);
+        assertTrue(muchLater, muchLater.contains("\"updated\":\"9 hours ago\""));
     }
 }

@@ -6,8 +6,9 @@
 package app.amazon.extension;
 
 /**
- * What to do with CamelCamelCamel's answer, apart from fetching it: which payload the card gets and how long that
- * answer may be kept. Free of Android APIs.
+ * What to do with CamelCamelCamel's answer, apart from fetching it: what the answer says and how long it may be
+ * kept. The payload the card gets is built from it on every delivery (PricePayload), because the age of the data
+ * and the verdict depend on the moment of delivery and on the price the page shows then. Free of Android APIs.
  */
 final class PriceFetch {
     private PriceFetch() {
@@ -19,29 +20,36 @@ final class PriceFetch {
     static final long RETRY_MILLIS = 60L * 1000L;
 
     static final class Result {
-        final String json;
+        /** PricePayload.OK, PricePayload.NONE or PricePayload.CHART. */
+        final String status;
+        /** The parsed table; not null exactly when the status is OK. */
+        final CccParser.Stats stats;
         final long keepMillis;
 
-        Result(String json, long keepMillis) {
-            this.json = json;
+        Result(String status, CccParser.Stats stats, long keepMillis) {
+            this.status = status;
+            this.stats = stats;
             this.keepMillis = keepMillis;
         }
     }
 
     /**
      * 200 with a readable table gives the numbers. 404 and 410 mean CamelCamelCamel has no such product. A challenge
-     * page, a 403, 429 or 5xx, an unreadable page or no answer at all (status 0) give just the chart.
+     * page, a 403, 429 or 5xx, an unreadable page or no answer at all (status 0) give just the chart. [fetchedAt] is
+     * the moment the page was fetched, which "6 hours ago" on it is counted back from.
      */
-    static Result classify(String asin, String code, int status, String body) {
+    static Result classify(String asin, String code, int status, String body, long fetchedAt) {
         if (status == 404 || status == 410) {
-            return new Result(PricePayload.status(asin, code, PricePayload.NONE), KEEP_MILLIS);
+            return new Result(PricePayload.NONE, null, KEEP_MILLIS);
         }
         if (status == 200) {
-            CccParser.Stats stats = CccParser.parse(body);
+            CccParser.Stats stats = CccParser.parse(body, fetchedAt);
             if (stats != null) {
-                return new Result(PricePayload.of(asin, code, stats), KEEP_MILLIS);
+                if (!stats.hasData()) return new Result(PricePayload.NONE, null, KEEP_MILLIS);
+                if (PriceVerdict.choose(stats) == null) return new Result(PricePayload.CHART, null, KEEP_MILLIS);
+                return new Result(PricePayload.OK, stats, KEEP_MILLIS);
             }
         }
-        return new Result(PricePayload.status(asin, code, PricePayload.CHART), RETRY_MILLIS);
+        return new Result(PricePayload.CHART, null, RETRY_MILLIS);
     }
 }

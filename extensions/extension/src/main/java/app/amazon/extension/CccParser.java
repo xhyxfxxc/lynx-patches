@@ -65,11 +65,14 @@ final class CccParser {
         final Series amazon;
         final Series thirdPartyNew;
         final Series thirdPartyUsed;
+        /** When CamelCamelCamel last scanned the product, in epoch milliseconds; -1 when the page does not say. */
+        final long scannedAt;
 
-        Stats(Series amazon, Series thirdPartyNew, Series thirdPartyUsed) {
+        Stats(Series amazon, Series thirdPartyNew, Series thirdPartyUsed, long scannedAt) {
             this.amazon = amazon;
             this.thirdPartyNew = thirdPartyNew;
             this.thirdPartyUsed = thirdPartyUsed;
+            this.scannedAt = scannedAt;
         }
 
         boolean hasData() {
@@ -88,21 +91,135 @@ final class CccParser {
     private static final Pattern DATE = Pattern.compile("([A-Za-z]{3,9}\\.?\\s+\\d{1,2},?\\s+\\d{4})");
     private static final Pattern NUMBER = Pattern.compile("\\d[\\d.,\\u00a0\\u202f]*");
     private static final Pattern ENTITY = Pattern.compile("&(#x?[0-9a-fA-F]+|[a-zA-Z]+);");
+    /**
+     * The value cell after the "Last update scan" label cell. The gap after the label may not cross into another
+     * cell or row, and the value stops at the end of its cell or at the next cell or row (the row is sometimes not
+     * closed), so the next row's label is never read as the value.
+     */
+    private static final Pattern LAST_SCAN = Pattern.compile(
+        "Last\\s+update\\s+scan(?:(?!<t[dhr]\\b).){0,300}?</t[dh]\\s*>\\s*<td\\b[^>]*>(.{0,300}?)"
+            + "(?:</t[dh]\\s*>|<t[dhr]\\b|$)", FLAGS);
+    private static final Pattern RELATIVE_AGE = Pattern.compile(
+        "(?:(?:about|over|almost)\\s+)?(\\d{1,5}|a|an|one)\\s+(minute|hour|day|week|month|year)s?\\s+ago");
+    private static final Pattern ABSOLUTE_DATE = Pattern.compile(
+        "(?:on\\s+)?([a-z]{3,9})\\.?\\s+(\\d{1,2})(?:\\s*,\\s*|\\s+)(\\d{4})");
+    private static final long MINUTE = 60_000L;
+    private static final long HOUR = 60L * MINUTE;
+    private static final long DAY = 24L * HOUR;
+
+    /** Same as {@link #parse(String, long)}, with the current time as the moment the page was fetched. */
+    static Stats parse(String html) {
+        return parse(html, System.currentTimeMillis());
+    }
 
     /**
      * The price table of a product page, or null when the page has none (a challenge page, an error page, a product
-     * that is not tracked). A table whose rows are all "-" gives a Stats with no data.
+     * that is not tracked). A table whose rows are all "-" gives a Stats with no data. [fetchedAt] is when the page
+     * was fetched: the page says "6 hours ago", and that is counted back from it.
      */
-    static Stats parse(String html) {
+    static Stats parse(String html, long fetchedAt) {
         if (html == null) return null;
         // "Lowest Ever" may also appear in prose before the table, so every occurrence gets a try.
         int header = indexOfIgnoreCase(html, "Lowest Ever", 0);
+        if (header < 0) return null;
+        long scanned = scannedAt(lastScan(html), fetchedAt);
         while (header >= 0) {
-            Stats stats = parseTable(tableAround(html, header));
+            Stats stats = parseTable(tableAround(html, header), scanned);
             if (stats != null) return stats;
             header = indexOfIgnoreCase(html, "Lowest Ever", header + 1);
         }
         return null;
+    }
+
+    /**
+     * The text of the cell after the "Last update scan" label ("6 hours ago", "on Nov 19, 2023"), or null when the
+     * page has none. Works whether or not the row is closed with a tr end tag.
+     */
+    static String lastScan(String html) {
+        if (html == null) return null;
+        Matcher m = LAST_SCAN.matcher(html);
+        while (m.find()) {
+            String value = text(m.group(1));
+            if (!value.isEmpty()) return value;
+        }
+        return null;
+    }
+
+    /**
+     * Epoch milliseconds for the scan time as the page words it, or -1 when it cannot be read. Relative forms
+     * ("6 hours ago", "an hour ago", "about 3 hours ago", "yesterday", "less than a minute ago") count back from
+     * [fetchedAt], with a month as 30 days and a year as 365; "on Nov 19, 2023" is that day at 00:00 UTC. The month
+     * names are the English ones, whatever the language of the phone.
+     */
+    static long scannedAt(String text, long fetchedAt) {
+        if (text == null) return -1;
+        String t = text.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+        if (t.isEmpty()) return -1;
+        if (t.equals("just now") || t.equals("less than a minute ago")) return fetchedAt;
+        if (t.equals("yesterday")) return Math.max(0, fetchedAt - DAY);
+
+        Matcher rel = RELATIVE_AGE.matcher(t);
+        if (rel.matches()) {
+            String count = rel.group(1);
+            long n = Character.isDigit(count.charAt(0)) ? Long.parseLong(count) : 1;
+            long unit;
+            switch (rel.group(2)) {
+                case "minute": unit = MINUTE; break;
+                case "hour": unit = HOUR; break;
+                case "day": unit = DAY; break;
+                case "week": unit = 7 * DAY; break;
+                case "month": unit = 30 * DAY; break;
+                default: unit = 365 * DAY; break;
+            }
+            return Math.max(0, fetchedAt - n * unit);
+        }
+
+        Matcher abs = ABSOLUTE_DATE.matcher(t);
+        if (abs.matches()) {
+            int month = monthNumber(abs.group(1));
+            int day = Integer.parseInt(abs.group(2));
+            int year = Integer.parseInt(abs.group(3));
+            if (month < 1 || day < 1 || day > daysInMonth(year, month)) return -1;
+            return Math.max(0, daysFromCivil(year, month, day) * DAY);
+        }
+        return -1;
+    }
+
+    /** 1 to 12 for an English month name or its short form, else 0. */
+    private static int monthNumber(String name) {
+        switch (name) {
+            case "jan": case "january": return 1;
+            case "feb": case "february": return 2;
+            case "mar": case "march": return 3;
+            case "apr": case "april": return 4;
+            case "may": return 5;
+            case "jun": case "june": return 6;
+            case "jul": case "july": return 7;
+            case "aug": case "august": return 8;
+            case "sep": case "sept": case "september": return 9;
+            case "oct": case "october": return 10;
+            case "nov": case "november": return 11;
+            case "dec": case "december": return 12;
+            default: return 0;
+        }
+    }
+
+    private static int daysInMonth(int year, int month) {
+        switch (month) {
+            case 2: return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) ? 29 : 28;
+            case 4: case 6: case 9: case 11: return 30;
+            default: return 31;
+        }
+    }
+
+    /** Days since 1970-01-01 for a date in the proleptic Gregorian calendar (no time zone, no locale). */
+    private static long daysFromCivil(int year, int month, int day) {
+        long y = month <= 2 ? year - 1 : year;
+        long era = (y >= 0 ? y : y - 399) / 400;
+        long yearOfEra = y - era * 400;
+        long dayOfYear = (153L * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
+        long dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
+        return era * 146097 + dayOfEra - 719468;
     }
 
     private static String tableAround(String html, int header) {
@@ -113,7 +230,7 @@ final class CccParser {
         return html.substring(start, end);
     }
 
-    private static Stats parseTable(String table) {
+    private static Stats parseTable(String table, long scannedAt) {
         Series amazon = null;
         Series thirdNew = null;
         Series used = null;
@@ -133,7 +250,7 @@ final class CccParser {
             else if (key.equals("used") && used == null) used = series;
         }
         if (amazon == null && thirdNew == null && used == null) return null;
-        return new Stats(amazon, thirdNew, used);
+        return new Stats(amazon, thirdNew, used, scannedAt);
     }
 
     /** amazon, new or used: from the row's data-field when it has one, else from the first cell's label. */

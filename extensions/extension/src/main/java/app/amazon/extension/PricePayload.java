@@ -25,15 +25,20 @@ final class PricePayload {
             + ",\"status\":" + AmazonJson.string(status) + "}";
     }
 
-    /** The tiles and the verdict for a parsed table, or the right status when the table has nothing to show. */
-    static String of(String asin, String code, CccParser.Stats stats) {
-        if (stats == null) return status(asin, code, CHART);
-        if (!stats.hasData()) return status(asin, code, NONE);
+    /**
+     * The payload for one delivery of a (possibly cached) answer: the tiles, how old CamelCamelCamel's data is and
+     * the verdict for an OK answer, else just the status. [pagePrice] is the price the Amazon page shows (NaN when
+     * unknown) and [now] the moment of delivery, so the age and the verdict are never stale themselves.
+     */
+    static String of(String asin, String code, PriceFetch.Result result, double pagePrice, long now) {
+        if (!OK.equals(result.status) || result.stats == null) return status(asin, code, result.status);
+        CccParser.Stats stats = result.stats;
         PriceVerdict.Chosen chosen = PriceVerdict.choose(stats);
         if (chosen == null) return status(asin, code, CHART);
 
         CccParser.Series s = chosen.series;
-        PriceVerdict verdict = PriceVerdict.forSeries(s);
+        PriceVerdict verdict = PriceVerdict.forSeries(s, pagePrice, stats.scannedAt, now);
+        String updated = stats.scannedAt >= 0 ? PriceVerdict.agePhrase(stats.scannedAt, now) : null;
         return "{\"asin\":" + AmazonJson.string(asin) + ",\"code\":" + AmazonJson.string(code)
             + ",\"status\":" + AmazonJson.string(OK)
             + ",\"label\":" + AmazonJson.string(chosen.label)
@@ -41,7 +46,9 @@ final class PricePayload {
             + ",\"average\":" + price(s.average)
             + ",\"highest\":" + price(s.highest)
             + ",\"kind\":" + AmazonJson.string(verdict.kind)
-            + ",\"verdict\":" + AmazonJson.string(verdict.text) + "}";
+            + ",\"verdict\":" + AmazonJson.string(verdict.text)
+            + ",\"updated\":" + AmazonJson.string(updated)
+            + ",\"stale\":" + PriceVerdict.isStale(stats.scannedAt, now) + "}";
     }
 
     private static String price(CccParser.Price price) {

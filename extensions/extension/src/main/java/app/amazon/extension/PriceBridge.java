@@ -33,13 +33,15 @@ import app.loki.extension.LokiLog;
  * to each Amazon WebView when it is created.
  *
  * <p>It does two things, both asked for by the card after the user tapped it (or switched on Load automatically):
- * {@code request(asin, code)} fetches the product page of CamelCamelCamel in the background and hands the lowest,
- * average and highest price back to the page, and {@code open(which, asin, code)} opens the product on
+ * {@code request(asin, code, pagePrice)} fetches the product page of CamelCamelCamel in the background and hands
+ * the lowest, average and highest price, how old they are and a verdict on the price the page shows back to the
+ * page, and {@code open(which, asin, code)} opens the product on
  * CamelCamelCamel or Keepa in the browser. Every argument is checked (an ASIN of ten capital letters and digits, a
  * marketplace CamelCamelCamel serves, one of two names) and anything else is ignored. Neither method returns data:
  * the answer goes to the page afterwards, to a fixed global function, and only while the WebView still shows an
- * Amazon page of the same marketplace. Requests are rate limited, answers are kept for 30 minutes per product, and
- * at most one request per product is on its way at a time.
+ * Amazon page of the same marketplace. Requests are rate limited, answers are kept for 30 minutes per product (the payload is built again for each
+ * delivery, so the age and the verdict are always current), and at most one request per product is on its way at a
+ * time. The page price is only a number to compare with; it is never logged or kept.
  *
  * <p>The object is visible to every page the WebView loads, so it holds nothing worth stealing: it gives out only
  * what CamelCamelCamel shows to anyone, and it can only be used to look up prices.
@@ -53,13 +55,24 @@ public final class PriceBridge {
     private static final int MAX_REDIRECTS = 3;
 
     /** The product pages this phone asked for, newest last; their answers. */
-    private static final PriceCache CACHE = new PriceCache(64);
+    private static final PriceCache<PriceFetch.Result> CACHE = new PriceCache<>(64);
     /** At most 12 look-ups a minute in all, and 6 browser opens a minute. */
     private static final RateLimiter REQUESTS = new RateLimiter(12, 60_000L);
     private static final RateLimiter OPENS = new RateLimiter(6, 60_000L);
 
+    /** One WebView waiting for an answer, with the price its page shows (NaN when unknown). */
+    private static final class Waiter {
+        final WeakReference<WebView> view;
+        final double pagePrice;
+
+        Waiter(WebView view, double pagePrice) {
+            this.view = new WeakReference<>(view);
+            this.pagePrice = pagePrice;
+        }
+    }
+
     /** Products being fetched right now, with the WebViews waiting for each. */
-    private static final Map<String, List<WeakReference<WebView>>> IN_FLIGHT = new HashMap<>();
+    private static final Map<String, List<Waiter>> IN_FLIGHT = new HashMap<>();
     private static final Map<WebView, Boolean> ATTACHED = new WeakHashMap<>();
 
     private static final ExecutorService WORKER = Executors.newSingleThreadExecutor(new ThreadFactory() {
@@ -92,19 +105,29 @@ public final class PriceBridge {
         }
     }
 
-    /** Looks the product up and sends the answer to the page. Returns nothing. */
+    /** Looks the product up and sends the answer to the page, without a price from the page. Returns nothing. */
     @JavascriptInterface
     public void request(final String asin, final String code) {
+        request(asin, code, null);
+    }
+
+    /**
+     * Looks the product up and sends the answer to the page. [pagePrice] is the price text the page shows ("$269.00"),
+     * which the verdict is judged on; anything that is not a usable price is ignored. Returns nothing.
+     */
+    @JavascriptInterface
+    public void request(final String asin, final String code, String pagePriceText) {
         if (!PriceLinks.validAsin(asin) || !PriceLinks.cccSupports(code)) return;
         final WebView webView = view.get();
         if (webView == null) return;
         if (!REQUESTS.tryAcquire(System.currentTimeMillis())) return;
+        final double pagePrice = PriceVerdict.pagePrice(pagePriceText);
         // The bridge answers on a background thread; the WebView may only be asked about its page on the main one.
         webView.post(new Runnable() {
             @Override
             public void run() {
                 if (!onAmazonPage(webView, code)) return;
-                start(webView, asin, code);
+                start(webView, asin, code, pagePrice);
             }
         });
     }
@@ -147,21 +170,22 @@ public final class PriceBridge {
     }
 
     /** Main thread: answer from the cache, join a request already on its way, or start one. */
-    private static void start(WebView webView, final String asin, final String code) {
+    private static void start(WebView webView, final String asin, final String code, double pagePrice) {
         final String key = code + ":" + asin;
-        String cached = CACHE.get(key, System.currentTimeMillis());
+        long now = System.currentTimeMillis();
+        PriceFetch.Result cached = CACHE.get(key, now);
         if (cached != null) {
-            deliver(webView, code, cached);
+            deliver(webView, code, PricePayload.of(asin, code, cached, pagePrice, now));
             return;
         }
         synchronized (IN_FLIGHT) {
-            List<WeakReference<WebView>> waiting = IN_FLIGHT.get(key);
+            List<Waiter> waiting = IN_FLIGHT.get(key);
             if (waiting != null) {
-                waiting.add(new WeakReference<>(webView));
+                waiting.add(new Waiter(webView, pagePrice));
                 return;
             }
             waiting = new ArrayList<>();
-            waiting.add(new WeakReference<>(webView));
+            waiting.add(new Waiter(webView, pagePrice));
             IN_FLIGHT.put(key, waiting);
         }
         try {
@@ -185,17 +209,20 @@ public final class PriceBridge {
             result = fetch(asin, code);
         } catch (Throwable error) {
             log("price history: the request failed (" + error.getClass().getSimpleName() + ", " + code + ")");
-            result = PriceFetch.classify(asin, code, 0, null);
+            result = PriceFetch.classify(asin, code, 0, null, System.currentTimeMillis());
         }
-        CACHE.put(key, result.json, result.keepMillis, System.currentTimeMillis());
-        List<WeakReference<WebView>> waiting;
+        CACHE.put(key, result, result.keepMillis, System.currentTimeMillis());
+        List<Waiter> waiting;
         synchronized (IN_FLIGHT) {
             waiting = IN_FLIGHT.remove(key);
         }
         if (waiting == null) return;
-        for (WeakReference<WebView> reference : waiting) {
-            WebView webView = reference.get();
-            if (webView != null) deliverLater(webView, code, result.json);
+        long now = System.currentTimeMillis();
+        for (Waiter waiter : waiting) {
+            WebView webView = waiter.view.get();
+            if (webView != null) {
+                deliverLater(webView, code, PricePayload.of(asin, code, result, waiter.pagePrice, now));
+            }
         }
     }
 
@@ -252,7 +279,7 @@ public final class PriceBridge {
             URL url = new URL(address);
             if (!"https".equals(url.getProtocol()) || !PriceLinks.isCccHost(url.getHost())) {
                 log("price history: refused a redirect that left CamelCamelCamel (" + code + ")");
-                return PriceFetch.classify(asin, code, 0, null);
+                return PriceFetch.classify(asin, code, 0, null, System.currentTimeMillis());
             }
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             try {
@@ -267,7 +294,7 @@ public final class PriceBridge {
                     String location = connection.getHeaderField("Location");
                     if (location == null) {
                         log("price history: redirect without a Location (HTTP " + status + ", " + code + ")");
-                        return PriceFetch.classify(asin, code, 0, null);
+                        return PriceFetch.classify(asin, code, 0, null, System.currentTimeMillis());
                     }
                     address = new URL(url, location).toString();
                     continue;
@@ -279,7 +306,8 @@ public final class PriceBridge {
                     // Only to tell a Cloudflare challenge from a plain refusal in the log.
                     body = readQuietly(connection.getErrorStream());
                 }
-                PriceFetch.Result result = PriceFetch.classify(asin, code, status, status == 200 ? body : null);
+                PriceFetch.Result result = PriceFetch.classify(asin, code, status, status == 200 ? body : null,
+                    System.currentTimeMillis());
                 if (status != 200) {
                     if (looksLikeChallenge(body)) {
                         log("price history: CamelCamelCamel sent a bot check page (HTTP " + status + ", " + code + ")");
@@ -299,7 +327,7 @@ public final class PriceBridge {
             }
         }
         log("price history: gave up after too many redirects (" + code + ")");
-        return PriceFetch.classify(asin, code, 0, null);
+        return PriceFetch.classify(asin, code, 0, null, System.currentTimeMillis());
     }
 
     private static String readQuietly(InputStream in) {

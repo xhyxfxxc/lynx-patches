@@ -154,4 +154,122 @@ public class CccParserTest {
         assertEquals("a b", CccParser.text("a\n   <br>  b"));
         assertEquals("&bogus;", CccParser.text("&bogus;"));
     }
+
+    /** One row of the product details table, as CamelCamelCamel writes it. */
+    private static String detailRow(String cls, String label, String value, boolean closed) {
+        return "  <tr class=\"" + cls + "\">\n"
+            + "    <td valign=\"middle\" nowrap=\"nowrap\" width=\"30.0%\">\n"
+            + "      <strong>" + label + "</strong>\n"
+            + "    </td>\n"
+            + "    <td valign=\"middle\" width=\"70.0%\" style=\"overflow-wrap: break-word;\">\n"
+            + "        " + value + "\n"
+            + "    </td>\n"
+            + (closed ? "  </tr>\n" : "");
+    }
+
+    @Test
+    public void lastScanIsReadFromAClosedRow() {
+        String page = "<table>" + detailRow("even", "Last update scan", "6 hours ago", true)
+            + detailRow("odd", "Last tracked", "3 years ago", true) + "</table>";
+        assertEquals("6 hours ago", CccParser.lastScan(page));
+    }
+
+    @Test
+    public void lastScanIsReadFromAnUnclosedRowAndNeverTakesTheNextLabel() {
+        String page = "<table>" + detailRow("odd", "Last update scan", "5 days ago", false)
+            + detailRow("even", "Last tracked", "3 years ago", false) + "</table>";
+        assertEquals("5 days ago", CccParser.lastScan(page));
+    }
+
+    @Test
+    public void lastScanReadsAnAbsoluteDate() {
+        String page = "<table>" + detailRow("even", "LAST UPDATE SCAN", "on Nov 19, 2023", true)
+            + detailRow("odd", "Last tracked", "x", true) + "</table>";
+        assertEquals("on Nov 19, 2023", CccParser.lastScan(page));
+    }
+
+    @Test
+    public void lastScanIsNullWhenThePageHasNone() {
+        assertNull(CccParser.lastScan(null));
+        assertNull(CccParser.lastScan(""));
+        assertNull(CccParser.lastScan(PAGE));
+        assertNull(CccParser.lastScan("<table><tr><td>Last tracked</td><td>3 years ago</td></tr></table>"));
+        // The label with no value cell: the next row's label must not become the value.
+        assertNull(CccParser.lastScan("<table><tr><td><strong>Last update scan</strong></td></tr>"
+            + "<tr><td><strong>Last tracked</strong></td><td>3 years ago</td></tr></table>"));
+        // An empty value cell is no value either.
+        assertNull(CccParser.lastScan("<table><tr><td>Last update scan</td><td>  </td></tr></table>"));
+    }
+
+    private static final long FETCHED = 1_800_000_000_000L;
+    private static final long HOUR = 60L * 60L * 1000L;
+    private static final long DAY = 24L * HOUR;
+
+    @Test
+    public void relativeScanTimesCountBackFromTheFetch() {
+        assertEquals(FETCHED - 6 * HOUR, CccParser.scannedAt("6 hours ago", FETCHED));
+        assertEquals(FETCHED - HOUR, CccParser.scannedAt("an hour ago", FETCHED));
+        assertEquals(FETCHED - HOUR, CccParser.scannedAt("a hour ago", FETCHED));
+        assertEquals(FETCHED - HOUR, CccParser.scannedAt("one hour ago", FETCHED));
+        assertEquals(FETCHED - HOUR, CccParser.scannedAt("1 hour ago", FETCHED));
+        assertEquals(FETCHED - 3 * HOUR, CccParser.scannedAt("about 3 hours ago", FETCHED));
+        assertEquals(FETCHED - 3 * HOUR, CccParser.scannedAt("Over 3 hours ago", FETCHED));
+        assertEquals(FETCHED - 3 * HOUR, CccParser.scannedAt("ALMOST 3 Hours Ago", FETCHED));
+        assertEquals(FETCHED - DAY, CccParser.scannedAt("1 day ago", FETCHED));
+        assertEquals(FETCHED - 5 * DAY, CccParser.scannedAt("  5 days   ago ", FETCHED));
+        assertEquals(FETCHED - 14 * DAY, CccParser.scannedAt("2 weeks ago", FETCHED));
+        assertEquals(FETCHED - 7 * DAY, CccParser.scannedAt("a week ago", FETCHED));
+        assertEquals(FETCHED - 60 * DAY, CccParser.scannedAt("2 months ago", FETCHED));
+        assertEquals(FETCHED - 30 * DAY, CccParser.scannedAt("a month ago", FETCHED));
+        assertEquals(FETCHED - 3 * 365 * DAY, CccParser.scannedAt("3 years ago", FETCHED));
+        assertEquals(FETCHED - 365 * DAY, CccParser.scannedAt("a year ago", FETCHED));
+        assertEquals(FETCHED - 5 * 60_000L, CccParser.scannedAt("5 minutes ago", FETCHED));
+        assertEquals(FETCHED, CccParser.scannedAt("less than a minute ago", FETCHED));
+        assertEquals(FETCHED, CccParser.scannedAt("just now", FETCHED));
+        assertEquals(FETCHED - DAY, CccParser.scannedAt("yesterday", FETCHED));
+    }
+
+    @Test
+    public void absoluteScanTimesAreMidnightUtc() {
+        long nov19 = 1_700_352_000_000L; // 2023-11-19T00:00:00Z
+        assertEquals(nov19, CccParser.scannedAt("on Nov 19, 2023", FETCHED));
+        assertEquals(nov19, CccParser.scannedAt("Nov 19, 2023", FETCHED));
+        assertEquals(nov19, CccParser.scannedAt("November 19, 2023", FETCHED));
+        assertEquals(nov19, CccParser.scannedAt("on nov. 19 2023", FETCHED));
+        assertEquals(nov19, CccParser.scannedAt("ON NOV 19,2023", FETCHED));
+        assertEquals(0, CccParser.scannedAt("Jan 1, 1970", FETCHED));
+        assertEquals(1_709_164_800_000L, CccParser.scannedAt("on Feb 29, 2024", FETCHED)); // a leap day
+        assertEquals(1_756_684_800_000L, CccParser.scannedAt("Sept 1, 2025", FETCHED));
+    }
+
+    @Test
+    public void unreadableScanTimesGiveMinusOne() {
+        assertEquals(-1, CccParser.scannedAt(null, FETCHED));
+        assertEquals(-1, CccParser.scannedAt("", FETCHED));
+        assertEquals(-1, CccParser.scannedAt("   ", FETCHED));
+        assertEquals(-1, CccParser.scannedAt("garbage", FETCHED));
+        assertEquals(-1, CccParser.scannedAt("sometime ago", FETCHED));
+        assertEquals(-1, CccParser.scannedAt("6 fortnights ago", FETCHED));
+        assertEquals(-1, CccParser.scannedAt("6 hours", FETCHED));
+        assertEquals(-1, CccParser.scannedAt("on Foo 19, 2023", FETCHED));
+        assertEquals(-1, CccParser.scannedAt("on Feb 30, 2024", FETCHED));
+        assertEquals(-1, CccParser.scannedAt("on Feb 29, 2023", FETCHED));
+        assertEquals(-1, CccParser.scannedAt("on Nov 0, 2023", FETCHED));
+        assertEquals(-1, CccParser.scannedAt("19/11/2023", FETCHED));
+    }
+
+    @Test
+    public void theParsedTableCarriesWhenTheProductWasLastScanned() {
+        String table = "<table><tr><th>Lowest Ever</th></tr>"
+            + "<tr data-field=\"amazon\"><td>Amazon</td><td>$100.00</td><td>$250.00</td><td>$102.50</td>"
+            + "<td>$180.25</td></tr></table>";
+        CccParser.Stats fresh = CccParser.parse(table + detailRow("even", "Last update scan", "6 hours ago", true),
+            FETCHED);
+        assertEquals(FETCHED - 6 * HOUR, fresh.scannedAt);
+        CccParser.Stats old = CccParser.parse(table + detailRow("even", "Last update scan", "on Nov 19, 2023", false),
+            FETCHED);
+        assertEquals(1_700_352_000_000L, old.scannedAt);
+        assertEquals(-1, CccParser.parse(table, FETCHED).scannedAt);
+        assertEquals(-1, CccParser.parse(PAGE).scannedAt);
+    }
 }
