@@ -9,24 +9,20 @@
 package app.amazon.patches.disableautoplay
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.methodCall
 
-/**
- * MShopWebView.initialize(): called once per WebView instantiation (via <init>).
- * Unique by the mashService().setWebViewSettings(WebView) interface call sequence,
- * which only appears in this private method.
- * We prepend setMediaPlaybackRequiresUserGesture(true) so every WebView in the app
- * requires user interaction before any video autoplays.
- */
-internal val MShopWebViewInitializeFingerprint = Fingerprint(
-    definingClass = "Lcom/amazon/mShop/web/MShopWebView;",
-    name = "initialize",
+// Normal (non-jumpstarted) page loads
+internal val MShopWebViewClientOnPageFinishedFingerprint = Fingerprint(
+    definingClass = "Lcom/amazon/mShop/web/MShopWebViewClient;",
+    name = "onPageFinished",
     returnType = "V",
-    parameters = emptyList(),
-    filters = listOf(
-        methodCall(
-            definingClass = "Lcom/amazon/mShop/mash/api/MShopMASHService;",
-            name = "setWebViewSettings",
-        ),
-    ),
+    parameters = listOf("Landroid/webkit/WebView;", "Ljava/lang/String;"),
+    strings = listOf("onPageFinished_withDuration"),
+)
+
+// All pages (normal and jumpstarted): fires when the WebView is assigned to the fragment
+internal val InteractionWebFragmentSetWebViewFingerprint = Fingerprint(
+    definingClass = "Lcom/amazon/mShop/web/InteractionWebFragment;",
+    name = "setWebView",
+    returnType = "V",
+    parameters = listOf("Lcom/amazon/mShop/web/MShopWebView;"),
 )

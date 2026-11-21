@@ -9,6 +9,7 @@
 package app.amazon.patches.disableautoplay
 
 import app.amazon.patches.shared.Constants.COMPATIBILITY_AMAZON
+import app.amazon.patches.shared.Constants.HELPER
 import app.loki.patches.universal.addMenuFlag
 import app.loki.patches.universal.menuPatch
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
@@ -22,32 +23,37 @@ private val autoplayFlag = resourcePatch {
 }
 
 /**
- * Ported from amznkiller v2.5.0 (feat: disable video autoplay in webviews).
- * The original uses Xposed to hook onPageFinished and inject JS; here a bytecode
- * patch on MShopWebView.initialize() calls setMediaPlaybackRequiresUserGesture(true)
- * at WebView creation time, which is cleaner and fires before any page loads.
+ * Ported from amznkiller v2.5.0 (feat: disable video autoplay in webviews), which hooks onPageFinished and injects
+ * JavaScript. That is what this does too. An earlier version of this patch set
+ * setMediaPlaybackRequiresUserGesture(true) when a WebView is created, which did nothing: Cordova's
+ * SystemWebViewEngine.initWebViewSettings resets it to false afterwards, MASHWebView.enableMediaAutoplay sets it
+ * again, and Chromium lets muted videos play on their own regardless.
  *
- * Registers in initialize(): .registers 3 gives p0=this, v0 and v1 available.
- * We call p0.getSettings() into v0, then v0.setMediaPlaybackRequiresUserGesture(true).
+ * The script (AmazonHelper.injectNoAutoplay) removes autoplay attributes, pauses a video that starts without a tap
+ * and watches for videos added later. It runs for normal page loads (onPageFinished) and, like Remove ads, when a
+ * WebView is handed to a fragment, which also covers the pages that are loaded ahead of time.
  */
 @Suppress("unused")
 val amazonDisableVideoAutoplayPatch = bytecodePatch(
     name = "Disable video autoplay",
-    description = "Prevents videos from autoplaying in Amazon's in-app WebView pages.",
+    description = "Stops videos in Amazon's in-app pages from starting on their own; a tap still plays them.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_AMAZON)
     dependsOn(menuPatch, autoplayFlag)
+    extendWith("extensions/extension.mpe")
 
     execute {
-        MShopWebViewInitializeFingerprint.method.addInstructions(
+        // Normal page loads: p1=WebView
+        MShopWebViewClientOnPageFinishedFingerprint.method.addInstructions(
             0,
-            """
-                invoke-virtual {p0}, Landroid/webkit/WebView;->getSettings()Landroid/webkit/WebSettings;
-                move-result-object v0
-                const/4 v1, 0x1
-                invoke-virtual {v0, v1}, Landroid/webkit/WebSettings;->setMediaPlaybackRequiresUserGesture(Z)V
-            """.trimIndent(),
+            "invoke-static {p1}, $HELPER->injectNoAutoplay(Landroid/webkit/WebView;)V",
+        )
+
+        // All pages when the WebView is assigned to the fragment: p1=MShopWebView
+        InteractionWebFragmentSetWebViewFingerprint.method.addInstructions(
+            0,
+            "invoke-static {p1}, $HELPER->injectNoAutoplay(Landroid/webkit/WebView;)V",
         )
     }
 }

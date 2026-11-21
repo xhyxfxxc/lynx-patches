@@ -152,6 +152,61 @@ public class AmazonHelper {
             + "s.textContent=css;})(" + jsonString(adCss()) + ");", null);
     }
 
+    // ---- Video autoplay ----
+
+    /**
+     * Stops videos that start without the user. A page's own settings cannot do this: Cordova resets
+     * setMediaPlaybackRequiresUserGesture to false and Chromium lets muted videos play on their own anyway, so
+     * the page is told instead. The script removes autoplay attributes, pauses any video that starts without a
+     * tap, press or key within the last second (a real tap on a video, which comes right before its play event,
+     * still plays it), and watches for videos added later. A video the user started is never paused by a later
+     * run, and a video that keeps restarting itself is let go after 25 tries so a player cannot spin the page.
+     * Running it again on the same page only rescans. The script is a constant: no runtime value enters it.
+     */
+    private static final String NO_AUTOPLAY_JS =
+        "(function(){"
+        + "if(window.__lynxNoAutoplay){window.__lynxNoAutoplay();return;}"
+        + "var last=0;"
+        + "function mark(){last=Date.now();}"
+        + "['pointerdown','touchstart','mousedown','keydown','click'].forEach(function(t){"
+        + "document.addEventListener(t,mark,true);});"
+        + "function recent(){return Date.now()-last<1000;}"
+        + "function stop(v){"
+        + "if(v.__lynxUser||(v.__lynxStops|0)>=25)return;"
+        + "v.__lynxStops=(v.__lynxStops|0)+1;"
+        + "try{v.pause();}catch(e){}}"
+        + "function strip(v){"
+        + "try{if(v.hasAttribute('autoplay'))v.removeAttribute('autoplay');v.autoplay=false;}catch(e){}"
+        + "if(!v.paused&&!v.__lynxUser)stop(v);}"
+        + "function scan(root){"
+        + "var list=root.querySelectorAll?root.querySelectorAll('video'):[];"
+        + "for(var i=0;i<list.length;i++)strip(list[i]);}"
+        + "document.addEventListener('play',function(e){"
+        + "var v=e.target;if(!v||v.tagName!=='VIDEO')return;"
+        + "if(recent()){v.__lynxUser=true;return;}"
+        + "stop(v);},true);"
+        + "new MutationObserver(function(muts){"
+        + "for(var i=0;i<muts.length;i++){var m=muts[i];"
+        + "if(m.type==='attributes'){if(m.target.tagName==='VIDEO')strip(m.target);continue;}"
+        + "for(var j=0;j<m.addedNodes.length;j++){var n=m.addedNodes[j];"
+        + "if(n.nodeType!==1)continue;"
+        + "if(n.tagName==='VIDEO')strip(n);else scan(n);}}"
+        + "}).observe(document.documentElement,"
+        + "{childList:true,subtree:true,attributes:true,attributeFilter:['autoplay']});"
+        + "window.__lynxNoAutoplay=function(){scan(document);};"
+        + "scan(document);"
+        + "})();";
+
+    /** Keeps videos in Amazon's pages from starting on their own. Performs no network access. */
+    public static void injectNoAutoplay(WebView webView) {
+        if (webView == null) return;
+        try {
+            webView.evaluateJavascript(NO_AUTOPLAY_JS, null);
+        } catch (RuntimeException ignored) {
+            // A WebView that is being destroyed: there is no page left to stop.
+        }
+    }
+
     // ---- Price history (explicitly user initiated) ----
 
     // graph.keepa.com takes a marketplace country code as its `domain`
