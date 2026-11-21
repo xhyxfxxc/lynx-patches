@@ -39,9 +39,9 @@ import app.loki.extension.LokiLog;
  * CamelCamelCamel or Keepa in the browser. Every argument is checked (an ASIN of ten capital letters and digits, a
  * marketplace CamelCamelCamel serves, one of two names) and anything else is ignored. Neither method returns data:
  * the answer goes to the page afterwards, to a fixed global function, and only while the WebView still shows an
- * Amazon page of the same marketplace. Requests are rate limited, answers are kept for 30 minutes per product (the payload is built again for each
- * delivery, so the age and the verdict are always current), and at most one request per product is on its way at a
- * time. The page price is only a number to compare with; it is never logged or kept.
+ * Amazon page of the same marketplace. Requests are rate limited, answers are kept for 30 minutes per product (the
+ * payload is built again for each delivery, so the age and the verdict are always current), and at most one request
+ * per product is on its way at a time. The page price is only a number to compare with; it is never logged or kept.
  *
  * <p>The object is visible to every page the WebView loads, so it holds nothing worth stealing: it gives out only
  * what CamelCamelCamel shows to anyone, and it can only be used to look up prices.

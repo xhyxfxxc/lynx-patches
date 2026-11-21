@@ -116,11 +116,14 @@ final class PriceVerdict {
         return scannedAt >= 0 && now - scannedAt > STALE_AFTER_MILLIS;
     }
 
-    /** How long ago the scan was, in words: "less than an hour ago", "6 hours ago", "5 days ago", "2 months ago". */
+    /**
+     * How long ago the scan was, in words: "less than an hour ago", "6 hours ago" (up to 23), "1 day ago",
+     * "5 days ago", "2 months ago", "3 years ago".
+     */
     static String agePhrase(long scannedAt, long now) {
         long age = Math.max(0, now - scannedAt);
         if (age < HOUR_MILLIS) return "less than an hour ago";
-        if (age < 2 * DAY_MILLIS) return count(age / HOUR_MILLIS, "hour") + " ago";
+        if (age < DAY_MILLIS) return count(age / HOUR_MILLIS, "hour") + " ago";
         long days = age / DAY_MILLIS;
         if (days < 60) return count(days, "day") + " ago";
         if (days < 730) return count(days / 30, "month") + " ago";

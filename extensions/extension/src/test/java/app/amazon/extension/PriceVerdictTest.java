@@ -205,7 +205,9 @@ public class PriceVerdictTest {
         assertEquals("1 hour ago", PriceVerdict.agePhrase(NOW - 119 * MINUTE, NOW));
         assertEquals("2 hours ago", PriceVerdict.agePhrase(NOW - 2 * HOUR, NOW));
         assertEquals("6 hours ago", PriceVerdict.agePhrase(NOW - 6 * HOUR, NOW));
-        assertEquals("47 hours ago", PriceVerdict.agePhrase(NOW - 47 * HOUR, NOW));
+        assertEquals("23 hours ago", PriceVerdict.agePhrase(NOW - 23 * HOUR, NOW));
+        assertEquals("1 day ago", PriceVerdict.agePhrase(NOW - 24 * HOUR, NOW));
+        assertEquals("1 day ago", PriceVerdict.agePhrase(NOW - 47 * HOUR, NOW));
         assertEquals("2 days ago", PriceVerdict.agePhrase(NOW - 48 * HOUR, NOW));
         assertEquals("5 days ago", PriceVerdict.agePhrase(NOW - 5 * DAY, NOW));
         assertEquals("59 days ago", PriceVerdict.agePhrase(NOW - 59 * DAY, NOW));
