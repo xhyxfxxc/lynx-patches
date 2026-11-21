@@ -24,12 +24,22 @@ public class PriceVerdictTest {
     }
 
     @Test
-    public void lowestEverWithinOnePercent() {
+    public void lowestEverOnlyWhenEqualWithinRounding() {
         verdict(PriceVerdict.LOW, "Lowest price ever", 100.0, 100.0, 200.0);
         verdict(PriceVerdict.LOW, "Lowest price ever", 90.0, 100.0, 200.0);
-        verdict(PriceVerdict.LOW, "Lowest price ever", 101.0, 100.0, 200.0);
-        // 100 * 1.01 is not exactly 101 in floating point; the boundary still counts as lowest.
-        verdict(PriceVerdict.NEAR, "Near the lowest price ever", 101.01, 100.0, 200.0);
+        // 0.2 percent above the lowest still counts as the lowest; 100 * 1.002 is not exactly 100.2 in floating
+        // point, so the boundary must not be decided by rounding.
+        verdict(PriceVerdict.LOW, "Lowest price ever", 100.2, 100.0, 200.0);
+        verdict(PriceVerdict.NEAR, "Near the lowest price ever", 100.21, 100.0, 200.0);
+        verdict(PriceVerdict.NEAR, "Near the lowest price ever", 101.0, 100.0, 200.0);
+    }
+
+    @Test
+    public void twoDollarsAboveTheLowestIsNearNotLowest() {
+        // The case seen on a phone: $266.08 now, lowest ever $264.08 (0.76 percent above).
+        verdict(PriceVerdict.NEAR, "Near the lowest price ever", 266.08, 264.08, 319.34);
+        verdict(PriceVerdict.LOW, "Lowest price ever", 264.08, 264.08, 319.34);
+        verdict(PriceVerdict.LOW, "Lowest price ever", 264.5, 264.08, 319.34);
     }
 
     @Test
@@ -92,7 +102,7 @@ public class PriceVerdictTest {
     @Test
     public void usesAmazonWhenItHasACurrentPrice() {
         CccParser.Stats stats = new CccParser.Stats(
-            series("amazon", 100.0, 250.0, 100.5, 180.0),
+            series("amazon", 100.0, 250.0, 100.0, 180.0),
             series("new", 90.0, 300.0, 90.0, 190.0), null);
         PriceVerdict.Chosen chosen = PriceVerdict.choose(stats);
         assertEquals("Amazon", chosen.label);
@@ -152,9 +162,9 @@ public class PriceVerdictTest {
         assertTrue(json, json.contains("\"lowest\":{\"p\":\"$264.08\",\"d\":\"Nov 20, 2026\"}"));
         assertTrue(json, json.contains("\"average\":{\"p\":\"$319.34\",\"d\":null}"));
         assertTrue(json, json.contains("\"highest\":{\"p\":\"$479.00\",\"d\":\"Aug 08, 2020\"}"));
-        // 266.08 is 0.7 percent above the lowest 264.08, so it is the lowest price ever.
-        assertTrue(json, json.contains("\"kind\":\"low\""));
-        assertTrue(json, json.contains("\"verdict\":\"Lowest price ever\""));
+        // 266.08 is 0.76 percent above the lowest 264.08: near the lowest, not the lowest.
+        assertTrue(json, json.contains("\"kind\":\"near\""));
+        assertTrue(json, json.contains("\"verdict\":\"Near the lowest price ever\""));
     }
 
     @Test

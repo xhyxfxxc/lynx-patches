@@ -7,6 +7,7 @@ package app.amazon.extension;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
@@ -24,6 +25,8 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+
+import app.loki.extension.LokiLog;
 
 /**
  * The only way the price history card talks to anything outside the page: the object {@code lynxPrice}, added once
@@ -45,8 +48,6 @@ public final class PriceBridge {
     /** The name the page uses: window.lynxPrice. */
     static final String NAME = "lynxPrice";
 
-    private static final String USER_AGENT = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 "
-        + "(KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36";
     private static final int TIMEOUT_MILLIS = 10_000;
     private static final int MAX_BODY_BYTES = 1_500_000;
     private static final int MAX_REDIRECTS = 3;
@@ -183,6 +184,7 @@ public final class PriceBridge {
         try {
             result = fetch(asin, code);
         } catch (Throwable error) {
+            log("price history: the request failed (" + error.getClass().getSimpleName() + ", " + code + ")");
             result = PriceFetch.classify(asin, code, 0, null);
         }
         CACHE.put(key, result.json, result.keepMillis, System.currentTimeMillis());
@@ -216,11 +218,40 @@ public final class PriceBridge {
         }
     }
 
+    /**
+     * The name this request goes out under: the platform's own HTTP agent, which on Android is the honest
+     * "Dalvik/2.1.0 (Linux; U; Android ...)" string. CamelCamelCamel's Cloudflare answers a browser-like name with a
+     * JavaScript challenge that this plain request cannot pass, and lets a plain HTTP client through.
+     */
+    static String userAgent(String platformAgent, String androidRelease) {
+        if (platformAgent != null && !platformAgent.trim().isEmpty()) return platformAgent.trim();
+        return "Dalvik/2.1.0 (Linux; U; Android " + androidRelease + ")";
+    }
+
+    /** True for the page Cloudflare serves instead of the real one ("Just a moment..."). */
+    static boolean looksLikeChallenge(String body) {
+        if (body == null) return false;
+        String lower = body.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("just a moment") || lower.contains("challenge-platform")
+            || lower.contains("cf-browser-verification");
+    }
+
+    /** Diagnostic log (a line only while Diagnostic logging is on); used on failure paths only. */
+    private static void log(String line) {
+        try {
+            LokiLog.debug(line);
+        } catch (Throwable ignored) {
+            // A logging problem must never become the price card's problem.
+        }
+    }
+
     private static PriceFetch.Result fetch(String asin, String code) throws Exception {
+        String agent = userAgent(System.getProperty("http.agent"), Build.VERSION.RELEASE);
         String address = PriceLinks.cccProduct(code, asin);
         for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
             URL url = new URL(address);
             if (!"https".equals(url.getProtocol()) || !PriceLinks.isCccHost(url.getHost())) {
+                log("price history: refused a redirect that left CamelCamelCamel (" + code + ")");
                 return PriceFetch.classify(asin, code, 0, null);
             }
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -228,23 +259,56 @@ public final class PriceBridge {
                 connection.setInstanceFollowRedirects(false);
                 connection.setConnectTimeout(TIMEOUT_MILLIS);
                 connection.setReadTimeout(TIMEOUT_MILLIS);
-                connection.setRequestProperty("User-Agent", USER_AGENT);
+                connection.setRequestProperty("User-Agent", agent);
                 connection.setRequestProperty("Accept", "text/html,application/xhtml+xml");
                 connection.setRequestProperty("Accept-Language", "en-US,en;q=0.8");
                 int status = connection.getResponseCode();
                 if (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) {
                     String location = connection.getHeaderField("Location");
-                    if (location == null) return PriceFetch.classify(asin, code, 0, null);
+                    if (location == null) {
+                        log("price history: redirect without a Location (HTTP " + status + ", " + code + ")");
+                        return PriceFetch.classify(asin, code, 0, null);
+                    }
                     address = new URL(url, location).toString();
                     continue;
                 }
-                String body = status == 200 ? read(connection.getInputStream()) : null;
-                return PriceFetch.classify(asin, code, status, body);
+                String body = null;
+                if (status == 200) {
+                    body = read(connection.getInputStream());
+                } else if (status == 403 || status == 503) {
+                    // Only to tell a Cloudflare challenge from a plain refusal in the log.
+                    body = readQuietly(connection.getErrorStream());
+                }
+                PriceFetch.Result result = PriceFetch.classify(asin, code, status, status == 200 ? body : null);
+                if (status != 200) {
+                    if (looksLikeChallenge(body)) {
+                        log("price history: CamelCamelCamel sent a bot check page (HTTP " + status + ", " + code + ")");
+                    } else {
+                        log("price history: CamelCamelCamel answered HTTP " + status + " (" + code + ")");
+                    }
+                } else if (result.keepMillis == PriceFetch.RETRY_MILLIS) {
+                    if (looksLikeChallenge(body)) {
+                        log("price history: CamelCamelCamel sent a bot check page (HTTP 200, " + code + ")");
+                    } else {
+                        log("price history: could not read the price table on the page (" + code + ")");
+                    }
+                }
+                return result;
             } finally {
                 connection.disconnect();
             }
         }
+        log("price history: gave up after too many redirects (" + code + ")");
         return PriceFetch.classify(asin, code, 0, null);
+    }
+
+    private static String readQuietly(InputStream in) {
+        if (in == null) return null;
+        try {
+            return read(in);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private static String read(InputStream in) throws Exception {

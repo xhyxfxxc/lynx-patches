@@ -30,14 +30,15 @@ final class PriceVerdict {
     }
 
     /**
-     * Judges the current price against the lowest ever and the average. A value that is NaN or not above zero is
-     * treated as missing: without a current price there is no verdict, and a missing lowest or average only skips
-     * its own rule.
+     * Judges the current price against the lowest ever and the average. "Lowest price ever" means equal to the lowest
+     * within rounding (0.2 percent); up to 5 percent above it is "Near the lowest price ever". A value that is NaN or
+     * not above zero is treated as missing: without a current price there is no verdict, and a missing lowest or
+     * average only skips its own rule.
      */
     static PriceVerdict of(double current, double lowest, double average) {
         if (!usable(current)) return new PriceVerdict(NONE, "");
         if (usable(lowest)) {
-            if (current <= lowest * 1.01 + EPSILON) return new PriceVerdict(LOW, "Lowest price ever");
+            if (current <= lowest * 1.002 + EPSILON) return new PriceVerdict(LOW, "Lowest price ever");
             if (current <= lowest * 1.05 + EPSILON) return new PriceVerdict(NEAR, "Near the lowest price ever");
         }
         if (usable(average)) {

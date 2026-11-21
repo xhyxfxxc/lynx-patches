@@ -13,7 +13,7 @@
 | Feature | What you get |
 |---|---|
 | 🚫 **Ad-free pages** | Sponsored products, brand banners and video ads are hidden on search, product, cart and order pages. |
-| 📈 **Price history card** | A "Price history" card under the price on product pages, in the style of Amazon's own (which Amazon does not offer in Australia). Tap it to see whether the price is the lowest ever, a good price or higher than usual, the lowest, average and highest price with their dates, and the CamelCamelCamel chart for 30 days, 90 days, 1 year or all time. |
+| 📈 **Price history card** | A "Price history" card under the price on product pages, in the style of Amazon's own (which Amazon does not offer in Australia). Tap it to see whether the price is the lowest ever, near the lowest, a good price or higher than usual, the lowest, average and highest price with their dates, and the CamelCamelCamel chart for 30 days, 90 days, 1 year or all time. |
 | 🎨 **Dark mode** | While your phone is in dark mode, Amazon's pages and bottom bar are darkened by Android's own Force Dark. In light mode nothing changes. Manager lets you pick Off (the app is left untouched) or Follow system. |
 | ▶️ **No video autoplay** | Videos in Amazon's in-app pages wait until you tap them. |
 | 🛡️ **Quieter search** | Search keypress and focus events are no longer sent along with suggestion requests. |

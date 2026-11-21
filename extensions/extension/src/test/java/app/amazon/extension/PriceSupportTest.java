@@ -67,17 +67,19 @@ public class PriceSupportTest {
     @Test
     public void chartLinksClampTheWidthAndKnowTheRanges() {
         assertEquals("https://charts.camelcamelcamel.com/au/B076P3QK6K/amazon-new-used.png"
-                + "?force=1&legend=1&w=800&h=440&tp=3m",
+                + "?force=1&legend=1&w=800&h=480&tp=3m",
             PriceLinks.chartUrl("au", "B076P3QK6K", "3m", 800));
-        assertTrue(PriceLinks.chartUrl("au", "B076P3QK6K", "1y", 100).contains("&w=400&h=220&tp=1y"));
-        assertTrue(PriceLinks.chartUrl("au", "B076P3QK6K", "all", 5000).contains("&w=1000&h=550&tp=all"));
+        assertTrue(PriceLinks.chartUrl("au", "B076P3QK6K", "1y", 100).contains("&w=400&h=240&tp=1y"));
+        assertTrue(PriceLinks.chartUrl("au", "B076P3QK6K", "all", 5000).contains("&w=800&h=480&tp=all"));
         assertTrue(PriceLinks.chartUrl("us", "B076P3QK6K", "1m", 1000).contains("/us/B076P3QK6K/"));
         assertNull(PriceLinks.chartUrl("au", "B076P3QK6K", "3y", 800));
         assertNull(PriceLinks.chartUrl("au", "B076P3QK6K", "5y", 800));
         assertNull(PriceLinks.chartUrl("au", "B076P3QK6K", "3m&x=1", 800));
         assertNull(PriceLinks.chartUrl("in", "B076P3QK6K", "3m", 800));
         assertEquals(400, PriceLinks.clampWidth(-5));
-        assertEquals(1000, PriceLinks.clampWidth(1001));
+        assertEquals(800, PriceLinks.clampWidth(801));
+        assertEquals(800, PriceLinks.clampWidth(1001));
+        assertEquals(740, PriceLinks.clampWidth(740));
     }
 
     @Test
@@ -126,6 +128,26 @@ public class PriceSupportTest {
     public void goodAnswersAreKeptThirtyMinutesAndFailuresOneMinute() {
         assertEquals(30L * 60L * 1000L, PriceFetch.KEEP_MILLIS);
         assertEquals(60L * 1000L, PriceFetch.RETRY_MILLIS);
+    }
+
+    @Test
+    public void theRequestUsesThePlatformsOwnHttpAgent() {
+        String dalvik = "Dalvik/2.1.0 (Linux; U; Android 16; SM-S938B Build/BP2A)";
+        assertEquals(dalvik, PriceBridge.userAgent(dalvik, "16"));
+        assertEquals(dalvik, PriceBridge.userAgent("  " + dalvik + " ", "16"));
+        assertEquals("Dalvik/2.1.0 (Linux; U; Android 16)", PriceBridge.userAgent(null, "16"));
+        assertEquals("Dalvik/2.1.0 (Linux; U; Android 16)", PriceBridge.userAgent("", "16"));
+        assertEquals("Dalvik/2.1.0 (Linux; U; Android 16)", PriceBridge.userAgent("   ", "16"));
+        assertFalse(PriceBridge.userAgent(null, "16").contains("Mozilla"));
+    }
+
+    @Test
+    public void aCloudflareChallengePageIsRecognised() {
+        assertTrue(PriceBridge.looksLikeChallenge("<html><head><title>Just a moment...</title></head></html>"));
+        assertTrue(PriceBridge.looksLikeChallenge("<script src=\"/cdn-cgi/challenge-platform/h/b/orchestrate\"></script>"));
+        assertFalse(PriceBridge.looksLikeChallenge(TABLE));
+        assertFalse(PriceBridge.looksLikeChallenge(""));
+        assertFalse(PriceBridge.looksLikeChallenge(null));
     }
 
     @Test

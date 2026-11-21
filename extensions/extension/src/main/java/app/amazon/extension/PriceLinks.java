@@ -89,16 +89,20 @@ final class PriceLinks {
         return "https://charts.camelcamelcamel.com/" + code + "/";
     }
 
-    /** The chart image URL; the width is clamped to what CamelCamelCamel serves well (400 to 1000 pixels). */
+    /**
+     * The chart image URL; the width is clamped to 400 to 800 pixels and the height is 0.6 of it. That is about twice
+     * the width of the card on a phone: sharp, and its legend (lowest, highest, current price) stays readable
+     * instead of being a 1000 pixel image shrunk to a third. The card's script builds the same URL.
+     */
     static String chartUrl(String code, String asin, String range, int width) {
         if (!cccSupports(code) || !validAsin(asin) || !validRange(range)) return null;
         int w = clampWidth(width);
-        int h = (int) Math.round(w * 0.55);
+        int h = (int) Math.round(w * 0.6);
         return chartBase(code) + asin + "/amazon-new-used.png?force=1&legend=1&w=" + w + "&h=" + h + "&tp=" + range;
     }
 
     static int clampWidth(int width) {
-        return Math.max(400, Math.min(1000, width));
+        return Math.max(400, Math.min(800, width));
     }
 
     /** A host that may answer a request for a product page, after any redirect. */
