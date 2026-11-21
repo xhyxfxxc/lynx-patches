@@ -67,16 +67,22 @@ public class PriceSupportTest {
     @Test
     public void chartLinksClampTheWidthAndKnowTheRanges() {
         assertEquals("https://charts.camelcamelcamel.com/au/B076P3QK6K/amazon-new-used.png"
-                + "?force=1&legend=1&w=800&h=480&tp=3m",
+                + "?force=1&legend=0&w=800&h=480&tp=3m",
             PriceLinks.chartUrl("au", "B076P3QK6K", "3m", 800));
-        assertTrue(PriceLinks.chartUrl("au", "B076P3QK6K", "1y", 100).contains("&w=400&h=240&tp=1y"));
+        assertTrue(PriceLinks.chartUrl("au", "B076P3QK6K", "1y", 100).contains("&w=300&h=180&tp=1y"));
         assertTrue(PriceLinks.chartUrl("au", "B076P3QK6K", "all", 5000).contains("&w=800&h=480&tp=all"));
         assertTrue(PriceLinks.chartUrl("us", "B076P3QK6K", "1m", 1000).contains("/us/B076P3QK6K/"));
         assertNull(PriceLinks.chartUrl("au", "B076P3QK6K", "3y", 800));
         assertNull(PriceLinks.chartUrl("au", "B076P3QK6K", "5y", 800));
         assertNull(PriceLinks.chartUrl("au", "B076P3QK6K", "3m&x=1", 800));
         assertNull(PriceLinks.chartUrl("in", "B076P3QK6K", "3m", 800));
-        assertEquals(400, PriceLinks.clampWidth(-5));
+        assertTrue(PriceLinks.chartUrl("au", "B076P3QK6K", "1m", 370).contains("&w=370&h=222&tp=1m"));
+        // The built-in table of the image is never asked for: it cannot be read on a phone.
+        assertFalse(PriceLinks.chartUrl("au", "B076P3QK6K", "3m", 370).contains("legend=1"));
+        assertTrue(PriceLinks.chartUrl("au", "B076P3QK6K", "3m", 370).contains("legend=0"));
+        assertEquals(300, PriceLinks.clampWidth(-5));
+        assertEquals(300, PriceLinks.clampWidth(299));
+        assertEquals(300, PriceLinks.clampWidth(300));
         assertEquals(800, PriceLinks.clampWidth(801));
         assertEquals(800, PriceLinks.clampWidth(1001));
         assertEquals(740, PriceLinks.clampWidth(740));
