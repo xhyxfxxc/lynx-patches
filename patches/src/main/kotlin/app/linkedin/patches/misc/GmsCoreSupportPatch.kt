@@ -645,11 +645,15 @@ val gmsCoreSupportPatch = bytecodePatch(
             )
 
         // Push needs a Firebase installation first, and Google only issues one when the request names the
-        // certificate the app's API key is bound to. The patched app is signed with another key, so the request is
-        // refused (API_KEY_ANDROID_APP_BLOCKED), GmsCore's push registration then fails with FIS_AUTH_ERROR, and
-        // the app never gets notifications. The header gets the original certificate, the same one GmsCore already
-        // presents for the app.
-        if (originalSignatureSha1.isNotEmpty()) spoofFirebaseCertificate(originalSignatureSha1.uppercase())
+        // package and the certificate the app's API key is bound to. The patched app is signed with another key
+        // (and with "Change package name" it also has another package), so the request is refused
+        // (API_KEY_ANDROID_APP_BLOCKED, or 403 PERMISSION_DENIED for the renamed package), GmsCore's push
+        // registration then fails with FIS_AUTH_ERROR, and the app never gets notifications. The headers get the
+        // original certificate and the original package name, the same ones GmsCore already presents for the app.
+        if (originalSignatureSha1.isNotEmpty()) {
+            spoofFirebaseHeader("X-Android-Cert", originalSignatureSha1.uppercase())
+            if (OriginalApp.packageName.isNotEmpty()) spoofFirebaseHeader("X-Android-Package", OriginalApp.packageName)
+        }
 
         // LinkedIn's settings screen reports the GmsCore state through this method. Temporary coupling: the
         // unified menu replaces that screen, and this call plus the import above go away with it. Apps without
@@ -696,22 +700,22 @@ private fun BytecodePatchContext.replaceStrings(rename: (String) -> String?): In
 }
 
 /**
- * Sets the value of every "X-Android-Cert" request header to [sha1]. Firebase names the header with a string
+ * Sets the value of every request header called [header] to [value]. Firebase names the header with a string
  * constant and passes it straight to URLConnection, so the value register is found from that call, whatever the
  * obfuscated class around it is called.
  */
-private fun BytecodePatchContext.spoofFirebaseCertificate(sha1: String) {
+private fun BytecodePatchContext.spoofFirebaseHeader(header: String, value: String) {
     val holders = mutableListOf<ClassDef>()
     classDefForEach { classDef ->
         if (classDef.methods.any { method ->
-                method.implementation?.instructions?.any { it.stringConstant() == "X-Android-Cert" } == true
+                method.implementation?.instructions?.any { it.stringConstant() == header } == true
             }) holders += classDef
     }
     holders.forEach { classDef ->
         mutableClassDefBy(classDef).methods.forEach { method ->
             val code = method.implementation?.instructions?.toList() ?: return@forEach
             code.indices.reversed().forEach { index ->
-                if (code[index].stringConstant() != "X-Android-Cert") return@forEach
+                if (code[index].stringConstant() != header) return@forEach
                 val name = (code[index] as OneRegisterInstruction).registerA
                 val call = (index + 1 until minOf(index + 6, code.size)).firstOrNull { at ->
                     val instruction = code[at]
@@ -721,8 +725,8 @@ private fun BytecodePatchContext.spoofFirebaseCertificate(sha1: String) {
                         target?.definingClass == "Ljava/net/URLConnection;" &&
                         target.name.endsWith("RequestProperty")
                 } ?: return@forEach
-                val value = (code[call] as FiveRegisterInstruction).registerE
-                method.addInstructions(call, "const-string ${method.registerName(value)}, \"$sha1\"")
+                val valueRegister = (code[call] as FiveRegisterInstruction).registerE
+                method.addInstructions(call, "const-string ${method.registerName(valueRegister)}, \"$value\"")
             }
         }
     }
