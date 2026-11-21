@@ -19,7 +19,10 @@ Lynx Patches is a public fork of Loki Patches by Lokesh Sparrow
 
 - Only user-visible branding was renamed. Internal identifiers stay as upstream named them:
   packages `app.loki.*`, classes like `LokiLog`, resource names `loki_logo` / `loki_glyph`,
-  manifest keys `app.loki.menu.*`, Logcat tag "Loki", code comments. Do not rename them.
+  manifest keys `app.loki.menu.*`, Logcat tag "Loki", URL scheme `lokipatches://`, backup
+  format id `loki-patches-settings`, shortcut id `loki-patches`. Do not rename them.
+- The bundle name "Lynx Patches" in `patches/build.gradle.kts` (`about { name }`) must match the
+  manifest Name checks in `SharedPatches.kt` (bundle version lookup) and `MenuPatch.kt`.
 - Sync: `git fetch upstream` then `git merge upstream/main` (merge commit, never rebase or
   force-push). Upstream tags are not fetched (`remote.upstream.tagOpt --no-tags`) because our
   version numbers diverge from theirs.
@@ -30,6 +33,18 @@ Lynx Patches is a public fork of Loki Patches by Lokesh Sparrow
   `grep -rn -e "Loki Patches" -e "lokesh-sparrow/loki-patches" --exclude-dir=.git --exclude=NOTICE --exclude=CHANGELOG.md .`
   must only show the intended credit lines. When a source string changes, change the same key
   in every file under `extensions/extension/src/main/translations/` (the English text is the key).
+
+## Upstream check (on demand only; owner decision 2026-11-21)
+
+Lynx is for the owner's own use. Never sync upstream automatically. When the owner asks to
+"check upstream" (or a LinkedIn update breaks a patch):
+1. `git fetch upstream`, then `git log --oneline main..upstream/main` and
+   `git diff --stat main...upstream/main`.
+2. Summarize for the owner in plain words, LinkedIn changes first: fixed fingerprints, newly
+   verified LinkedIn builds (`VERIFIED_LINKEDIN_BUILDS` in
+   `patches/src/main/kotlin/app/linkedin/patches/shared/Constants.kt`), new patches, other apps.
+3. Merge or cherry-pick (`git cherry-pick -x`) only what the owner picks, rebrand per the rules
+   above, build, run `tools/audit.py`, then commit and push.
 
 ## Branches, commits, releases
 

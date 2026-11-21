@@ -96,9 +96,6 @@ Off by default; tick them in Manager for any app.
 Use one patch source per app. Two sources for the same app apply the same patches twice, and the result may not
 install.
 
-> [!NOTE]
-> **Already using Lynx Patches for LinkedIn?** Nothing changes for you: same source, same patches, same settings.
-
 ## Lynx Patches menu
 
 Every patched app gets the same **Lynx Patches** menu. Open it from the entry shown in the [Apps](#apps) table, or
