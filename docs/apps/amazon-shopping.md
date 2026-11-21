@@ -14,7 +14,7 @@
 |---|---|
 | 🚫 **Ad-free pages** | Sponsored products, brand banners and video ads are hidden on search, product, cart and order pages. |
 | 📈 **Price history** | A collapsed "Price History" box under the price on product pages. Tap **Load price history** to see the Keepa and CamelCamelCamel charts, with buttons for 1 month up to all time. |
-| 🎨 **Dark mode** | Amazon's pages and bottom tab icons follow your phone's dark theme. Manager lets you pick Off, Follow system or Always on. |
+| 🎨 **Dark mode** | While your phone is in dark mode, Amazon's pages and bottom bar are darkened by Android's own Force Dark. In light mode nothing changes. Manager lets you pick Off (the app is left untouched) or Follow system. |
 | ▶️ **No video autoplay** | Videos in Amazon's in-app pages wait until you tap them. |
 | 🛡️ **Quieter search** | Search keypress and focus events are no longer sent along with suggestion requests. |
 | 🔗 **Links open in your browser** | Links to websites outside Amazon open in your default browser instead of inside the app. Amazon's own app links, phone and email links, and everything during checkout, payment and sign-in stay in the app. |

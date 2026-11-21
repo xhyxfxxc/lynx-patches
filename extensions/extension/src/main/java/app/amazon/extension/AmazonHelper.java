@@ -368,39 +368,45 @@ public class AmazonHelper {
 
     // ---- Dark mode (inspired by amznkiller dark_mode.js, GPL-3.0, hxreborn) ----
 
-    /** Vendored dark-mode fixups, mirrors amznkiller dark_mode.js (GPL-3.0, hxreborn) */
+    /**
+     * Page fixes for while the phone is in dark mode (mirrors amznkiller dark_mode.js, GPL-3.0, hxreborn, minus its
+     * forced page background). Android's Force Dark does the darkening: it turns the page background and text
+     * dark by itself, so no background colour is set here (a fixed dark background under dark text is unreadable).
+     * What it leaves are the details Force Dark gets wrong: product photos that Amazon blends into the page with
+     * mix-blend-mode, and the yellow buttons, which stay light with dark text.
+     */
     private static final String DARK_FIX_CSS =
         "[class*=image-container] img{mix-blend-mode:normal!important}"
         + "img[style*=\"mix-blend-mode\"]{mix-blend-mode:normal!important}"
         + "[class*=asin-metadata]{mix-blend-mode:normal!important}"
-        + "html{background-color:#1a1a1a!important}"
-        + "body{background-color:#1a1a1a!important}"
         + "[class*=asin-container],[class*=asin-image-wrapper]{background-color:white!important}"
         + "[class*=badgeMessage]{background-color:transparent!important}"
         + ".a-button-primary,.a-button-oneclick{color-scheme:only light!important}";
 
-    private static boolean isDarkEnabled(String mode, android.view.View view) {
-        if ("on".equals(mode)) return true;
-        if ("follow_system".equals(mode) && view != null) {
-            int uiMode = view.getResources().getConfiguration().uiMode;
-            return (uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
-                == android.content.res.Configuration.UI_MODE_NIGHT_YES;
-        }
-        return false;
+    /** True while the phone (the view's configuration) is in dark mode, which is when Force Dark is active. */
+    private static boolean isSystemDark(android.view.View view) {
+        if (view == null) return false;
+        int uiMode = view.getResources().getConfiguration().uiMode;
+        return (uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+            == android.content.res.Configuration.UI_MODE_NIGHT_YES;
     }
 
     /**
-     * Applies the vendored dark-mode stylesheet. Performs no network access, so
-     * dark mode works offline and cannot be altered by any external repository.
+     * Applies the vendored dark-mode page fixes while the phone is in dark mode, and does nothing in light mode.
+     * Performs no network access, so it works offline and cannot be altered by any external repository.
      */
-    public static void injectDarkMode(WebView webView, String mode) {
-        if (webView == null || !isDarkEnabled(mode, webView)) return;
-        webView.evaluateJavascript(
-            "(function(css){var id='morphe-amazon-dark';"
-            + "var s=document.getElementById(id);"
-            + "if(!s){s=document.createElement('style');s.id=id;"
-            + "(document.head||document.documentElement).appendChild(s);}"
-            + "s.textContent=css;})(" + jsonString(DARK_FIX_CSS) + ");", null);
+    public static void injectDarkMode(WebView webView) {
+        if (webView == null || !isSystemDark(webView)) return;
+        try {
+            webView.evaluateJavascript(
+                "(function(css){var id='morphe-amazon-dark';"
+                + "var s=document.getElementById(id);"
+                + "if(!s){s=document.createElement('style');s.id=id;"
+                + "(document.head||document.documentElement).appendChild(s);}"
+                + "s.textContent=css;})(" + jsonString(DARK_FIX_CSS) + ");", null);
+        } catch (RuntimeException ignored) {
+            // A WebView that is being destroyed: there is no page left to fix.
+        }
     }
 
     // ---- External navigation ----
@@ -457,10 +463,10 @@ public class AmazonHelper {
 
     /**
      * Called with the ImageView returned by BaseTabController.getTabIcon() so
-     * the icon stays visible against a dark background.
+     * the icon stays visible against the dark bar while the phone is in dark mode.
      */
-    public static void tintTabIconIfDark(android.widget.ImageView icon, String mode) {
-        if (icon == null || !isDarkEnabled(mode, icon)) return;
+    public static void tintTabIconIfDark(android.widget.ImageView icon) {
+        if (icon == null || !isSystemDark(icon)) return;
         icon.setColorFilter(
             android.graphics.Color.WHITE,
             android.graphics.PorterDuff.Mode.SRC_IN
