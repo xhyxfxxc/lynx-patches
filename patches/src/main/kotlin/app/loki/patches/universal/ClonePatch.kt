@@ -7,6 +7,7 @@ package app.loki.patches.universal
 
 import app.loki.patches.universal.OriginalApp
 import app.loki.patches.universal.recordOriginalAppPatch
+import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
 import org.w3c.dom.Element
@@ -43,11 +44,15 @@ val clonePatch = resourcePatch(
  * app (provider authorities, the app's own permissions). Returns the provider authorities it renamed, old to new, so
  * an app-specific patch can rewrite the same names where the app's code spells them out. Does nothing, and returns
  * nothing, if the package was already renamed.
+ *
+ * An authority may be written as a string resource (`android:authorities="@string/name"`); its value is renamed in
+ * the resource itself, so every other use of that resource (code that builds content URIs from it) stays in step.
  */
 internal fun app.morphe.patcher.patch.ResourcePatchContext.renamePackage(suffix: String): Map<String, String> {
     val old = OriginalApp.packageName
     val new = old + suffix
     val authorities = mutableMapOf<String, String>()
+    val resourceAuthorities = mutableSetOf<String>()
     document("AndroidManifest.xml").use { document ->
         val root = document.documentElement
         if (old.isEmpty() || root.getAttribute("package") != old) return@use // nothing safe to rename
@@ -66,7 +71,12 @@ internal fun app.morphe.patcher.patch.ResourcePatchContext.renamePackage(suffix:
             "provider" -> element.setAttribute(
                 "android:authorities",
                 element.getAttribute("android:authorities").split(";").joinToString(";") { authority ->
-                    authority.renameIn(old, new).also { if (it != authority) authorities[authority] = it }
+                    if (authority.startsWith("@string/")) {
+                        resourceAuthorities += authority.removePrefix("@string/")
+                        authority
+                    } else {
+                        authority.renameIn(old, new).also { if (it != authority) authorities[authority] = it }
+                    }
                 },
             )
             "permission", "uses-permission", "uses-permission-sdk-23" -> element.setAttribute(
@@ -86,7 +96,46 @@ internal fun app.morphe.patcher.patch.ResourcePatchContext.renamePackage(suffix:
             },
         )
     }
+    if (resourceAuthorities.isNotEmpty()) renameStringAuthorities(resourceAuthorities, old, new, authorities)
     return authorities
+}
+
+/**
+ * Renames the value of each string resource in [names] that starts with the original package. Such a resource is
+ * a provider authority, so left alone it would clash with the original app exactly like a literal authority does.
+ */
+private fun app.morphe.patcher.patch.ResourcePatchContext.renameStringAuthorities(
+    names: Set<String>,
+    old: String,
+    new: String,
+    authorities: MutableMap<String, String>,
+) {
+    val remaining = names.toMutableSet()
+    val valueFiles = get("res/values").listFiles { file -> file.isFile && file.extension == "xml" }
+        ?.sortedBy { it.name } ?: emptyList()
+    for (file in valueFiles) {
+        if (remaining.isEmpty()) break
+        document("res/values/${file.name}").use { document ->
+            val strings = document.getElementsByTagName("string")
+            for (index in 0 until strings.length) {
+                val string = strings.item(index) as? Element ?: continue
+                val name = string.getAttribute("name")
+                if (name !in remaining) continue
+                remaining -= name
+                val value = string.textContent
+                val renamed = value.renameIn(old, new)
+                if (renamed != value) {
+                    string.textContent = renamed
+                    authorities[value] = renamed
+                }
+            }
+        }
+    }
+    if (remaining.isNotEmpty()) {
+        throw PatchException(
+            "Provider authority string resource not found in res/values: ${remaining.sorted().joinToString()}",
+        )
+    }
 }
 
 /** Renames [old] where it is the whole value or a dotted prefix of it. */

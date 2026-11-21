@@ -28,6 +28,7 @@
 - **Australia:** the global Amazon Shopping app is the one Amazon Australia uses. Keepa has no Australian prices, so there the box shows the CamelCamelCamel chart only.
 - **Ad hiding is a list of page rules.** It is built into the patch and never downloaded, so a change in Amazon's page layout can let an ad through until the patch is updated.
 - **Other Amazon apps** (Prime Video, Alexa and so on) can be installed beside it: the patch renames the permissions that Amazon's apps share, so they do not clash.
+- **A second copy beside the Amazon app:** turn on **Change package name** (off by default) to install the patched app next to the Amazon app from the Play Store. **Change package name support (Amazon)** renames Amazon's sign-in and file-sharing providers for you, so Android accepts the install. The copy is a separate app, so you sign in to it again.
 
 ## Questions
 
