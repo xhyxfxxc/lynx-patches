@@ -67,6 +67,15 @@ public final class MenuInfo {
             rows.add(new String[]{"Unlimited backup (Pixel XL)", flag(flags, "app.loki.menu.pixelspoof")});
             rows.add(new String[]{"Only real camera photos count as Camera", flag(flags, "app.loki.menu.dcimcamera")});
             rows.add(new String[]{"GmsCore support (Google Photos)", flag(flags, "app.loki.menu.gmscore")});
+        } else if (pkg.startsWith("com.amazon.mShop.android.shopping")) {
+            rows.add(new String[]{"Remove ads", flag(flags, "app.loki.menu.amazonadblock")});
+            rows.add(new String[]{"Price history charts", flag(flags, "app.loki.menu.amazonprice")});
+            rows.add(new String[]{"Dark mode", flag(flags, "app.loki.menu.amazondark")});
+            rows.add(new String[]{"Disable video autoplay", flag(flags, "app.loki.menu.amazonautoplay")});
+            rows.add(new String[]{"Disable search suggestions tracking", flag(flags, "app.loki.menu.amazonsuggest")});
+            rows.add(new String[]{"Open links in browser", flag(flags, "app.loki.menu.amazonlinks")});
+            rows.add(new String[]{"Hide Alexa for Shopping tab", flag(flags, "app.loki.menu.amazonalexa")});
+            rows.add(new String[]{"Fix Amazon manifest conflicts", flag(flags, "app.loki.menu.amazonmanifest")});
         } else if (pkg.startsWith("com.mxtech.videoplayer")) {
             rows.add(new String[]{"All codecs", flag(flags, "app.loki.menu.codec")});
             rows.add(new String[]{"Skip license check", flag(flags, "app.loki.menu.license")});

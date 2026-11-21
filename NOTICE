@@ -18,6 +18,27 @@ later (GPL-3.0-or-later). The Morphe NOTICE and the Loki Patches NOTICE below
 apply in full and are kept unchanged, including their section 7 terms. Anyone
 redistributing Lynx Patches, or a modified version of it, must follow them too.
 
+Amazon Shopping patches (added 2026-11-21)
+==========================================
+
+The Amazon Shopping patches in Lynx Patches (Remove ads, Price history
+charts, Dark mode, Disable video autoplay, Disable search suggestions
+tracking, Open links in browser, Hide Alexa for Shopping tab and Fix Amazon
+manifest conflicts) and their extension code (AmazonHelper and AmazonUrls)
+come from morphe-patches by rushiranpise
+(https://github.com/rushiranpise/morphe-patches), licensed under GPL-3.0.
+The ad-blocking selectors, the dark-mode CSS and the WebView injection
+approach they use come from amznkiller by hxreborn
+(https://github.com/hxreborn/amznkiller), licensed under GPL-3.0.
+
+These files were modified for Lynx Patches on 2026-11-21: moved to the
+app.amazon packages, Amazon India dropped, Amazon Shopping declared as an
+APKM bundle for 32.19.0.100 and 32.20.2.100, "Hide Rufus tab" renamed to
+"Hide Alexa for Shopping tab" and switched off by default, and every patch
+records a flag for the Lynx Patches menu. Each file keeps the copyright line
+of rushiranpise. rushiranpise and hxreborn did not make or endorse Lynx
+Patches.
+
 Morphe NOTICE
 =============
 

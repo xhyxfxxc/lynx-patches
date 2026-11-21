@@ -113,6 +113,8 @@
   "Maintainer of %1$s": "Maintainer of %1$s",
   "%1$s: the original project %2$s is based on": "%1$s: the original project %2$s is based on",
   "The patcher engine, Morphe Manager and the patch template": "The patcher engine, Morphe Manager and the patch template",
+  "The Amazon Shopping patches were ported from morphe-patches": "The Amazon Shopping patches were ported from morphe-patches",
+  "amznkiller: the ad-blocking rules and dark-mode CSS used for Amazon Shopping": "amznkiller: the ad-blocking rules and dark-mode CSS used for Amazon Shopping",
   "The app being patched. %1$s has no connection to LinkedIn.": "The app being patched. %1$s has no connection to LinkedIn.",
   "Can't open the link": "Can't open the link",
   "Settings backup copied": "Settings backup copied",

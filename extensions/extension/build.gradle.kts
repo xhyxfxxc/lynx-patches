@@ -24,6 +24,11 @@ android {
     }
 }
 
+// Plain JVM unit tests (AmazonUrlsTest): the URL trust checks have no Android dependency.
+dependencies {
+    testImplementation(libs.junit)
+}
+
 // The settings screen is translated in JSON: one file per
 // language in src/main/translations, with en.json as the source. An extension cannot carry
 // Android resources, so those files are compiled into a Java class instead. The output has

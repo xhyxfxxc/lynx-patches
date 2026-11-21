@@ -72,6 +72,15 @@
       "menu": "Account menu",
       "highlights": "💾 🔑 👯",
       "blurb": "Unlimited original-quality backup, installs beside the stock app"
+    },
+    "com.amazon.mShop.android.shopping": {
+      "name": "Amazon Shopping",
+      "slug": "amazon-shopping",
+      "category": "Shopping",
+      "file": "APKM (Android 12+)",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫 🛡️ 🎨",
+      "blurb": "Price history, ad-free pages, dark mode"
     }
   }
 }

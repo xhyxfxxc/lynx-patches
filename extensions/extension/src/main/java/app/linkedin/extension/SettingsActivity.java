@@ -80,6 +80,9 @@ public class SettingsActivity extends Activity {
     /** The project Lynx Patches is based on: its credit line stays on every About and Credits screen. */
     static final String ORIGINAL_CREDIT = "Loki Patches by Lokesh Sparrow";
     static final String ORIGINAL_URL = "https://github.com/lokesh-sparrow/loki-patches";
+    /** Source of the Amazon Shopping patches (GPL-3.0), and of the ad-blocking rules and dark-mode CSS behind them. */
+    static final String AMAZON_PORT_URL = "https://github.com/rushiranpise/morphe-patches";
+    static final String AMAZON_RULES_URL = "https://github.com/hxreborn/amznkiller";
 
     /** Fallback accent when the wallpaper has no usable colour: teal, lifted on dark, deeper on light. */
     static final int ACCENT_DARK = 0xFF2DBCB1;
@@ -1124,6 +1127,12 @@ public class SettingsActivity extends Activity {
         card.addView(credit(IconDrawable.PEOPLE, "Lokesh Sparrow",
                 f("%1$s: the original project %2$s is based on", ORIGINAL_CREDIT, BRAND),
                 "github.com/lokesh-sparrow/loki-patches", ORIGINAL_URL));
+        card.addView(credit(IconDrawable.PEOPLE, "rushiranpise",
+                "The Amazon Shopping patches were ported from morphe-patches",
+                "github.com/rushiranpise/morphe-patches", AMAZON_PORT_URL));
+        card.addView(credit(IconDrawable.PEOPLE, "hxreborn",
+                "amznkiller: the ad-blocking rules and dark-mode CSS used for Amazon Shopping",
+                "github.com/hxreborn/amznkiller", AMAZON_RULES_URL));
         card.addView(credit(IconDrawable.CODE, "Morphe", "The patcher engine, Morphe Manager and the patch template",
                 "morphe.software", MORPHE_WEBSITE));
         card.addView(credit(IconDrawable.INFO, appName(),
