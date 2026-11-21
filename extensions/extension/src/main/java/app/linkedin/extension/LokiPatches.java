@@ -78,8 +78,9 @@ public final class LokiPatches {
 
     /**
      * Every analytics event leaves the app through one of LinkedIn's two senders, as a map with its page. With
-     * Anonymous profile viewing, every event of a profile page is dropped (its page view, impressions and any profile
-     * view event), so nothing the app sends says a profile was seen.
+     * Anonymous profile viewing, every event of a profile page or of a company page (a LinkedIn Page: company,
+     * showcase, school) is dropped (its page view, impressions and any profile or organization view event), so
+     * nothing the app sends says a profile or a page was seen.
      *
      * @return true to drop the event.
      */
@@ -87,16 +88,42 @@ public final class LokiPatches {
         try {
             String name = String.valueOf(eventName);
             String page = findString(event, 0);
-            boolean profile = name.contains("ProfileView") || (page != null && page.toLowerCase().contains("profile"));
-            boolean drop = profile && Settings.anonymousProfileViewing();
-            if (profile && Settings.debug()) {
-                Settings.debugLog("tracking out " + route + ": " + name + " page=" + page + (drop ? " dropped" : " sent"));
+            String rule = visitRule(name, page);
+            boolean drop = rule != null && Settings.anonymousProfileViewing();
+            if (rule != null && Settings.debug()) {
+                Settings.debugLog("tracking out " + route + ": " + name + " page=" + page + " rule=" + rule
+                        + (drop ? " dropped" : " sent"));
             }
             return drop;
         } catch (Throwable t) {
             Diagnostics.error("dropOutgoingEvent failed", t);
             return false;
         }
+    }
+
+    /** What a LinkedIn Page's page key starts with: company, showcase and school pages, and the org_ ones. */
+    private static final String[] COMPANY_PAGE_KEYS = {"company", "showcase", "school", "organization", "org_"};
+
+    /**
+     * Which rule makes an event a visit to a profile or to a company page, or null when it is neither.
+     * The page of an event is the key with the app's prefix ("p_flagship3_company_overview") or the urn around it
+     * ("urn:li:page:p_flagship3_company_overview;trackingId"), so the urn and the prefix are cut off before the key
+     * is compared; a plain startsWith("company") would never match.
+     */
+    private static String visitRule(String name, String page) {
+        if (name.contains("ProfileView")) return "profile event name";
+        // FlagshipOrganizationViewEvent is the company page view, OrganizationProductViewEvent a product page's.
+        if (name.contains("OrganizationView") || name.contains("OrganizationProductView") || name.contains("CompanyView")) {
+            return "company event name";
+        }
+        if (page == null) return null;
+        String key = page.toLowerCase(java.util.Locale.ROOT);
+        if (key.contains("profile")) return "profile page key";
+        key = key.replaceFirst("^urn:li:page:", "").replaceFirst(";.*$", "").replaceFirst("^[a-z]_[a-z0-9]+_", "");
+        for (String prefix : COMPANY_PAGE_KEYS) {
+            if (key.startsWith(prefix)) return "company page key";
+        }
+        return null;
     }
 
     /** The first pageUrn or pageKey string in an event map, a few levels deep. */
