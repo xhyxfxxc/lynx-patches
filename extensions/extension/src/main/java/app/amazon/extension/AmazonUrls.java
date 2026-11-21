@@ -67,13 +67,46 @@ public final class AmazonUrls {
 
     /**
      * Amazon-operated asset domains ordinary in-app navigation touches.
-     * Amazon URL shorteners (a.co, amzn.to, ...) are intentionally absent: an
-     * unfamiliar shortener goes to the external browser rather than widening
-     * the internal trust boundary.
+     * Amazon URL shorteners (a.co, amzn.to, ...) are intentionally absent: for
+     * trust decisions (price history) an unfamiliar shortener is not Amazon.
+     * See {@link #isAmazonOwnedHost(String)} for what navigation leaves alone.
      */
     private static final String[] ASSET_DOMAINS = {
         "media-amazon.com",
         "ssl-images-amazon.com",
+    };
+
+    /**
+     * Other hosts the Amazon app itself sends the WebView to: the ad system,
+     * Prime Video and Amazon's short links, which the app resolves and routes
+     * itself. Navigation to them is never diverted to the browser.
+     */
+    private static final String[] AMAZON_OWNED_DOMAINS = {
+        "amazon-adsystem.com",
+        "primevideo.com",
+        "a.co",
+        "amzn.to",
+        "amzn.asia",
+        "amzn.eu",
+        "amzn.com",
+    };
+
+    /**
+     * Pages that carry a purchase or a sign-in (checkout, payment, cart,
+     * sign-in, Amazon Pay), as whole path segments: "/gp/buy" matches
+     * /gp/buy/spc/handlers/x.html but not /gp/buyagain. Australian checkout
+     * redirects to PayPal, Afterpay, Zip and bank 3-D Secure pages inside the
+     * same WebView, so a link on such a page must never leave the app.
+     */
+    private static final String[] PAYMENT_SEGMENTS = {
+        "/gp/buy", "/gp/cart", "/gp/checkoutportal", "/gp/payment", "/gp/prime",
+        "/checkout", "/cart", "/cpe", "/ap", "/ax", "/apay", "/payment", "/payments",
+        "/payments-portal",
+    };
+
+    /** Sign-in pages whose names continue after the prefix (/gp/aw/sign-in.html, /gp/sign-in.html). */
+    private static final String[] PAYMENT_RAW_PREFIXES = {
+        "/gp/aw/sign", "/gp/sign",
     };
 
     private static final Pattern ASIN_PATH = Pattern.compile(
@@ -117,6 +150,71 @@ public final class AmazonUrls {
         host = host.toLowerCase(Locale.ROOT);
         while (host.endsWith(".")) host = host.substring(0, host.length() - 1);
         return host.isEmpty() ? null : host;
+    }
+
+    /**
+     * The host of an http(s) URL read the way a browser would, or null.
+     *
+     * Unlike {@link #webHost(String)} this does not insist on a strictly valid
+     * URI: spaces, pipes or braces in the query do not matter, and userinfo is
+     * dropped instead of rejecting the URL, so https://amazon.com@evil.example/
+     * has the host evil.example. Null for every non-http(s) scheme (amznapp:,
+     * appnav:, intent:, tel:, mailto:, market:, javascript:, ...) and for a URL
+     * whose host is missing or holds whitespace or control characters.
+     */
+    public static String lenientWebHost(String url) {
+        String authority = webAuthority(url);
+        if (authority == null) return null;
+        int at = authority.lastIndexOf('@');
+        if (at >= 0) authority = authority.substring(at + 1);
+        String host;
+        if (authority.startsWith("[")) {
+            int close = authority.indexOf(']');
+            if (close < 0) return null;
+            host = authority.substring(0, close + 1);
+        } else {
+            int colon = authority.indexOf(':');
+            host = colon >= 0 ? authority.substring(0, colon) : authority;
+        }
+        host = host.toLowerCase(Locale.ROOT);
+        while (host.endsWith(".")) host = host.substring(0, host.length() - 1);
+        if (host.isEmpty()) return null;
+        for (int i = 0; i < host.length(); i++) {
+            char c = host.charAt(i);
+            if (c <= 0x20 || c == 0x7f) return null;
+        }
+        return host;
+    }
+
+    /** True when the host is an Amazon marketplace, asset, ad-system, Prime Video or short-link host. */
+    public static boolean isAmazonOwnedHost(String host) {
+        if (host == null) return false;
+        if (isAmazonHost(host)) return true;
+        for (String domain : AMAZON_OWNED_DOMAINS) {
+            if (matches(host, domain)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * True for an Amazon marketplace page that carries checkout, payment, cart,
+     * sign-in or Amazon Pay, judged by the path (a leading /-/xx language
+     * segment is ignored).
+     */
+    public static boolean isPaymentPage(String url) {
+        String host = lenientWebHost(url);
+        if (host == null || !isAmazonHost(host)) return false;
+        String path = webPath(url).toLowerCase(Locale.ROOT);
+        Matcher language = LANGUAGE_PREFIX.matcher(path);
+        if (language.find()) path = path.substring(language.end());
+        if (path.isEmpty()) path = "/";
+        for (String prefix : PAYMENT_SEGMENTS) {
+            if (path.equals(prefix) || path.startsWith(prefix + "/")) return true;
+        }
+        for (String prefix : PAYMENT_RAW_PREFIXES) {
+            if (path.startsWith(prefix)) return true;
+        }
+        return false;
     }
 
     /** True when the host is an Amazon marketplace/asset host, matched on dot boundaries. */
@@ -174,6 +272,35 @@ public final class AmazonUrls {
         String domain = marketplaceDomain(webHost(url));
         if (domain == null) return null;
         return "https://www." + domain + "/dp/" + asin;
+    }
+
+    private static final Pattern LANGUAGE_PREFIX = Pattern.compile("^/-/[a-z_-]{2,8}(?=/|$)");
+
+    /** The authority (userinfo, host and port) of an http(s) URL, or null for any other URL. */
+    private static String webAuthority(String url) {
+        if (url == null) return null;
+        String s = url.trim();
+        int colon = s.indexOf(':');
+        if (colon <= 0) return null;
+        String scheme = s.substring(0, colon).toLowerCase(Locale.ROOT);
+        if (!scheme.equals("http") && !scheme.equals("https")) return null;
+        if (!s.startsWith("//", colon + 1)) return null;
+        int start = colon + 3;
+        int end = start;
+        while (end < s.length() && "/?#\\".indexOf(s.charAt(end)) < 0) end++;
+        return s.substring(start, end);
+    }
+
+    /** The path of an http(s) URL as written ("/" when there is none), without query or fragment. */
+    private static String webPath(String url) {
+        String s = url.trim();
+        int start = s.indexOf("//") + 2;
+        int end = start;
+        while (end < s.length() && "/?#\\".indexOf(s.charAt(end)) < 0) end++;
+        int pathEnd = end;
+        while (pathEnd < s.length() && "?#".indexOf(s.charAt(pathEnd)) < 0) pathEnd++;
+        String path = s.substring(end, pathEnd);
+        return path.isEmpty() ? "/" : path;
     }
 
     private static boolean matches(String host, String domain) {

@@ -405,34 +405,41 @@ public class AmazonHelper {
 
     // ---- External navigation ----
 
+    private static final AmazonLinkPolicy LINK_POLICY = new AmazonLinkPolicy();
+
     /**
      * Decides whether a WebView navigation must leave the Amazon app, returning
      * true when the destination was handed to the external browser and the
-     * navigation should be reported as handled.
+     * navigation should be reported as handled. Returning false lets Amazon
+     * handle the link as it always does.
      *
-     * Trust comes from the parsed hostname, so destinations that merely contain
-     * the text "amazon." outside the host (evilamazon.com,
-     * amazon.com.evil.example, https://amazon.com@evil.example/,
-     * https://evil.example/?next=amazon.com) are treated as external. Only
-     * http(s) URLs are ever handed to another app, so this can never launch an
-     * intent:, file: or content: target.
-     *
-     * Malformed, hostless and non-web URLs are consumed without launching or
-     * rendering them. This is intentionally fail-closed: javascript:, data:,
-     * file:, content: and intent: never gain authenticated WebView treatment.
+     * Only an http(s) link whose parsed host is not Amazon's is opened in the
+     * browser (see AmazonLinkPolicy). Trust comes from the host, so
+     * destinations that merely contain the text "amazon." outside the host
+     * (evilamazon.com, amazon.com.evil.example, https://amazon.com@evil.example/,
+     * https://evil.example/?next=amazon.com) are external. Amazon's own app
+     * links (amznapp://, appnav://), intent:, tel:, mailto: and market: links,
+     * its short links and any URL without a readable host stay with Amazon,
+     * and so does everything while a checkout, payment or sign-in flow is
+     * running. Only http(s) URLs are ever handed to another app, so this can
+     * never launch an intent:, file: or content: target.
      */
     public static boolean openExternally(WebView webView, String url) {
-        if (webView == null) return true;
-        String host = AmazonUrls.webHost(url);
-        if (host == null) return true;
-        if (AmazonUrls.isAmazonHost(host)) return false;
+        if (webView == null || url == null) return false;
+        String current = null;
+        try {
+            current = webView.getUrl();
+        } catch (RuntimeException ignored) {
+            // A WebView being destroyed: judge the link on its own.
+        }
+        if (!LINK_POLICY.opensInBrowser(url, current, System.currentTimeMillis())) return false;
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url.trim()));
             intent.addCategory(Intent.CATEGORY_BROWSABLE);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             webView.getContext().startActivity(intent);
         } catch (Exception e) {
-            // No external handler: still refuse to render untrusted content
+            // No external handler: still refuse to render a foreign site
             // inside the authenticated Amazon WebView.
         }
         return true;

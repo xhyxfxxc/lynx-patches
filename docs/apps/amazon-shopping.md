@@ -17,7 +17,7 @@
 | 🎨 **Dark mode** | Amazon's pages and bottom tab icons follow your phone's dark theme. Manager lets you pick Off, Follow system or Always on. |
 | ▶️ **No video autoplay** | Videos in Amazon's in-app pages wait until you tap them. |
 | 🛡️ **Quieter search** | Search keypress and focus events are no longer sent along with suggestion requests. |
-| 🔗 **Links open in your browser** | Links to sites outside Amazon open in your default browser instead of inside the app. |
+| 🔗 **Links open in your browser** | Links to websites outside Amazon open in your default browser instead of inside the app. Amazon's own app links, phone and email links, and everything during checkout, payment and sign-in stay in the app. |
 | 🧩 **Alexa for Shopping tab** | Off by default. Tick **Hide Alexa for Shopping tab** in Manager to remove the tab from the bottom bar. |
 
 **Where Lynx Patches lives:** long press the Amazon icon on your home screen and choose Lynx Patches. Amazon's own menus are web pages, so there is no row inside the app. In the menu, **General → Show in the app drawer** gives it an icon of its own.
@@ -35,8 +35,8 @@
 **Does the Amazon app look different?**
 Only where a patch says so: hidden ads, the price history box, dark pages and, if you ticked it, no Alexa for Shopping tab. Everything else is Amazon's own app.
 
-**A step that goes through another website (a bank or payment page, for example) opens in my browser.**
-That is **Open links in browser**. Patch again with that switch off to keep those pages inside the app.
+**A step that goes through another website (a bank or payment page, for example) does not open in my browser. Is that on purpose?**
+Yes. While you check out, pay or sign in, every page stays inside the app, including PayPal, Afterpay, Zip and your bank's confirmation page. The app goes back to opening outside links in your browser as soon as you are on an ordinary Amazon page again.
 
 **Why is the Alexa for Shopping tab still there?**
 Hiding it is optional. Tick **Hide Alexa for Shopping tab** in Manager and patch again. Amazon used to call this assistant Rufus.
