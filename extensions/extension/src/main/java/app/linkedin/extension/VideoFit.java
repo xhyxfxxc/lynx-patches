@@ -10,8 +10,9 @@ import android.view.View;
 
 /**
  * Full-screen videos that LinkedIn crops. The server sends scalingType CROP for the video viewer, which the app
- * draws in one of two ways: AspectRatioFrameLayout grows past its parent (resize mode 4, zoom), or VideoTextureView
- * center-crops with a matrix (scaling mode 1). Either way the sides of a 9:16 video are cut off on a tall phone.
+ * draws in one of three ways: AspectRatioFrameLayout grows past its parent (resize mode 4, zoom), VideoTextureView
+ * center-crops with a matrix (scaling mode 1), or VideoTextureView measures itself past its parent (scaling mode 1,
+ * the Video tab). Every way cuts off the sides of a 9:16 video on a tall phone.
  * <p>
  * When the view is as big as the screen, both answers are replaced by fit (frame 0, texture 2), so the whole video
  * shows, as large as it fits. Smaller views, such as a video in the feed, keep what LinkedIn asked for.
@@ -39,6 +40,17 @@ public final class VideoFit {
     public static int textureScalingMode(View texture, int mode) {
         if (mode != TEXTURE_CROP) return mode;
         return isFullScreen(texture, "texture", texture.getWidth(), texture.getHeight(), "crop") ? TEXTURE_FIT : mode;
+    }
+
+    /**
+     * Injected after VideoTextureView.onMeasure reads its scalingMode. The Video tab measures instead of using a
+     * matrix, and p1 and p2 hold the available size there; getSize also passes a plain size through unchanged.
+     */
+    public static int textureMeasureMode(View texture, int mode, int widthSpec, int heightSpec) {
+        if (mode != TEXTURE_CROP) return mode;
+        int width = View.MeasureSpec.getSize(widthSpec);
+        int height = View.MeasureSpec.getSize(heightSpec);
+        return isFullScreen(texture, "texture", width, height, "crop") ? TEXTURE_FIT : mode;
     }
 
     private static boolean isFullScreen(View view, String kind, int width, int height, String from) {

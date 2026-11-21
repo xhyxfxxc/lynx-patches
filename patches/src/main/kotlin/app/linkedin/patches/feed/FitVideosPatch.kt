@@ -33,7 +33,7 @@ private object FrameMeasureFingerprint : Fingerprint(
     parameters = listOf("I", "I"),
 )
 
-/** The texture view: builds a matrix from its scalingMode, 0 = stretch, 1 = crop, 2 = fit. */
+/** The texture view with matrix scaling: builds a matrix from its scalingMode, 0 = stretch, 1 = crop, 2 = fit. */
 private object TextureTransformFingerprint : Fingerprint(
     definingClass = TEXTURE_CLASS,
     name = "updateTransform",
@@ -42,10 +42,22 @@ private object TextureTransformFingerprint : Fingerprint(
 )
 
 /**
- * Puts a call to [hook] right after the first read of [field] in this method. The call gets the view (p0) and the
- * value just read, and its answer replaces that value in the same register.
+ * The texture view without matrix scaling (the Video tab and the older media viewer, VoyagerVideoView): onMeasure
+ * reads scalingMode and in crop mode grows past its parent.
  */
-private fun MutableMethod.hookFieldRead(owner: String, field: String, hook: String) {
+private object TextureMeasureFingerprint : Fingerprint(
+    definingClass = TEXTURE_CLASS,
+    name = "onMeasure",
+    returnType = "V",
+    parameters = listOf("I", "I"),
+)
+
+/**
+ * Puts a call to [hook] right after the first read of [field] in this method. The call gets the view (p0), the value
+ * just read, then [passedParameters] of the method's own int parameters (p1, p2), and its answer replaces that value
+ * in the same register.
+ */
+private fun MutableMethod.hookFieldRead(owner: String, field: String, hook: String, passedParameters: Int = 0) {
     val code = implementation ?: throw PatchException("$name of $definingClass has no code")
     val index = instructions.indexOfFirst { instruction ->
         if (instruction.opcode != Opcode.IGET) return@indexOfFirst false
@@ -59,14 +71,20 @@ private fun MutableMethod.hookFieldRead(owner: String, field: String, hook: Stri
     // Parameter registers sit at the end of the frame; p0 is the view itself.
     val parameterRegisters = 1 + parameterTypes.map { if (it.toString() == "J" || it.toString() == "D") 2 else 1 }.sum()
     val thisRegister = code.registerCount - parameterRegisters
-    if (thisRegister > 15 || valueRegister > 15) {
-        throw PatchException("$owner.$field hook needs v$thisRegister and v$valueRegister, but invoke-static takes v0..v15")
+    // p1 and p2 of the hooked methods are ints, one register each, right after p0.
+    val lastRegister = maxOf(valueRegister, thisRegister + passedParameters)
+    if (thisRegister > 15 || lastRegister > 15) {
+        throw PatchException(
+            "$owner.$field hook needs registers up to v$lastRegister (p0 is v$thisRegister), but invoke-static takes v0..v15"
+        )
     }
 
+    val passed = (1..passedParameters).joinToString("") { ", p$it" }
+    val descriptor = "Landroid/view/View;" + "I".repeat(1 + passedParameters)
     addInstructions(
         index + 1,
         """
-            invoke-static { p0, v$valueRegister }, $VIDEO_FIT->$hook(Landroid/view/View;I)I
+            invoke-static { p0, v$valueRegister$passed }, $VIDEO_FIT->$hook($descriptor)I
             move-result v$valueRegister
         """
     )
@@ -86,5 +104,7 @@ val fitVideosPatch = bytecodePatch(
 
         FrameMeasureFingerprint.method.hookFieldRead(FRAME_CLASS, "resizeMode", "frameResizeMode")
         TextureTransformFingerprint.method.hookFieldRead(TEXTURE_CLASS, "scalingMode", "textureScalingMode")
+        // p1 and p2 already hold the available width and height where scalingMode is read.
+        TextureMeasureFingerprint.method.hookFieldRead(TEXTURE_CLASS, "scalingMode", "textureMeasureMode", passedParameters = 2)
     }
 }
