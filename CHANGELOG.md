@@ -1,3 +1,11 @@
+## 3.6.1 (2026-11-21)
+
+### Fixes
+- The price history card says "1 day ago" instead of "24 hours ago" for data a day old.
+- The price history card says how old CamelCamelCamel's data is, judges the price on the page, and gives no verdict on data older than a week.
+
+**55 patches for 7 apps.** Full list in the [README](https://github.com/[secure]/lynx-patches#apps).
+
 ## 3.6.0 (2026-11-21)
 
 ### New Features

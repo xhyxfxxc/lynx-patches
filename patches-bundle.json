@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-21T11:40:45",
-  "description": "## 3.6.0 (2026-11-21)\n\n### New Features\n- Price history card in the style of Amazon's own, with 30 day, 90 day, 1 year and all-time views, lowest, average and highest price, powered by CamelCamelCamel.\n- Amazon Shopping joins the bundle - price history charts, ad-free pages, dark mode, no video autoplay, links open in your browser.\n\n### Fixes\n- The price chart drops CamelCamelCamel's unreadable built-in table for a clear color key.\n- The price history card shows lowest, average and highest price again (CamelCamelCamel refused the old browser name), says \"near the lowest\" unless it really is the lowest, and draws a readable chart.\n- The Lynx Patches shortcut no longer removes the app's own shortcuts and comes back after the app replaces them.\n- Fix Amazon manifest conflicts keeps the app's own and the sign-in library's permissions working.\n- Disable video autoplay now stops videos that start on their own.\n- Dark mode keeps pages readable, and Off leaves the app untouched.\n- Open links in browser leaves app links, phone and mail links and checkout payment pages to Amazon.\n- Change package name installs Amazon next to the real app instead of failing with a provider conflict.\n\n**55 patches for 7 apps.** Full list in the [README](https://github.com/[secure]/lynx-patches#apps).",
-  "download_url": "https://github.com/xhyxfxxc/lynx-patches/releases/download/v3.6.0/patches-3.6.0.mpp",
+  "created_at": "2026-11-21T14:53:47",
+  "description": "## 3.6.1 (2026-11-21)\n\n### Fixes\n- The price history card says \"1 day ago\" instead of \"24 hours ago\" for data a day old.\n- The price history card says how old CamelCamelCamel's data is, judges the price on the page, and gives no verdict on data older than a week.\n\n**55 patches for 7 apps.** Full list in the [README](https://github.com/[secure]/lynx-patches#apps).",
+  "download_url": "https://github.com/xhyxfxxc/lynx-patches/releases/download/v3.6.1/patches-3.6.1.mpp",
   "signature_download_url": "",
-  "version": "3.6.0"
+  "version": "3.6.1"
 }
