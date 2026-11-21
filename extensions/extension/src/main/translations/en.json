@@ -197,5 +197,6 @@
   "Not now": "Not now",
   "Don't remind me": "Don't remind me",
   "microG RE battery reminder": "microG RE battery reminder",
+  "Lynx Patches cannot open here. Reinstall the patched app normally (not mounted).": "Lynx Patches cannot open here. Reinstall the patched app normally (not mounted).",
   "Reminds you when Android limits microG RE in the background. Notifications and Google sign-in go through microG RE, so they can arrive late or fail while it is limited.": "Reminds you when Android limits microG RE in the background. Notifications and Google sign-in go through microG RE, so they can arrive late or fail while it is limited."
 }

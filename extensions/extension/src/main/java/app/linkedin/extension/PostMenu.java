@@ -7,6 +7,7 @@ package app.linkedin.extension;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 
@@ -55,6 +56,8 @@ final class PostMenu {
     private static final String KEY_NAME = "post_action_key";
     private static final String KEY_PARAMETER = "k";
     private static String actionKey;
+    /** Whether PostActionActivity is declared in this install, once it is known. */
+    private static Boolean actionScreen;
 
     static final class Post {
         String text;
@@ -101,6 +104,22 @@ final class PostMenu {
         }
         actionKey = saved;
         return saved;
+    }
+
+    /**
+     * Whether the links of our rows have a screen to open. A mounted install keeps the original manifest, without
+     * PostActionActivity, and rows that open nothing would only confuse.
+     */
+    private static synchronized boolean hasActionScreen() {
+        if (actionScreen == null) {
+            Context context = Settings.context();
+            if (context == null) return false;
+            Intent probe = new Intent(Intent.ACTION_VIEW, Uri.parse(SCHEME + "://" + HOST + "/copy?u=probe"))
+                    .setPackage(context.getPackageName());
+            actionScreen = context.getPackageManager().resolveActivity(probe, 0) != null;
+            if (!actionScreen) Settings.debugLog("post menu: PostActionActivity is not in this install, rows not added");
+        }
+        return actionScreen;
     }
 
     /** Whether the link carries our key. The bytes are compared in constant time. */
@@ -193,7 +212,7 @@ final class PostMenu {
     static Object inject(Object component, byte[] bytes) {
         try {
             if (!Settings.postMenu() || bytes == null || !ProtoEdit.contains(bytes, PAGE)
-                    || !ProtoEdit.contains(bytes, TEMPLATE) || actionKey() == null) {
+                    || !ProtoEdit.contains(bytes, TEMPLATE) || !hasActionScreen() || actionKey() == null) {
                 return component;
             }
             // Rows of an earlier injection (a feed cached before the links carried a key) are signed, not added again.

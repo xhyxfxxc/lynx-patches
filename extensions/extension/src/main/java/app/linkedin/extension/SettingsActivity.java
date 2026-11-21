@@ -573,7 +573,14 @@ public class SettingsActivity extends Activity {
     static void open(Context context) {
         Intent intent = new Intent(context, SettingsActivity.class);
         if (!(context instanceof Activity)) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        context.startActivity(intent);
+        try {
+            context.startActivity(intent);
+        } catch (android.content.ActivityNotFoundException | SecurityException failure) {
+            // A mounted install keeps the original manifest, which does not declare this screen: say so, instead of
+            // letting the exception close LinkedIn.
+            Diagnostics.error("settings screen could not start", failure);
+            Downloads.toast(context, "Lynx Patches cannot open here. Reinstall the patched app normally (not mounted).");
+        }
     }
 
     /** {patch name, applied}, in the order Morphe Manager lists the patches. */
