@@ -46,6 +46,14 @@ Lynx is for the owner's own use. Never sync upstream automatically. When the own
 3. Merge or cherry-pick (`git cherry-pick -x`) only what the owner picks, rebrand per the rules
    above, build, run `tools/audit.py`, then commit and push.
 
+Amazon Shopping has a second source: its patches were ported by hand on 2026-11-21 from
+rushiranpise/morphe-patches v1.23.1 (GPL-3.0; credited in NOTICE and the in-app Credits), into
+`app/amazon/patches/` and `app/amazon/extension/`. It is not a git remote (different layout). On
+"check upstream" for Amazon, diff that repo's `patches/src/main/kotlin/app/template/patches/amazon/`
+and `extensions/.../AmazonHelper.java` / `AmazonUrls.java` since v1.23.1 and port by hand what the
+owner picks. Our Amazon code has since diverged (clone support, link policy, dark mode, autoplay,
+manifest permissions, price history card), so never copy their files over ours.
+
 ## Branches, commits, releases
 
 - Everything lands on `main` (upstream's design: a push to `main` is a release). Commit and
