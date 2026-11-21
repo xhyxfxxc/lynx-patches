@@ -18,7 +18,7 @@ make everyday apps work the way you want.
 [![Latest release](https://img.shields.io/github/v/release/xhyxfxxc/lynx-patches?sort=semver&style=for-the-badge&label=release&labelColor=0d1117&color=22d3ee)](https://github.com/xhyxfxxc/lynx-patches/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/xhyxfxxc/lynx-patches/total?style=for-the-badge&labelColor=0d1117&color=0ea5e9)](https://github.com/xhyxfxxc/lynx-patches/releases)
 <!-- BADGES_START -->
-[![apps](https://img.shields.io/badge/apps-6-2563eb?style=for-the-badge&labelColor=0d1117)](#apps) [![patches](https://img.shields.io/badge/patches-45-14b8a6?style=for-the-badge&labelColor=0d1117)](#apps)
+[![apps](https://img.shields.io/badge/apps-6-2563eb?style=for-the-badge&labelColor=0d1117)](#apps) [![patches](https://img.shields.io/badge/patches-46-14b8a6?style=for-the-badge&labelColor=0d1117)](#apps)
 <!-- BADGES_END -->
 [![Morphe](https://img.shields.io/badge/patches%20for-Morphe-06b6d4?style=for-the-badge&labelColor=0d1117)](https://morphe.software)
 [![License](https://img.shields.io/github/license/xhyxfxxc/lynx-patches?style=for-the-badge&labelColor=0d1117&color=6e7681)](LICENSE)
@@ -47,13 +47,13 @@ Every app with its highlights, the version it is built for, and which file to do
 for its features, patches and FAQ.
 
 <!-- APPS_START -->
-> **[v3.4.1](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.4.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**6** apps&nbsp;&nbsp;•&nbsp;&nbsp;**45** patches
+> **[v3.5.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.5.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**6** apps&nbsp;&nbsp;•&nbsp;&nbsp;**46** patches
 
 ### Featured
 
 <table>
 <tr>
-<td align="center" width="170"><a href="docs/apps/linkedin.md"><img src="assets/icons/com.linkedin.android.svg" width="44" height="44" alt=""><br><b>LinkedIn</b></a><br><sub>23 patches</sub><br><sub>Copy text, downloads, ad-free feed, ghost chat</sub></td>
+<td align="center" width="170"><a href="docs/apps/linkedin.md"><img src="assets/icons/com.linkedin.android.svg" width="44" height="44" alt=""><br><b>LinkedIn</b></a><br><sub>24 patches</sub><br><sub>Copy text, downloads, ad-free feed, ghost chat</sub></td>
 <td align="center" width="170"><a href="docs/apps/splitwise.md"><img src="assets/icons/com.Splitwise.SplitwiseMobile.png" width="44" height="44" alt=""><br><b>Splitwise</b></a><br><sub>5 patches</sub><br><sub>Pro features, no upsells, AMOLED black</sub></td>
 <td align="center" width="170"><a href="docs/apps/truecaller.md"><img src="assets/icons/com.truecaller.png" width="44" height="44" alt=""><br><b>Truecaller</b></a><br><sub>3 patches</sub><br><sub>Premium features, no after-call screen</sub></td>
 <td align="center" width="170"><a href="docs/apps/doc-scanner.md"><img src="assets/icons/com.cv.docscanner.png" width="44" height="44" alt=""><br><b>Doc Scanner</b></a><br><sub>5 patches</sub><br><sub>Full version, no clutter, clone</sub></td>
@@ -69,7 +69,7 @@ for its features, patches and FAQ.
 |---|---|:---:|---|---|---|
 | <img src="assets/icons/com.cv.docscanner.png" width="20" height="20" align="top" alt=""> [**Doc Scanner**](docs/apps/doc-scanner.md) | 💎 🧹 👯 🔑 | 5 | `6.9.14` | **APKM** | Side menu |
 | <img src="assets/icons/com.google.android.apps.photos.png" width="20" height="20" align="top" alt=""> [**Google Photos**](docs/apps/google-photos.md) | 💾 🔑 👯 | 4 | `8.1.0.1023737660` | **APKM (Android 8+)** | Account menu |
-| <img src="assets/icons/com.linkedin.android.svg" width="20" height="20" align="top" alt=""> [**LinkedIn**](docs/apps/linkedin.md) | 🚫 🛡️ 🎨 ⬇️ 🔑 | 23 | `4.1.1275` | **APK (Android 10+)** | Me panel |
+| <img src="assets/icons/com.linkedin.android.svg" width="20" height="20" align="top" alt=""> [**LinkedIn**](docs/apps/linkedin.md) | 🚫 🛡️ 🎨 ⬇️ 🔑 | 24 | `4.1.1275` | **APK (Android 10+)** | Me panel |
 | <img src="assets/icons/com.mxtech.videoplayer.pro.png" width="20" height="20" align="top" alt=""> [**MX Player Pro**](docs/apps/mx-player-pro.md) | 💎 🎞️ | 3 | `1.93.4` | **APK** | Settings |
 | <img src="assets/icons/com.Splitwise.SplitwiseMobile.png" width="20" height="20" align="top" alt=""> [**Splitwise**](docs/apps/splitwise.md) | 💎 🚫 🛡️ 🎨 🔑 | 5 | `26.11.1` | **APK** | Account tab |
 | <img src="assets/icons/com.truecaller.png" width="20" height="20" align="top" alt=""> [**Truecaller**](docs/apps/truecaller.md) | 💎 📵 🔑 | 3 | `26.44.6` | **APKM** | Profile menu · Settings |

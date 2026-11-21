@@ -1,3 +1,13 @@
+## 3.5.0 (2026-11-21)
+
+### New Features
+- **LinkedIn:** Full-screen videos fit the screen instead of cutting off the sides.
+
+### Fixes
+- **LinkedIn:** Fit videos to screen also fits the Video tab.
+
+**46 patches for 6 apps.** Full list in the [README](https://github.com/[secure]/lynx-patches#apps).
+
 ## 3.4.1 (2026-11-21)
 
 ### Fixes
