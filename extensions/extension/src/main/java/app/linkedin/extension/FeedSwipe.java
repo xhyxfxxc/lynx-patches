@@ -162,6 +162,7 @@ public final class FeedSwipe {
         List<View> composeViews = new ArrayList<>();
         findComposeViews(view.getRootView(), composeViews);
         Rect bounds = new Rect();
+        boolean network = onMyNetwork();
         // Home tabs and My Network tabs are kept apart: the home feed stays attached behind My Network, and its
         // selected "For you, 1 of 2" tab must not be mistaken for Grow.
         Rect homeTarget = null;
@@ -197,6 +198,9 @@ public final class FeedSwipe {
                 if (index < 0) continue;
                 Rect found = new Rect();
                 info.getBoundsInScreen(found);
+                // On the home feed the tabs are a slim strip at the top. A post with two photos (", 1 of 2") or a text
+                // that starts with "Network" or "Grow" is feed content, and tapping it could press Follow or Connect.
+                if (!network && !inHeaderZone(view.getRootView(), found)) continue;
                 if (myNetworkTab(info)) {
                     if (info.isVisibleToUser() && !found.isEmpty()) networkTabsShown = true;
                     if (index == tab) {
@@ -215,7 +219,7 @@ public final class FeedSwipe {
         }
         Rect target;
         boolean targetSelected;
-        if ((networkTabsShown || networkTarget != null) && (onMyNetwork() || homeTarget == null)) {
+        if ((networkTabsShown || networkTarget != null) && (network || homeTarget == null)) {
             target = networkTarget;
             // The selected flag of the My Network tabs is not reliable; tapping the open tab does no harm.
             targetSelected = false;
@@ -226,8 +230,9 @@ public final class FeedSwipe {
             target = homeTarget;
             targetSelected = homeSelected;
         }
-        if (target == null) {
-            // The tabs of My Network (Grow, Catch up) are regular views, not Compose.
+        if (target == null && network) {
+            // The tabs of My Network (Grow, Catch up) are regular views, not Compose. Only searched there: on the home
+            // feed a card that starts with "Grow" would be taken for one.
             View[] found = new View[1];
             findNativeTab(view.getRootView(), tab, found);
             if (found[0] != null) {
@@ -240,12 +245,13 @@ public final class FeedSwipe {
                         + " selected=" + targetSelected);
             }
         }
-        if (target == null) {
+        if (target == null && network) {
             // The My Network header stops exposing the inactive tab once one is selected; its place has not moved.
+            // Only there: on the home feed a missing tab means nothing is tapped, a remembered place can be feed now.
             target = remembered(view.getRootView(), tab);
             if (target != null) Settings.debugLog("feed swipe: " + tabName(tab) + " remembered at " + target);
         }
-        if ((target == null || target.isEmpty()) && onMyNetwork()) {
+        if ((target == null || target.isEmpty()) && network) {
             // Say what was there, so a report shows why the tab was not found. Nothing is guessed or tapped.
             Settings.debugLog("feed swipe: " + tabName(tab) + " not found; open tab " + networkOther
                     + ", tappable " + tappable.size());
@@ -270,8 +276,33 @@ public final class FeedSwipe {
         Settings.debugLog("feed swipe: " + tabName(tab));
         // After the swipe's own touch has finished.
         final Rect tabBounds = target;
-        MAIN.post(() -> tap(view.getRootView(), tabBounds.exactCenterX(), tabBounds.exactCenterY()));
+        final View root = view.getRootView();
+        final String screen = SduiMediaDownload.resumedScreen();
+        MAIN.post(() -> {
+            // The screen can change before this runs. A tab that is gone, or on the home feed no longer in the strip
+            // at the top, is not tapped: the point would be feed content.
+            if (tabBounds.isEmpty() || !screen.equals(SduiMediaDownload.resumedScreen())
+                    || (!network && !inHeaderZone(root, tabBounds))) {
+                Settings.debugLog("feed swipe: tap skipped, " + tabName(tab) + " is not in the header any more "
+                        + tabBounds);
+                return;
+            }
+            tap(root, tabBounds.exactCenterX(), tabBounds.exactCenterY());
+        });
         return true;
+    }
+
+    /**
+     * Whether a rect on the home feed can be one of its two tabs: entirely inside the top quarter of the window and
+     * at most 80 dp tall. A feed post that reads like a tab is taller, or lower, or both.
+     */
+    private static boolean inHeaderZone(View root, Rect rect) {
+        if (rect == null || rect.isEmpty()) return false;
+        int[] origin = new int[2];
+        root.getLocationOnScreen(origin);
+        float density = root.getResources().getDisplayMetrics().density;
+        return rect.top >= origin[1] && rect.bottom <= origin[1] + root.getHeight() * 0.25f
+                && rect.height() <= 80 * density;
     }
 
     /** A shown view labeled with a tab name (text or description), for the tabs that are not drawn by Compose. */
