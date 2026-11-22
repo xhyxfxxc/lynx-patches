@@ -34,7 +34,8 @@
         "tasks": ":patches:generatePatchesList :patches:buildAndroid",
         "output": "patches/build/release/patches-*.mpp",
         "args": ""
-      }
+      },
+      "commit": "78f7deb99969b30dd9eeabe8e572c1b60386fad5"
     },
     "threads": {
       "title": "HushThreads (Lynx build)",
