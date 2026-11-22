@@ -35,9 +35,6 @@ separate from the main Lynx Patches bundle.
    `patches/build.gradle.kts`), `NOTICE` has a Lynx section on top of the unchanged original text, and this file
    was added (plus one line in `.gitignore` so git tracks it). Settings titles inside the app still say HushThreads.
 5. Version and patch list: the build version is `0.0.18-lynx.1` and `patches-list.json` was regenerated for it.
-6. Build fix: `extensions/shared/library/build.gradle.kts` compiles against Android platform 36 instead of 35,
-   because platform 35 installs without `android.jar` on the build PC. Only the compile step is affected. Revert
-   it when platform 35 works again.
 
 README.md is the upstream text and still describes the upstream project, including its signed releases. A Lynx
 bundle is not signed.

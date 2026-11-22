@@ -4,8 +4,7 @@ plugins {
 
 android {
     namespace = "app.morphe.extension"
-    // Lynx build: platform 36 is the one installed on the build PC (platform 35 installs without android.jar).
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         // Threads 450 declares minSdk 28, and this library only ever runs inside it.
