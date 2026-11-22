@@ -961,12 +961,12 @@ group = "app.morphe"
 
 patches {
     about {
-        name = "Hushfacebook"
+        name = "Hushfacebook (Lynx build)"
         description = "Hushfacebook patches for the Facebook app, built for Morphe. Sponsored posts, Reels, Stories and suggested clutter out of your feed, and more control over what Facebook shows you."
-        source = "https://github.com/SysAdminDoc/Hushfacebook"
-        author = "SysAdminDoc"
-        contact = "https://github.com/SysAdminDoc/Hushfacebook/issues"
-        website = "https://github.com/SysAdminDoc/Hushfacebook"
+        source = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/facebook"
+        author = "SysAdminDoc, modified by xhyxfxxc"
+        contact = "https://github.com/xhyxfxxc/lynx-patches/issues"
+        website = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/facebook"
         license = "GNU General Public License v3.0, with additional GPL section 7 requirements"
     }
 }
