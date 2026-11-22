@@ -692,12 +692,12 @@ group = "app.morphe"
 
 patches {
     about {
-        name = "HushGram"
+        name = "HushGram (Lynx build)"
         description = "HushGram patches for the Instagram app, built for Morphe. Hides ads, cleans tracking keys off the links you share, keeps usage events on your phone, and keeps a patched build from locking you out."
-        source = "https://github.com/SysAdminDoc/HushGram"
-        author = "SysAdminDoc"
-        contact = "https://github.com/SysAdminDoc/HushGram/issues"
-        website = "https://github.com/SysAdminDoc/HushGram"
+        source = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/instagram"
+        author = "SysAdminDoc, modified by xhyxfxxc"
+        contact = "https://github.com/xhyxfxxc/lynx-patches/issues"
+        website = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/instagram"
         license = "GNU General Public License v3.0, with additional GPL section 7 requirements"
     }
 }
