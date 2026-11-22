@@ -114,6 +114,24 @@ Off by default; tick them in Manager for any app.
 Use one patch source per app. Two sources for the same app apply the same patches twice, and the result may not
 install.
 
+## Other apps (separate sources)
+
+These are other authors' patch packs, not Lynx Patches. Lynx reviewed their source, changed what each pack's
+`LYNX.md` lists, and builds them from this repo. Each one is its own source in Morphe Manager with its own version,
+and none of them gets the Lynx Patches menu.
+
+| App | Pack | Original author | Add |
+|---|---|---|---|
+| Facebook | [Hushfacebook (Lynx build)](packs/facebook/LYNX.md) | [SysAdminDoc/HushFacebook](https://github.com/SysAdminDoc/HushFacebook) | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/facebook&name=Lynx%20Facebook) |
+| Instagram | [HushGram (Lynx build)](packs/instagram/LYNX.md) | [SysAdminDoc/HushGram](https://github.com/SysAdminDoc/HushGram) | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/instagram&name=Lynx%20Instagram) |
+| Threads | [HushThreads (Lynx build)](packs/threads/LYNX.md) | [SysAdminDoc/HushThreads](https://github.com/SysAdminDoc/HushThreads) | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/threads&name=Lynx%20Threads) |
+| Gboard | [Gboard patches (Lynx build)](packs/gboard/LYNX.md) | [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches) | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/gboard&name=Lynx%20Gboard) |
+| Waze | [bearinmind Waze patches (Lynx build)](packs/waze/LYNX.md) | [bearinmindcat/morphe-patches](https://github.com/bearinmindcat/morphe-patches) | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/waze&name=Lynx%20Waze) |
+| X | [Piko for X (Lynx build)](packs/x/LYNX.md) | [crimera/piko](https://github.com/crimera/piko) | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/x&name=Lynx%20X) |
+
+Details are in [packs/README.md](packs/README.md). Use one patch source per app: remove or switch off the original
+author's source for that app in Manager before or after adding the Lynx one.
+
 ## Lynx Patches menu
 
 Every patched app gets the same **Lynx Patches** menu. Open it from the entry shown in the [Apps](#apps) table, or

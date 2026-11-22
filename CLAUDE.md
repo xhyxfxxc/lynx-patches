@@ -77,6 +77,21 @@ manifest permissions, price history card), so never copy their files over ours.
   `gh workflow run Pack -R xhyxfxxc/lynx-patches -f pack=<name>`.
 - License duties: keep each pack's LICENSE and upstream NOTICE text, name it "<Upstream name> (Lynx build)",
   never publish upstream's own `patches-bundle.json` or signing key from our folders.
+- CI lessons (2026-11-23): dispatch one Pack run at a time and wait for it (`gh run watch`), because the workflow's
+  concurrency group cancels older queued runs. A Maven Central `429 Too Many Requests` or any other download error
+  in the build is transient: run it again. The three Hush packs (facebook, instagram, threads) are built upstream
+  only on Windows: when a dependency change fails Gradle dependency verification on Linux CI, add the Linux
+  artifact's checksum as published by its vendor to that pack's `gradle/verification-metadata.xml`; never switch
+  verification off.
+- After a pack release: check that
+  `https://raw.githubusercontent.com/xhyxfxxc/lynx-patches/main/packs/<name>/patches-bundle.json` answers 200,
+  download the asset (`gh release download pack-<name>-v<version> -R xhyxfxxc/lynx-patches`) and confirm its
+  `classes.dex` and `extensions/*` are byte-identical to the bundle that was validated and tested (only `META-INF`
+  build stamps and CRLF/LF in text files may differ), then update the Packs table in `packs/README.md`. The Lynx
+  Patches release must stay the one marked Latest.
+- One-tap add link (checked in Morphe Manager 2.7.0):
+  `https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/<name>&name=<label>`. Manager
+  shows the bundle's own name ("<Upstream name> (Lynx build)") once the source has loaded.
 
 ## Branches, commits, releases
 

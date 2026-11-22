@@ -148,11 +148,22 @@ uploads it as a workflow artifact (also with `publish=false`, so you can try it 
 
 ## Add a pack as a source in Morphe Manager
 
-On the phone: Sources, plus, paste
+One tap: on the phone, tap the pack's "Add to Morphe" link in the table in [Packs](#packs). Morphe Manager opens
+and asks to add the source. The link has this form:
+
+```
+https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/<name>&name=<label>
+```
+
+By hand: on the phone, Sources, plus, paste
 
 ```
 https://raw.githubusercontent.com/xhyxfxxc/lynx-patches/main/packs/<name>/patches-bundle.json
 ```
+
+Use one patch source per app: remove or switch off the original author's source for that app in Manager before or
+after adding the Lynx one. Two sources for the same app apply the same patches twice, and the result may not
+install.
 
 ## License duties
 
@@ -164,5 +175,14 @@ https://raw.githubusercontent.com/xhyxfxxc/lynx-patches/main/packs/<name>/patche
 
 ## Packs
 
-| name | app | upstream | upstream version | Lynx version |
-| --- | --- | --- | --- | --- |
+| name | app (tested with) | upstream | upstream version | Lynx version | add |
+| --- | --- | --- | --- | --- | --- |
+| facebook | Facebook `com.facebook.katana`, 587.0.0.39.55 | [SysAdminDoc/HushFacebook](https://github.com/SysAdminDoc/HushFacebook) | v0.23.0 | 0.23.0-lynx.1 | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/facebook&name=Lynx%20Facebook) |
+| instagram | Instagram `com.instagram.android`, 456.0.0.53.78 | [SysAdminDoc/HushGram](https://github.com/SysAdminDoc/HushGram) | v0.0.21 | 0.0.21-lynx.1 | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/instagram&name=Lynx%20Instagram) |
+| threads | Threads `com.instagram.barcelona`, 455.0.0.55.72 | [SysAdminDoc/HushThreads](https://github.com/SysAdminDoc/HushThreads) | v0.0.18 | 0.0.18-lynx.1 | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/threads&name=Lynx%20Threads) |
+| gboard | Gboard `com.google.android.inputmethod.latin`, 18.5.4.993608717 | [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches) | v4.4.0 | 4.4.0-lynx.1 | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/gboard&name=Lynx%20Gboard) |
+| waze | Waze `com.waze`, 5.27.5.0 | [bearinmindcat/morphe-patches](https://github.com/bearinmindcat/morphe-patches) | v2.10.0 | 2.10.0-lynx.1 | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/waze&name=Lynx%20Waze) |
+| x | X `com.twitter.android`, 12.19.1-release.0 | [crimera/piko](https://github.com/crimera/piko) | v3.11.1 | 3.11.1-lynx.1 | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/x&name=Lynx%20X) |
+
+Each pack's own `LYNX.md` lists what Lynx changed in it. When a pack's `version` in `packs.json` changes, update
+its row here in the same commit.
