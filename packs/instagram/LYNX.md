@@ -32,6 +32,8 @@ original and its author has not endorsed it. The licence is GPL-3.0 (see LICENSE
    the import leaves out. The test input now points at the Lynx repository's own form two folders up (and does
    not fail when it is missing). Nothing that goes into the bundle changes. File: extensions/instagram/build.gradle.kts.
 5. This file (LYNX.md). Our test ReportProblemFormTest now checks the field names against the Lynx form.
+6. Build only: the dependency checksum list now also accepts the Linux build of the Android resource tool aapt2
+   (checksum from Google's own published value), because upstream only builds on Windows and Lynx builds on Linux.
 
 ## What was reviewed and what was not
 
@@ -42,14 +44,12 @@ has been tested on a phone yet.
 
 ## Known problems that are not fixed
 
-- Signing in through Facebook hangs on a re-signed Instagram (upstream issue 760). Signing in with user name
-  and password works.
+- Facebook sign-in hangs on a re-signed Instagram (upstream issue 760). Signing in with user name and password works.
 - The pack makes the re-signed Instagram accept its own signing key in place of Meta's ("Restore trust on
   re-signed builds", always on). It is only as private as the key Morphe Manager signs with. Do not share
   that key or reuse a published one.
-- Meta can detect patched builds and has restricted accounts (upstream issues 317, 405, 615, closed without
-  a root cause). All "ghost" style switches (anonymous story views, hidden typing, and so on) start off. Try it
-  on a spare account first.
+- Meta can detect patched builds and has restricted accounts (upstream issues 317, 405, 615, closed without a root
+  cause). All "ghost" style switches (anonymous story views, hidden typing, etc.) start off. Try a spare account first.
 - Other open upstream reports: 805 (black bar on reels with Clear mode and the seek bar on 3-button
   navigation); 757, 749, 806 (chat screen jitter, only with "Glass in chats" on); 791 (reels stuck on the first
   frame after returning to the Reels tab); 751 (story edges flash with "Ambient light for stories"); 777 (reels
