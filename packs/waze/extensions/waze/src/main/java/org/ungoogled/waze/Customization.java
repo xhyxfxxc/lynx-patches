@@ -99,10 +99,8 @@ public final class Customization {
                 "No Work button when choosing a destination"});
         LABELS.put("speedLimitSign", new String[]{"Speed limit sign",
                 "One sign style in every country"});
-        LABELS.put("shareAlerts", new String[]{"Share alerts with Maps",
-                "Shows Waze alerts in Ungoogled Maps"});
         LABELS.put("stayAwake", new String[]{"Stay awake in the background",
-                "Keeps Waze running for Maps"});
+                "Keeps Waze running without a route"});
         LABELS.put("biggerPins", new String[]{"Bigger alert pins",
                 "Larger alert pins on the map"});
         LABELS.put("noLocationGate", new String[]{"Open without device location",
