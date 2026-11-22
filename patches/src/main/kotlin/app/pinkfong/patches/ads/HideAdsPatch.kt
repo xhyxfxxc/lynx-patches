@@ -46,8 +46,9 @@ private val hideAdsFlag = resourcePatch {
  * instant answer made that loop run hundreds of times a second until the JNI global reference table overflowed and
  * the app crashed. The bridge posts the failure to the game's thread itself, so the answer is as asynchronous as a
  * real one. No request ever reaches AdMob, so none of the mediated networks is asked for an ad either. The
- * preloaders (background loading ahead of time) and native template ads are stopped as well. Only p2 (the callback)
- * is used, because one of the games has no free register in that method.
+ * preloaders (background loading ahead of time) and native template ads are stopped as well, and so is
+ * `UnityBannerAd.load` (older bridges load banners outside AdWrapper). Only p2 (the callback) is used, because one of
+ * the games has no free register in that method.
  *
  * Group B, Unity with the legacy Google Mobile Ads SDK (`com.google.android.gms.ads`, public API kept) and the
  * legacy bridge (`com.google.unity.ads`). Every full-screen format is loaded by a static SDK method
@@ -117,6 +118,13 @@ val pinkfongHideAdsPatch = bytecodePatch(
         }
 
         nativeTemplateLoadFingerprint.matchOrNull()?.method?.let {
+            it.addInstructions(0, "return-void")
+            stopped++
+        }
+
+        // Older bridges load the banner directly through the SDK, outside AdWrapper.load; it never loads, like the
+        // legacy bridge's Banner.loadAd.
+        unityBannerLoadFingerprint.matchOrNull()?.method?.let {
             it.addInstructions(0, "return-void")
             stopped++
         }

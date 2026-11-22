@@ -61,6 +61,17 @@ internal val nativeTemplateLoadFingerprint = Fingerprint(
     parameters = listOf("$SDK/nativead/NativeAdRequest;"),
 )
 
+/**
+ * Older bridges (no `AdWrapper.forBanner`) load the banner straight through the SDK instead of through
+ * `AdWrapper.load`, so the choke point above never sees it. Optional: newer bridges route it through AdWrapper.
+ */
+internal val unityBannerLoadFingerprint = Fingerprint(
+    definingClass = "$BRIDGE/UnityBannerAd;",
+    name = "load",
+    returnType = "V",
+    parameters = listOf("$SDK/banner/BannerAdRequest;"),
+)
+
 // ---- Group B: Unity, legacy Google Mobile Ads SDK ------------------------------------------------------------------
 
 private const val GMS = "Lcom/google/android/gms/ads"
