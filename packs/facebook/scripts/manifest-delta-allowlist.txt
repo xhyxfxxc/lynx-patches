@@ -1,0 +1,60 @@
+# Reviewed Android manifest changes the Hushfacebook patches make to a stock Facebook APK.
+#
+# One line per change, as "<kind> <value>":
+#   permission-added     <permission name>      the patched app asks for something stock did not
+#   permission-removed   <permission name>      the patched app no longer asks for it
+#   exported-added       <kind>:<class>         something other apps can now reach
+#   exported-removed     <kind>:<class>         something other apps can no longer reach
+#
+# scripts/build-release-receipt.ps1 writes the delta it measures into the release receipt, and
+# scripts/validate-release-facts.ps1 refuses a receipt carrying a change that is not listed here.
+# scripts/verify-all-patches.ps1 reads it too, and stops a run whose patched manifest changed in
+# a way it doesn't list. A line nothing produces any more fails the receipt as well, so this
+# cannot quietly outlive the change it approved.
+#
+# Everything here is Install beside Meta's apps. Facebook declares two signature permissions that
+# Messenger, Facebook Lite, Business Suite and Workplace declare too, and Android lets one signing
+# key own a permission name, so a re-signed Facebook and those apps couldn't be installed
+# together. The patch renames every mention of Facebook's two from com.facebook. to
+# app.hushfacebook., and what the receipt sees of that is Facebook asking for the new names in
+# place of the old ones. It declares the new names itself at the same signature level, so nothing
+# it asks for is granted to anyone the old names weren't.
+#
+# Nothing else is approved. A patch that asks for any other permission, drops one, or changes what
+# other apps can reach still stops the release until somebody says why.
+
+permission-added app.hushfacebook.permission.prod.FB_APP_COMMUNICATION
+permission-added app.hushfacebook.receiver.permission.ACCESS
+permission-removed com.facebook.permission.prod.FB_APP_COMMUNICATION
+permission-removed com.facebook.receiver.permission.ACCESS
+
+# Open in Facebook from the share menu (#111). The share target has to be exported or no other
+# app's share sheet can list it. It takes text/plain only, keeps the first facebook.com, fb.com,
+# fb.watch or fb.me address in it (a Facebook host, never one inside another site's address) and
+# hands that to Facebook's own link screen by package and class, then finishes. Anything else it
+# drops, so another app reaches nothing through it that a facebook.com link it opens couldn't.
+exported-added activity:app.morphe.extension.facebook.misc.OpenInFacebook
+
+# GmsCore support, for phones without Google Play services. Push comes from microG-RE there, which
+# sends under its own app.revanced.android.c2dm names, so Facebook asks for that RECEIVE permission
+# in place of Google's. Nothing is granted that Google's name didn't grant, to a different sender.
+permission-added app.revanced.android.c2dm.permission.RECEIVE
+permission-removed com.google.android.c2dm.permission.RECEIVE
+
+# Clone install (#417), opt-in, for phones whose preinstalled Facebook refuses a re-signed
+# com.facebook.katana. The copy goes on under its own package (com.facebook.katana.hush by default),
+# and Facebook's own permissions move with it: the patch declares each new name itself at the level
+# Facebook declared the old one, and every guard that named the old one names the new one. Two apps
+# with different keys can't both declare one permission name, so the old names have to go. What
+# the copy asks for is its own permissions under its own name, which grant nobody anything the
+# stock names didn't.
+permission-added com.facebook.katana.hush.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+permission-added com.facebook.katana.hush.permission.CREATE_SHORTCUT
+permission-added com.facebook.katana.hush.permission.CROSS_PROCESS_BROADCAST_MANAGER
+permission-added com.facebook.katana.hush.permission.RECEIVE_ADM_MESSAGE
+permission-added com.facebook.katana.hush.provider.ACCESS
+permission-removed com.facebook.katana.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+permission-removed com.facebook.katana.permission.CREATE_SHORTCUT
+permission-removed com.facebook.katana.permission.CROSS_PROCESS_BROADCAST_MANAGER
+permission-removed com.facebook.katana.permission.RECEIVE_ADM_MESSAGE
+permission-removed com.facebook.katana.provider.ACCESS

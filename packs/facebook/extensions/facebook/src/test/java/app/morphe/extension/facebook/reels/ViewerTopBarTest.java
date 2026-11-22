@@ -1,0 +1,505 @@
+/*
+ * Copyright 2026 Hushfacebook contributors
+ * https://github.com/SysAdminDoc/Hushfacebook
+ */
+package app.morphe.extension.facebook.reels;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.robolectric.Shadows.shadowOf;
+
+import android.app.Activity;
+import android.content.Context;
+import android.os.Looper;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
+
+import com.facebook.katana.immersiveactivity.ImmersiveActivity;
+import com.facebook.litho.ComponentHost;
+import com.facebook.litho.LithoView;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.Robolectric;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
+
+import java.time.Duration;
+
+import app.morphe.extension.facebook.settings.FamilyNames;
+import app.morphe.extension.facebook.settings.Settings;
+import app.morphe.extension.shared.SettingsContextRule;
+import app.morphe.extension.shared.diagnostics.HookStatus;
+import app.morphe.extension.shared.settings.HushfacebookPause;
+import app.morphe.extension.shared.settings.PauseForTests;
+
+/**
+ * Search and the button beside it at the top of an opened video (#311). The bar copies the S22's
+ * on 585 as dumpsys has it (2026-10-31): the LithoView 0,0-1080,338, its row 0,0-1080,199, Back's
+ * clickable host four levels down at 0,89-113,202, Search's at 838,98-939,199 and the Reels profile
+ * button's at 962,98-1063,199.
+ */
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk = 30, qualifiers = "w384dp-h823dp-xxhdpi")
+public class ViewerTopBarTest {
+    private static final int BAR_ID = 0x7f0a22e7;
+
+    @Rule public final SettingsContextRule settingsContext = new SettingsContextRule();
+
+    private Activity activity;
+    private LithoView bar;
+    private ComponentHost row;
+    private ComponentHost back;
+    private ComponentHost search;
+    private ComponentHost profile;
+
+    @Before
+    public void setUp() {
+        ViewerTopBar.reset();
+        HookStatus.clear();
+        ViewerTopBar.barIdForTests = BAR_ID;
+        activity = Robolectric.buildActivity(ImmersiveActivity.class).setup().get();
+        FrameLayout root = new FrameLayout(activity);
+        place(root, new FrameLayout(activity), 0, 0, 1080, 2181);
+        bar = new LithoView(activity);
+        bar.setId(BAR_ID);
+        place(root, bar, 0, 0, 1080, 338);
+        ComponentHost column = new ComponentHost(activity);
+        place(bar, column, 0, 0, 1080, 338);
+        row = new ComponentHost(activity);
+        place(column, row, 0, 0, 1080, 199);
+        ComponentHost backSlot = new ComponentHost(activity);
+        place(row, backSlot, 17, 112, 131, 186);
+        ComponentHost backIcon = new ComponentHost(activity);
+        place(backSlot, backIcon, 6, 0, 74, 68);
+        ComponentHost backTouch = new ComponentHost(activity);
+        place(backIcon, backTouch, -28, -28, 96, 96);
+        back = button(backTouch, 5, 5, 118, 118);
+        search = button(row, 838, 98, 939, 199);
+        profile = button(row, 962, 98, 1063, 199);
+        activity.setContentView(root);
+        layOut();
+    }
+
+    @After
+    public void tearDown() {
+        PauseForTests.resume();
+        Settings.HIDE_VIEWER_TOP_BUTTONS.resetToDefault();
+        Settings.HIDE_REELS_TAB_TITLE.resetToDefault();
+        Settings.HIDE_VIEWER_BACK_BUTTON.resetToDefault();
+        ViewerTopBar.reset();
+        HookStatus.clear();
+    }
+
+    @Test
+    public void hidesSearchAndTheButtonBesideItAndKeepsBack() {
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+
+        assertEquals(2, ViewerTopBar.tidy(bar));
+
+        assertEquals(View.VISIBLE, back.getVisibility());
+        assertEquals(View.INVISIBLE, search.getVisibility());
+        assertEquals(View.INVISIBLE, profile.getVisibility());
+        assertTrue(reported(ViewerTopBar.HIDDEN));
+    }
+
+    /** #362: the text of the tab's title sits in a host of its own beside Menu. */
+    @Test
+    public void theReelsTitleGoesOnTheTabAndNothingElseDoes() {
+        ComponentHost title = new ComponentHost(activity);
+        place(row, title, 160, 98, 360, 199);
+        layOut();
+        assertEquals(0, ViewerTopBar.tidy(bar, true));
+        assertEquals("the title went with its switch off", View.VISIBLE, title.getVisibility());
+
+        Settings.HIDE_REELS_TAB_TITLE.save(true);
+        assertEquals("a bar that isn't the tab's lost its title", 0, ViewerTopBar.tidy(bar));
+        assertEquals(View.VISIBLE, title.getVisibility());
+
+        assertEquals("only the buttons count", 0, ViewerTopBar.tidy(bar, true));
+        assertEquals(View.INVISIBLE, title.getVisibility());
+        assertEquals("Menu went with the title", View.VISIBLE, back.getVisibility());
+        assertEquals("Search went with the title", View.VISIBLE, search.getVisibility());
+        assertEquals(View.VISIBLE, profile.getVisibility());
+        assertTrue(reported(ViewerTopBar.TITLE_HIDDEN));
+
+        Settings.HIDE_REELS_TAB_TITLE.save(false);
+        ViewerTopBar.tidy(bar, true);
+        assertEquals("the title stayed away with the switch off", View.VISIBLE, title.getVisibility());
+    }
+
+    @Test
+    public void theOpenScreenTakesTheButtonsAfterALayout() {
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+
+        ViewerTopBar.resumed(activity);
+        layOut();
+
+        assertEquals(View.VISIBLE, back.getVisibility());
+        assertEquals(View.INVISIBLE, search.getVisibility());
+        assertEquals(View.INVISIBLE, profile.getVisibility());
+    }
+
+    @Test
+    public void theReelsTabsHeaderLosesSearchAndTheProfileButtonAndKeepsMenu() {
+        // #346: the tab's header is the same bar inside the tab pages, Menu where Back would be.
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        Activity main = Robolectric.buildActivity(Activity.class).setup().get();
+        ComponentHost[] header = reelsTab(main);
+
+        ViewerTopBar.resumed(main);
+        layOut(main);
+
+        assertEquals(View.VISIBLE, header[0].getVisibility());
+        assertEquals(View.INVISIBLE, header[1].getVisibility());
+        assertEquals(View.INVISIBLE, header[2].getVisibility());
+
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(false);
+        layOut(main);
+
+        assertEquals(View.VISIBLE, header[1].getVisibility());
+        assertEquals(View.VISIBLE, header[2].getVisibility());
+    }
+
+    @Test
+    public void aFeedVideoOpenedOverTheMainScreenTakesTheButtons() {
+        // S22, 585: the player is its own layer of the content view, beside the tabs, and its bar
+        // has the id the Reels tab's header has inside the pages (#311).
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        Activity main = Robolectric.buildActivity(Activity.class).setup().get();
+        ComponentHost[] header = reelsTab(main);
+        FrameLayout player = new FrameLayout(main);
+        main.addContentView(player, new FrameLayout.LayoutParams(1080, 2181));
+        LithoView playerBar = new LithoView(main);
+        playerBar.setId(BAR_ID);
+        place(player, playerBar, 0, 0, 1080, 338);
+        ComponentHost playerBack = button(playerBar, 23, 112, 91, 180);
+        ComponentHost playerSearch = button(playerBar, 838, 98, 939, 199);
+        ComponentHost playerMore = button(playerBar, 962, 98, 1063, 199);
+
+        ViewerTopBar.resumed(main);
+        layOut(main);
+
+        assertEquals(View.VISIBLE, playerBack.getVisibility());
+        assertEquals(View.INVISIBLE, playerSearch.getVisibility());
+        assertEquals(View.INVISIBLE, playerMore.getVisibility());
+        assertEquals(View.VISIBLE, header[0].getVisibility());
+        assertEquals(View.INVISIBLE, header[1].getVisibility());
+    }
+
+    @Test
+    public void switchingOffBringsThemBack() {
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        ViewerTopBar.tidy(bar);
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(false);
+
+        assertEquals(0, ViewerTopBar.tidy(bar));
+
+        assertEquals(View.VISIBLE, search.getVisibility());
+        assertEquals(View.VISIBLE, profile.getVisibility());
+    }
+
+    @Test
+    public void offOrPausedLeavesTheBarAsItIs() {
+        assertEquals(0, ViewerTopBar.tidy(bar));
+        assertEquals(View.VISIBLE, search.getVisibility());
+
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        PauseForTests.pause(HushfacebookPause.Reason.SWITCH);
+
+        assertEquals(0, ViewerTopBar.tidy(bar));
+        assertEquals(View.VISIBLE, search.getVisibility());
+        assertEquals(View.VISIBLE, profile.getVisibility());
+    }
+
+    @Test
+    public void aHostLithoTakesAwayComesBackVisible() {
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        ViewerTopBar.tidy(bar);
+
+        row.removeView(search);
+
+        assertEquals(View.VISIBLE, search.getVisibility());
+        assertEquals(View.INVISIBLE, profile.getVisibility());
+    }
+
+    @Test
+    public void aButtonBelowBacksRowStays() {
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        ComponentHost lower = button((ViewGroup) row.getParent(), 900, 220, 1060, 320);
+        layOut();
+
+        ViewerTopBar.tidy(bar);
+
+        assertEquals(View.VISIBLE, lower.getVisibility());
+        assertEquals(View.INVISIBLE, search.getVisibility());
+    }
+
+    @Test
+    public void aBarWithNothingOnBacksSideIsLeftAlone() {
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        back.setClickable(false);
+
+        assertEquals(0, ViewerTopBar.tidy(bar));
+
+        assertEquals(View.VISIBLE, search.getVisibility());
+        assertEquals(View.VISIBLE, profile.getVisibility());
+    }
+
+    @Test
+    public void rightToLeftHidesTheButtonsOnTheLeft() {
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        bar.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        ComponentHost backSlot = (ComponentHost) row.getChildAt(0);
+        row.removeView(backSlot);
+        place(row, backSlot, 949, 112, 1063, 186);
+        row.removeView(search);
+        row.removeView(profile);
+        ComponentHost leftSearch = button(row, 141, 98, 242, 199);
+        ComponentHost leftProfile = button(row, 17, 98, 118, 199);
+        layOut();
+
+        assertEquals(2, ViewerTopBar.tidy(bar));
+
+        assertEquals(View.VISIBLE, back.getVisibility());
+        assertEquals(View.INVISIBLE, leftSearch.getVisibility());
+        assertEquals(View.INVISIBLE, leftProfile.getVisibility());
+    }
+
+    /** #388: Back over an opened video goes with its own switch, and the buttons past it stay. */
+    @Test
+    public void backGoesWithItsOwnSwitchAndComesBackOff() {
+        assertEquals(0, ViewerTopBar.tidy(bar));
+        assertEquals("Back went with its switch off", View.VISIBLE, back.getVisibility());
+
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(true);
+        assertEquals(1, ViewerTopBar.tidy(bar));
+        assertEquals(View.INVISIBLE, back.getVisibility());
+        assertEquals("Search went with Back", View.VISIBLE, search.getVisibility());
+        assertEquals(View.VISIBLE, profile.getVisibility());
+        assertTrue(reported(ViewerTopBar.BACK_HIDDEN));
+        assertEquals("a hidden Back was counted twice", 0, ViewerTopBar.tidy(bar));
+
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        ViewerTopBar.tidy(bar);
+        assertEquals("the far buttons lost their place once Back went", View.INVISIBLE, search.getVisibility());
+        assertEquals(View.INVISIBLE, profile.getVisibility());
+
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(false);
+        ViewerTopBar.tidy(bar);
+        assertEquals("Back stayed away with its switch off", View.VISIBLE, back.getVisibility());
+        assertEquals(View.INVISIBLE, search.getVisibility());
+
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(true);
+        PauseForTests.pause(HushfacebookPause.Reason.SWITCH);
+        ViewerTopBar.tidy(bar);
+        assertEquals("a paused Hushfacebook hid Back", View.VISIBLE, back.getVisibility());
+    }
+
+    /** #390: on the Reels tab's header Menu sits where Back would, so the title, Menu and the far buttons all go. */
+    @Test
+    public void theReelsTabsHeaderCanLoseMenuAndItsTitleToo() {
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(true);
+        Settings.HIDE_REELS_TAB_TITLE.save(true);
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        Activity main = Robolectric.buildActivity(Activity.class).setup().get();
+        ComponentHost[] header = reelsTab(main);
+        ComponentHost title = new ComponentHost(main);
+        place((ViewGroup) header[0].getParent(), title, 160, 45, 360, 146);
+
+        ViewerTopBar.resumed(main);
+        layOut(main);
+
+        assertEquals("Menu stayed", View.INVISIBLE, header[0].getVisibility());
+        assertEquals(View.INVISIBLE, header[1].getVisibility());
+        assertEquals(View.INVISIBLE, header[2].getVisibility());
+        assertEquals("the title stayed", View.INVISIBLE, title.getVisibility());
+
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(false);
+        layOut(main);
+        assertEquals("Menu stayed away with its switch off", View.VISIBLE, header[0].getVisibility());
+        assertEquals(View.INVISIBLE, title.getVisibility());
+    }
+
+    /**
+     * #388: a reel opened from search results. Its bar sits in the main screen's own layer, after
+     * the tab pages, so the Reels tab's header is the first view with the id in that layer.
+     */
+    @Test
+    public void aReelOpenedFromSearchLosesBackToo() {
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(true);
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        Activity main = Robolectric.buildActivity(Activity.class).setup().get();
+        FrameLayout screen = new FrameLayout(main);
+        main.setContentView(screen);
+        HorizontalScrollView tabs = new HorizontalScrollView(main);
+        screen.addView(tabs, new FrameLayout.LayoutParams(1080, 2106));
+        ComponentHost[] header = reelsHeader(tabs);
+        FrameLayout search = new FrameLayout(main);
+        screen.addView(search, new FrameLayout.LayoutParams(1080, 2181));
+        LithoView viewerBar = new LithoView(main);
+        viewerBar.setId(BAR_ID);
+        place(search, viewerBar, 0, 0, 1080, 338);
+        ComponentHost viewerBack = button(viewerBar, 23, 112, 91, 180);
+        ComponentHost viewerSearch = button(viewerBar, 838, 98, 939, 199);
+
+        ViewerTopBar.resumed(main);
+        layOut(main);
+
+        assertEquals("Back stayed on the reel", View.INVISIBLE, viewerBack.getVisibility());
+        assertEquals(View.INVISIBLE, viewerSearch.getVisibility());
+        assertEquals("the header lost Menu", View.INVISIBLE, header[0].getVisibility());
+
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(false);
+        layOut(main);
+        assertEquals("Back stayed away with its switch off", View.VISIBLE, viewerBack.getVisibility());
+        assertEquals(View.VISIBLE, header[0].getVisibility());
+    }
+
+    /**
+     * #388: a reel opened from search results on 587 shows Back, the "Find related reels" pill and
+     * Search in a header with no id at the top of the reel's LithoView (S22, 2026-11-16).
+     */
+    @Test
+    public void aSearchReelsHeaderWithNoIdLosesBack() {
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(true);
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        Activity player = Robolectric.buildActivity(ImmersiveActivity.class).setup().get();
+        FrameLayout root = new FrameLayout(player);
+        LithoView reel = new LithoView(player);
+        place(root, reel, 0, 0, 1080, 2274);
+        place(reel, new FrameLayout(player), 0, 0, 1080, 2105);
+        ComponentHost header = new ComponentHost(player);
+        place(reel, header, 0, 0, 1080, 338);
+        ComponentHost headerRow = new ComponentHost(player);
+        place(header, headerRow, 0, 0, 1080, 212);
+        ComponentHost backSlot = new ComponentHost(player);
+        place(headerRow, backSlot, 23, 118, 80, 186);
+        ComponentHost backIcon = new ComponentHost(player);
+        place(backSlot, backIcon, -28, -28, 85, 96);
+        ComponentHost reelBack = button(backIcon, -1, 5, 112, 118);
+        ComponentHost related = button(headerRow, 103, 104, 926, 206);
+        ComponentHost reelSearch = button(headerRow, 966, 105, 1067, 206);
+        player.setContentView(root);
+
+        ViewerTopBar.resumed(player);
+        layOut(player);
+
+        assertEquals("Back stayed on a search reel", View.INVISIBLE, reelBack.getVisibility());
+        assertEquals(View.INVISIBLE, reelSearch.getVisibility());
+        assertEquals("the related reels pill went", View.VISIBLE, related.getVisibility());
+
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(false);
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(false);
+        layOut(player);
+        assertEquals("Back stayed away with its switches off", View.VISIBLE, reelBack.getVisibility());
+        assertEquals(View.VISIBLE, reelSearch.getVisibility());
+    }
+
+    /**
+     * A post's header in a list on a player screen has the same row (the profile picture first, then
+     * More), but its LithoView is a post, not the screen, so nothing in it goes.
+     */
+    @Test
+    public void aPostsHeaderOnAPlayerScreenStays() {
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(true);
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        Activity player = Robolectric.buildActivity(ImmersiveActivity.class).setup().get();
+        FrameLayout root = new FrameLayout(player);
+        LithoView post = new LithoView(player);
+        place(root, post, 0, 400, 1080, 1100);
+        ComponentHost header = new ComponentHost(player);
+        place(post, header, 0, 0, 1080, 130);
+        ComponentHost picture = button(header, 34, 17, 135, 118);
+        ComponentHost more = button(header, 930, 17, 1046, 118);
+        player.setContentView(root);
+
+        ViewerTopBar.resumed(player);
+        layOut(player);
+
+        assertEquals("a post lost its profile picture", View.VISIBLE, picture.getVisibility());
+        assertEquals(View.VISIBLE, more.getVisibility());
+    }
+
+    /** A reel's own page, as tall as its LithoView, is no header even with a button in its corner. */
+    @Test
+    public void aReelPagesOwnColumnIsNoHeader() {
+        Settings.HIDE_VIEWER_BACK_BUTTON.save(true);
+        Settings.HIDE_VIEWER_TOP_BUTTONS.save(true);
+        Activity player = Robolectric.buildActivity(ImmersiveActivity.class).setup().get();
+        FrameLayout root = new FrameLayout(player);
+        LithoView reel = new LithoView(player);
+        place(root, reel, 0, 0, 1080, 2106);
+        ComponentHost page = new ComponentHost(player);
+        place(reel, page, 0, 0, 1080, 2105);
+        ComponentHost corner = button(page, 34, 17, 135, 118);
+        ComponentHost side = button(page, 945, 1200, 1080, 1374);
+        player.setContentView(root);
+
+        ViewerTopBar.resumed(player);
+        layOut(player);
+
+        assertEquals("the reel page lost a button", View.VISIBLE, corner.getVisibility());
+        assertEquals(View.VISIBLE, side.getVisibility());
+    }
+
+    private boolean reported(String counted) {
+        for (String line : HookStatus.report()) {
+            if (line.contains(FamilyNames.REEL_DECLUTTER) && line.contains(counted)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * The main screen with the Reels tab showing, as 585 lays it out: its header, Menu, Search and
+     * the profile button, inside the tab pages that slide sideways. Answers those three buttons.
+     */
+    private static ComponentHost[] reelsTab(Activity main) {
+        HorizontalScrollView tabs = new HorizontalScrollView(main);
+        main.setContentView(tabs);
+        return reelsHeader(tabs);
+    }
+
+    /** The Reels tab's page inside [tabs], with its header. Answers Menu, Search and the profile button. */
+    private static ComponentHost[] reelsHeader(HorizontalScrollView tabs) {
+        Context main = tabs.getContext();
+        FrameLayout page = new FrameLayout(main);
+        tabs.addView(page, new FrameLayout.LayoutParams(1080, 2106));
+        LithoView header = new LithoView(main);
+        header.setId(BAR_ID);
+        place(page, header, 0, 0, 1080, 338);
+        return new ComponentHost[]{
+                button(header, 11, 45, 135, 146),
+                button(header, 838, 45, 939, 146),
+                button(header, 962, 45, 1063, 146)};
+    }
+
+    private static ComponentHost button(ViewGroup parent, int left, int top, int right, int bottom) {
+        ComponentHost host = new ComponentHost(parent.getContext());
+        host.setClickable(true);
+        place(parent, host, left, top, right, bottom);
+        return host;
+    }
+
+    private static void place(ViewGroup parent, View child, int left, int top, int right, int bottom) {
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(right - left, bottom - top, Gravity.LEFT | Gravity.TOP);
+        params.leftMargin = left;
+        params.topMargin = top;
+        parent.addView(child, params);
+    }
+
+    private void layOut() {
+        layOut(activity);
+    }
+
+    private static void layOut(Activity screen) {
+        screen.getWindow().getDecorView().requestLayout();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    }
+}

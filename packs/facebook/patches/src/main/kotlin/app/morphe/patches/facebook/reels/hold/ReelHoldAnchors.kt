@@ -1,0 +1,742 @@
+/*
+ * Copyright 2026 Hushfacebook contributors
+ * https://github.com/SysAdminDoc/Hushfacebook
+ */
+package app.morphe.patches.facebook.reels.hold
+
+import app.morphe.patches.facebook.feed.holdsString
+import app.morphe.patches.facebook.media.taptoplay.FB_USER_SESSION
+import app.morphe.patches.facebook.media.taptoplay.MOTION_EVENT
+import app.morphe.patches.facebook.misc.extension.EXTENSION_PACKAGE
+import app.morphe.patches.facebook.search.branchTarget
+import app.morphe.util.ControlFlow
+import com.android.tools.smali.dexlib2.AccessFlags
+import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.ClassDef
+import com.android.tools.smali.dexlib2.iface.Method
+import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
+import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.SwitchPayload
+import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.reference.FieldReference
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+import com.android.tools.smali.dexlib2.iface.reference.StringReference
+import com.android.tools.smali.dexlib2.iface.reference.TypeReference
+
+/*
+ * Where Hold a reel for 2x hooks, found by kept names only (read from 577 and 580, 2026-09-29). The
+ * obfuscated names in these comments are for reviewers; the code never writes one down.
+ *
+ * Facebook's Reels controls (FbShortsVideoControlComponent, 580 LX/83J;, 577 LX/7mG;, and
+ * FbShortsViewerOverlayComponent, 580 LX/83D;, 577 LX/7H5;) already speed a reel up while it's held,
+ * behind server flags most accounts don't get:
+ *
+ * - The long-press handlers: Kotlin lambdas keeping their captured names, among them
+ *   $shouldDispatchLongPressEventDirectly and $immersiveFeedPlayerConfig, and holding the log
+ *   string "speed_up" (580 LX/88x; and LX/UoS;, 577 LX/9bg; and LX/V0J;). Each asks the immersive
+ *   player config (580 LX/Cv5;, 577 LX/Cpk;) one flag with no arguments (580 AgW, 577 Aiu), the
+ *   speed-up flag. Yes, and a press on a reel that isn't an ad goes to the speed-up when it landed
+ *   within the config's edge width of the reel's left or right side; otherwise it opens the
+ *   long-press menu. Each loads "speed_up" once, for the log call it makes only on its way to the
+ *   speed-up, past those checks (580 88x index 125, UoS 117; 577 9bg 131, V0J 107). The speed-up
+ *   (580 LX/83J;->A0H, 577 LX/7mG;->A0H) remembers the reel's speed and sets the config's
+ *   long-press speed, 2x unless the server says otherwise, through FbGrootPlayer's speed setter.
+ * - The edge check: the one method of the build taking (MotionEvent, View, FbUserSession, the
+ *   config, boolean) and answering a boolean (581 LX/881;->A08), an instance method of ten
+ *   registers on all three. One long-press handler calls it itself, the other through a lazy value.
+ *   It measures the press's getX() against the view's width, so the right-edge switch measures the
+ *   same two. 583 has no such method: Redex inlined it into a merged Kotlin lambda the handler makes
+ *   (LX/CnX;, case 4 of its invoke()), which reads the press and the view off the handler's gesture
+ *   (LX/D6k;) and answers Boolean.valueOf of the same measure, and the handler reads it as a lazy
+ *   value.
+ * - The release listeners: lambdas keeping $isInLongPress2xPlaybackSpeed and
+ *   $immersiveFeedPlayerConfig (580 LX/88y; and LX/UoP;, 577 LX/9bh; and LX/V0G;), a reel's touch
+ *   listener. Each asks a second flag with no arguments (580 AgX, 577 Aiv) and, straight after its
+ *   branch, the speed-up flag; with both yes, on the finger's lift or a cancel it puts back the
+ *   speed the speed-up remembered, whenever the player's speed differs from it. It hears every
+ *   touch on the reel, not only a hold's. It captures whether a hold is on and the speed to put
+ *   back when the reel is drawn, and the speed-up has the reel drawn again, so a lift before that
+ *   reaches a listener holding the old values. Its own check of the hold flag is behind a third
+ *   config answer (580 AhA, 577 AjY) that every implementation on both builds answers no, so on
+ *   these builds every listener asks both flags on every touch.
+ * - 583 dropped UddPlayerControlComponent (582 LX/XIg;) and its long-press handler and release
+ *   listener (582 LX/Z4h; and LX/Z4d;), so there's one of each, FbShortsVideoControlComponent's.
+ * - The hold speed: the speed-ups in FbShortsVideoControlComponent (580 LX/83J;->A0H) and, up to
+ *   582, UddPlayerControlComponent (580 LX/T9a;->A05) set FbGrootPlayer's speed to a double they read
+ *   from the object the config's no-argument CIr() answers (580 LX/4Xa;->A0R), made a float. The
+ *   same read gives the speed the helper that remembers the pre-hold speed compares with, and up
+ *   to 586 a 2x label. Outside the Video tab it answers a fixed 2.0; where an account's Reels live in the
+ *   Video tab (the object's surface is FB_SHORTS_IN_WATCH_TAB) it answers MobileConfig double
+ *   0x104003303ee0017, whose default no code sets. 587 moved the read into a static method taking
+ *   the object (armeabi-v7a LX/0A4x;->A01), and on arm64-v8a inlined that too: the speed-up
+ *   (LX/08kZ;->A0X) makes the same choice inline three times, handing the object's A0h a lambda
+ *   reading the config (LX/0CxW;, case 8) and one answering 2.0 (LX/0A5F;, case 0x74) and reading
+ *   the Number it answers as a double, for the set and for the two compares of the inlined helper.
+ *   No other method of that build reads that config value.
+ * - The speed to put back: the speed-up asks a helper (580 LX/B1k;->A00) for it, which answers the
+ *   player's speed through its getter (580 Brl, 577 BtK) but normal speed when that already is the
+ *   hold speed and MobileConfig 0x101055200213585 says so, and keeps it in the component's state, from
+ *   which the listener is drawn with it. So a reel Keep the reel speed started at 2x comes back at
+ *   normal speed, and so does a reel whose listener was drawn before a speed was picked. The release
+ *   listeners each read the getter to compare with it, the one no-argument float method of the
+ *   player they call; the extension reads the player's speed through it when a hold speeds a reel up.
+ * - The overlay component's render (580 LX/83D;->A1F, 577 LX/7H5;->A1N) gives a reel its release
+ *   listener only when the speed-up flag says yes. The control component gives it one regardless.
+ *   Three other places read the speed-up flag (a Watch fragment's setup and an auto-advance guard);
+ *   they don't touch the hold and are left alone.
+ */
+
+internal const val REEL_HOLD = "$EXTENSION_PACKAGE/reels/ReelHold;"
+internal const val TOUCH = "$REEL_HOLD->touch(Landroid/view/MotionEvent;)V"
+internal const val LONG_PRESS = "$REEL_HOLD->longPress(Z)Z"
+internal const val ANYWHERE = "$REEL_HOLD->anywhere(Z)Z"
+internal const val EDGE_TOUCH = "$REEL_HOLD->edgeTouch(Landroid/view/MotionEvent;Landroid/view/View;)V"
+internal const val SPEED_UP = "$REEL_HOLD->speedUp(Z)Z"
+internal const val RELEASE = "$REEL_HOLD->release(Z)Z"
+internal const val HELD = "$REEL_HOLD->held()V"
+internal const val HOLD_SPEED = "$REEL_HOLD->holdSpeed(D)D"
+internal const val SPEED_SET = "$REEL_HOLD->speedSet(Ljava/lang/Object;F)F"
+internal const val PLAYER_SPEED_STUB = "playerSpeed"
+
+internal const val SPEED_UP_LOG = "speed_up"
+internal const val CONFIG_FIELD = "\$immersiveFeedPlayerConfig"
+internal const val DISPATCH_DIRECTLY_FIELD = "\$shouldDispatchLongPressEventDirectly"
+internal const val IN_LONG_PRESS_FIELD = "\$isInLongPress2xPlaybackSpeed"
+internal val CONTROL_COMPONENTS = listOf("FbShortsVideoControlComponent", "FbShortsViewerOverlayComponent")
+internal val SPEED_UP_COMPONENTS = listOf("FbShortsVideoControlComponent")
+
+private const val VIEW = "Landroid/view/View;"
+private const val NUMBER = "Ljava/lang/Number;"
+private const val OBJECT = "Ljava/lang/Object;"
+
+private fun Method.parameters() = parameterTypes.map(CharSequence::toString)
+
+private val Method.code get() = implementation?.instructions?.toList().orEmpty()
+
+/** The type of [classDef]'s captured immersive player config, or null when it captures none. */
+internal fun configType(classDef: ClassDef): String? =
+    classDef.fields.singleOrNull { it.name == CONFIG_FIELD && !AccessFlags.STATIC.isSet(it.accessFlags) }?.type
+
+private fun ClassDef.hasBooleanField(name: String) =
+    fields.any { it.name == name && it.type == "Z" && !AccessFlags.STATIC.isSet(it.accessFlags) }
+
+/** Whether [classDef] is a long-press handler: its captured names, and a method logging "speed_up". */
+internal fun isLongPressHandler(classDef: ClassDef): Boolean =
+    classDef.hasBooleanField(DISPATCH_DIRECTLY_FIELD) && configType(classDef) != null &&
+        classDef.methods.any { holdsString(it, SPEED_UP_LOG) }
+
+/** Whether [classDef] is a release listener: it captures whether a hold is on and the config. */
+internal fun isReleaseListener(classDef: ClassDef): Boolean =
+    classDef.hasBooleanField(IN_LONG_PRESS_FIELD) && configType(classDef) != null
+
+/** The call in [method] at each index, when it asks [config] a flag: no arguments, a boolean answer. */
+internal fun flagCalls(method: Method, config: String): Map<Int, String> =
+    method.code.withIndex().mapNotNull { (index, instruction) ->
+        val call = (instruction as? ReferenceInstruction)?.reference as? MethodReference ?: return@mapNotNull null
+        if (instruction.opcode != Opcode.INVOKE_INTERFACE && instruction.opcode != Opcode.INVOKE_INTERFACE_RANGE) {
+            return@mapNotNull null
+        }
+        if (call.definingClass != config || call.returnType != "Z" || call.parameterTypes.isNotEmpty()) return@mapNotNull null
+        index to call.name
+    }.toMap()
+
+/**
+ * The flags [method] asks right before [speedUp]: a flag call, its move-result, one branch on it,
+ * and then the [speedUp] call, which is how each release listener asks its second flag.
+ */
+internal fun flagsBefore(method: Method, config: String, speedUp: String): Set<String> {
+    val code = method.code
+    val calls = flagCalls(method, config)
+    return calls.filter { (index, name) ->
+        name != speedUp && calls[index + 3] == speedUp && code.getOrNull(index + 1)?.opcode == Opcode.MOVE_RESULT &&
+            code.getOrNull(index + 2)?.opcode?.name?.startsWith("if-") == true
+    }.values.toSet()
+}
+
+/**
+ * The one method [listener] hands its work to, when none of its own methods asks [config] a flag:
+ * 586's Android 9 build passes every captured value to one method elsewhere (LX/0C5r;->A03), which
+ * asks the flags the listener asks on the phone builds. Null when the listener asks them itself.
+ */
+internal fun handedRelease(listener: ClassDef, config: String): MethodReference? {
+    if (listener.methods.any { flagCalls(it, config).isNotEmpty() }) return null
+    return listener.methods.flatMap { it.code }.mapNotNull { (it as? ReferenceInstruction)?.reference as? MethodReference }
+        .filter { call -> call.definingClass != listener.type && call.parameterTypes.any { it.toString() == config } }
+        .distinctBy { it.toString() }.singleOrNull()
+}
+
+/** Whether [method] makes an instance of one of [types]. */
+internal fun makesOneOf(method: Method, types: Set<String>): Boolean = method.code.any {
+    it.opcode == Opcode.NEW_INSTANCE && ((it as ReferenceInstruction).reference as TypeReference).type in types
+}
+
+/** Whether [parameters] and [returnType] are the edge check's: (MotionEvent, View, FbUserSession, [config], Z)Z. */
+internal fun isEdgeCheckShape(parameters: List<String>, returnType: String, config: String): Boolean =
+    returnType == "Z" && parameters == listOf(MOTION_EVENT, VIEW, FB_USER_SESSION, config, "Z")
+
+/** The methods of the edge check's shape that [method] calls, as references. */
+internal fun edgeChecksCalled(method: Method, config: String): List<MethodReference> = method.code.mapNotNull {
+    val call = (it as? ReferenceInstruction)?.reference as? MethodReference ?: return@mapNotNull null
+    call.takeIf { isEdgeCheckShape(call.parameterTypes.map(CharSequence::toString), call.returnType, config) }
+}
+
+/** Whether [method] is the edge check a call to [reference] names, with a body. */
+internal fun isMethod(method: Method, reference: MethodReference): Boolean =
+    method.definingClass == reference.definingClass && method.name == reference.name &&
+        method.returnType == reference.returnType && method.parameters() == reference.parameterTypes.map(CharSequence::toString) &&
+        method.implementation != null
+
+/**
+ * The edge check's code: the method it's in ([method]), the index where its press and the reel's
+ * view are first in hand ([entry]), their registers ([press], [view]), and the index of each
+ * instruction its boolean answer goes out by, with the answer's register ([answers]).
+ */
+internal class EdgeCheck(val method: Method, val entry: Int, val press: Int, val view: Int, val answers: Map<Int, Int>)
+
+/**
+ * The edge check as a method of its own, up to 582: its first two parameters are the press and the
+ * view, and each `return` hands out its answer. Null when it never returns.
+ */
+internal fun ownEdgeCheck(method: Method): EdgeCheck? {
+    val implementation = method.implementation ?: return null
+    val returns = method.code.withIndex().filter { it.value.opcode == Opcode.RETURN }
+        .associate { it.index to (it.value as OneRegisterInstruction).registerA }
+    if (returns.isEmpty()) return null
+    val press = implementation.registerCount - method.parameters().sumOf { if (it == "J" || it == "D") 2 else 1 }
+    return EdgeCheck(method, 0, press, press + 1, returns)
+}
+
+/** The types [method] makes instances of. */
+internal fun typesMade(method: Method): Set<String> = method.code.filter { it.opcode == Opcode.NEW_INSTANCE }
+    .map { ((it as ReferenceInstruction).reference as TypeReference).type }.toSet()
+
+/** Whether [instruction] writes [register], or a wide pair holding it. */
+private fun writes(instruction: Instruction, register: Int): Boolean {
+    val destination = (instruction as? OneRegisterInstruction)?.registerA ?: return false
+    if (!instruction.opcode.setsRegister()) return false
+    return destination == register || (instruction.opcode.setsWideRegister() && destination + 1 == register)
+}
+
+/**
+ * The edge check where 583 inlined it into [method], a lambda's: the one read of a MotionEvent field
+ * and the one read of a View field, one after the other and reached only that way, and from there on
+ * a getX() of that press, a getWidth() of that view and a no-argument int asked of [config], with
+ * neither register written again. Each way out returns the Boolean.valueOf it boxes the answer with
+ * right away, and the answer goes out at each of those valueOf calls, all past the reads. Null
+ * unless all that holds, and the two registers fit a call to the extension (neighbours, or both v15
+ * or below).
+ */
+internal fun inlinedEdgeCheck(method: Method, config: String): EdgeCheck? {
+    val code = method.code
+    fun reads(index: Int, type: String) = code[index].opcode == Opcode.IGET_OBJECT &&
+        ((code[index] as ReferenceInstruction).reference as FieldReference).type == type
+    val pressAt = code.indices.filter { reads(it, MOTION_EVENT) }.singleOrNull() ?: return null
+    val viewAt = code.indices.filter { reads(it, VIEW) }.singleOrNull() ?: return null
+    if (maxOf(pressAt, viewAt) - minOf(pressAt, viewAt) != 1) return null
+    val entry = maxOf(pressAt, viewAt) + 1
+    val press = (code[pressAt] as TwoRegisterInstruction).registerA
+    val view = (code[viewAt] as TwoRegisterInstruction).registerA
+    if (press == view || entry >= code.size || view != press + 1 && (press > 15 || view > 15)) return null
+    val flow = ControlFlow.of(method)
+    if (code.indices.any { (it != entry - 1 && entry in flow.normal[it]) || (it != entry - 2 && entry - 1 in flow.normal[it]) }) return null
+    val reached = sortedSetOf(entry)
+    val queue = ArrayDeque(listOf(entry))
+    while (queue.isNotEmpty()) flow.normal[queue.removeFirst()].forEach { if (reached.add(it)) queue += it }
+    fun calls(index: Int, reference: String, on: Int? = null): Boolean {
+        val call = (code[index] as? ReferenceInstruction)?.reference as? MethodReference ?: return false
+        val key = "${call.definingClass}->${call.name}(${call.parameterTypes.joinToString("")})${call.returnType}"
+        return code[index].opcode.name.startsWith("invoke") && key == reference &&
+            (on == null || (code[index] as? FiveRegisterInstruction)?.registerC == on)
+    }
+    val asksEdge = reached.any { index ->
+        val call = (code[index] as? ReferenceInstruction)?.reference as? MethodReference
+        code[index].opcode.name.startsWith("invoke-interface") && call?.definingClass == config && call.returnType == "I" &&
+            call.parameterTypes.isEmpty()
+    }
+    if (!asksEdge || reached.none { calls(it, "$MOTION_EVENT->getX()F", press) } ||
+        reached.none { calls(it, "$VIEW->getWidth()I", view) } ||
+        reached.any { writes(code[it], press) || writes(code[it], view) }
+    ) {
+        return null
+    }
+    val boxes = reached.filter { calls(it, "Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;") }
+    val returns = reached.filter { code[it].opcode.name.startsWith("return") }
+    fun boxedReturn(box: Int): Boolean {
+        val taken = code.getOrNull(box + 1)?.takeIf { it.opcode == Opcode.MOVE_RESULT_OBJECT } as? OneRegisterInstruction ?: return false
+        val out = code.getOrNull(box + 2)?.takeIf { it.opcode == Opcode.RETURN_OBJECT } as? OneRegisterInstruction ?: return false
+        return out.registerA == taken.registerA && code.indices.none { it != box && box + 1 in flow.normal[it] } &&
+            code.indices.none { it != box + 1 && box + 2 in flow.normal[it] }
+    }
+    if (boxes.isEmpty() || boxes.any { it < entry } || !boxes.all(::boxedReturn) || returns.toSet() != boxes.map { it + 2 }.toSet()) {
+        return null
+    }
+    return EdgeCheck(method, entry, press, view, boxes.associateWith { (code[it] as FiveRegisterInstruction).registerC })
+}
+
+/** The indices in [method] of the instructions loading the long-press handlers' "speed_up" log name. */
+internal fun speedUpLoads(method: Method): List<Int> = method.code.withIndex().filter { (_, instruction) ->
+    ((instruction as? ReferenceInstruction)?.reference as? StringReference)?.string == SPEED_UP_LOG
+}.map { it.index }
+
+private fun Instruction.registers(): List<Int> = when (this) {
+    is RegisterRangeInstruction -> (startRegister until startRegister + registerCount).toList()
+    is FiveRegisterInstruction -> listOf(registerC, registerD, registerE, registerF, registerG).take(registerCount)
+    else -> emptyList()
+}
+
+/**
+ * One read of the hold speed in [method], whose double the move-result-wide at [taken] takes. Up to
+ * 586 a call of [getter], a no-argument double method of one of the config's answers (587 on
+ * armeabi-v7a: a static double method taking one, LX/0A4x;->A01). 587 on arm64-v8a inlined it: a call of an answer's method handing back an object, made with lambdas it picks between (the
+ * config's double where the surface is the Video tab's, a fixed 2.0 elsewhere), cast to a Number and
+ * read as a double, with [getter] null. [key] names the read: the getter, or the call and each
+ * lambda's type and the case it's made with, so two reads of one config value share it.
+ */
+internal class HoldSpeedRead(val method: Method, val taken: Int, val getter: MethodReference?, val key: String)
+
+/**
+ * The hold speed reads in [method] whose double the next instructions make a float and hand to
+ * [setter] ("class->name(F)V") as its speed: the answer of a no-argument double method of one of
+ * [configAnswers] or a static one taking one, or 587's inlined read of one (see [inlinedConfigReads]).
+ */
+internal fun holdSpeedReads(method: Method, setter: String, configAnswers: Set<String>): List<HoldSpeedRead> {
+    val code = method.code
+    val inlined = inlinedConfigReads(method, configAnswers).associateBy { it.taken }
+    return code.indices.mapNotNull { index ->
+        val call = (code[index] as? ReferenceInstruction)?.reference as? MethodReference ?: return@mapNotNull null
+        if ("${call.definingClass}->${call.name}(${call.parameterTypes.joinToString("")})${call.returnType}" != setter) {
+            return@mapNotNull null
+        }
+        val speed = code[index].registers().getOrNull(1) ?: return@mapNotNull null
+        val convert = code.getOrNull(index - 1)?.takeIf { it.opcode == Opcode.DOUBLE_TO_FLOAT } as? TwoRegisterInstruction
+        if (convert == null || convert.registerA != speed) return@mapNotNull null
+        val taken = code.getOrNull(index - 2)?.takeIf { it.opcode == Opcode.MOVE_RESULT_WIDE } as? OneRegisterInstruction
+        if (taken == null || taken.registerA != convert.registerB) return@mapNotNull null
+        inlined[index - 2]?.let { return@mapNotNull it }
+        val reading = code.getOrNull(index - 3) ?: return@mapNotNull null
+        val read = (reading as? ReferenceInstruction)?.reference as? MethodReference ?: return@mapNotNull null
+        // 587's armeabi-v7a build moved the getter into a static method taking the answer.
+        val answers = if (reading.opcode == Opcode.INVOKE_STATIC || reading.opcode == Opcode.INVOKE_STATIC_RANGE) {
+            read.parameterTypes.singleOrNull()?.toString() in configAnswers
+        } else {
+            read.parameterTypes.isEmpty() && read.definingClass in configAnswers
+        }
+        read.takeIf { answers && it.returnType == "D" }?.let { HoldSpeedRead(method, index - 2, it, it.toString()) }
+    }
+}
+
+/**
+ * Every double [method] reads from one of [configAnswers] through a method of its own handing back
+ * an object: the call, a move-result-object, a check-cast of it to Number, its doubleValue() and the
+ * move-result-wide taking that, one after the other, with each argument but the answer a lambda
+ * made in [method] (587 LX/08kZ;->A0X: LX/04vF;->A0h(new LX/0CxW;(state, 8), new LX/0A5F;(0x74))).
+ */
+internal fun inlinedConfigReads(method: Method, configAnswers: Set<String>): List<HoldSpeedRead> {
+    val code = method.code
+    return code.indices.mapNotNull { taken ->
+        if (code[taken].opcode != Opcode.MOVE_RESULT_WIDE) return@mapNotNull null
+        val double = code.getOrNull(taken - 1) ?: return@mapNotNull null
+        val doubleCall = (double as? ReferenceInstruction)?.reference as? MethodReference
+        if (doubleCall?.definingClass != NUMBER || doubleCall.name != "doubleValue" || doubleCall.returnType != "D") return@mapNotNull null
+        val answer = double.registers().singleOrNull() ?: return@mapNotNull null
+        val cast = code.getOrNull(taken - 2)?.takeIf { it.opcode == Opcode.CHECK_CAST } ?: return@mapNotNull null
+        if ((cast as OneRegisterInstruction).registerA != answer || ((cast as ReferenceInstruction).reference as TypeReference).type != NUMBER) {
+            return@mapNotNull null
+        }
+        val moved = code.getOrNull(taken - 3)?.takeIf { it.opcode == Opcode.MOVE_RESULT_OBJECT } as? OneRegisterInstruction
+        if (moved?.registerA != answer) return@mapNotNull null
+        val read = code.getOrNull(taken - 4) ?: return@mapNotNull null
+        val call = (read as? ReferenceInstruction)?.reference as? MethodReference ?: return@mapNotNull null
+        if (call.definingClass !in configAnswers || call.returnType != OBJECT || call.parameterTypes.isEmpty()) return@mapNotNull null
+        val lambdas = read.registers().drop(1).map { lambdaMade(code, taken - 4, it) ?: return@mapNotNull null }
+        HoldSpeedRead(method, taken, null, "$call${lambdas.joinToString(",", "(", ")")}")
+    }
+}
+
+/**
+ * The lambda in [register] at [at] in [code]: the type of the one constructor call on it before
+ * there with nothing writing it since, and, when that constructor takes an int last, the case
+ * constant it's handed, as "type#case". Null for anything else.
+ */
+private fun lambdaMade(code: List<Instruction>, at: Int, register: Int): String? {
+    val init = (at - 1 downTo 0).firstOrNull { index ->
+        val call = (code[index] as? ReferenceInstruction)?.reference as? MethodReference
+        code[index].opcode == Opcode.INVOKE_DIRECT && call?.name == "<init>" && code[index].registers().firstOrNull() == register
+    } ?: return null
+    if ((init + 1 until at).any { writes(code[it], register) }) return null
+    val made = (code[init] as ReferenceInstruction).reference as MethodReference
+    if (made.parameterTypes.lastOrNull()?.toString() != "I") return made.definingClass
+    val caseRegister = code[init].registers().last()
+    val loaded = (init - 1 downTo 0).firstOrNull { writes(code[it], caseRegister) } ?: return null
+    val case = (code[loaded] as? NarrowLiteralInstruction)?.narrowLiteral ?: return null
+    return "${made.definingClass}#$case"
+}
+
+/** The no-argument float methods of [player] that [method] calls, as references: in a release listener, the speed getter. */
+internal fun speedGettersCalled(method: Method, player: String): List<MethodReference> = method.code.mapNotNull {
+    val call = (it as? ReferenceInstruction)?.reference as? MethodReference ?: return@mapNotNull null
+    call.takeIf { call.definingClass == player && call.returnType == "F" && call.parameterTypes.isEmpty() }
+}
+
+/** Whether the instruction after the call at [index] in [method] takes its boolean answer. */
+internal fun answerTakenAt(method: Method, index: Int): Int? =
+    (method.code.getOrNull(index + 1)?.takeIf { it.opcode == Opcode.MOVE_RESULT } as? OneRegisterInstruction)?.registerA
+
+/*
+ * Hold a feed video for 2x (issue #229), the second switch of Hold a reel for 2x. FbGrootPlayer
+ * attaches its view to a container in one static method holding [ATTACH_VIEW_LOG], taking the
+ * container first and the player as one other parameter (584: LX/55R;->A0O, the player third),
+ * and keeps the container in its one ViewGroup field, which the attach writes (584: A06). The
+ * extension's FeedVideoHold notes each player there, reads its container through that field to find
+ * the video under a hold, and sets its speed with the speed setter.
+ */
+
+internal const val FEED_VIDEO_HOLD = "$EXTENSION_PACKAGE/reels/FeedVideoHold;"
+internal const val FEED_TOUCH = "$FEED_VIDEO_HOLD->touch(Landroid/app/Activity;Landroid/view/MotionEvent;)V"
+internal const val FEED_ATTACHED = "$FEED_VIDEO_HOLD->attached(Landroid/view/ViewGroup;Ljava/lang/Object;)V"
+internal const val PLAYER_VIEW_STUB = "playerView"
+internal const val PLAYER_ORIGIN_STUB = "playerOrigin"
+internal const val SET_PLAYER_SPEED_STUB = "setPlayerSpeed"
+internal const val ATTACH_VIEW_LOG = "FbGrootPlayer.attachPlayerViewInternal"
+internal const val VIEW_GROUP = "Landroid/view/ViewGroup;"
+
+/**
+ * When [method] is FbGrootPlayer's attach of its view, static, holding [ATTACH_VIEW_LOG], taking a
+ * ViewGroup first and [player] once: the index of the player's parameter. Otherwise null.
+ */
+internal fun attachedPlayerParameter(method: Method, player: String): Int? {
+    if (!AccessFlags.STATIC.isSet(method.accessFlags) || !holdsString(method, ATTACH_VIEW_LOG)) return null
+    val parameters = method.parameters()
+    if (parameters.firstOrNull() != VIEW_GROUP) return null
+    return parameters.withIndex().filter { it.value == player }.singleOrNull()?.index
+}
+
+/**
+ * The ViewGroup fields of [player] that [method] writes: in the attach, the player's view container.
+ * 585 moved the write into the one static [player] method the attach hands its work to, so the
+ * [player] methods [method] calls directly are read too.
+ */
+internal fun containersWritten(method: Method, player: ClassDef): List<FieldReference> =
+    (method.code + playerCallees(player, method).flatMap { it.code })
+        .filter { it.opcode == Opcode.IPUT_OBJECT }
+        .mapNotNull { (it as? ReferenceInstruction)?.reference as? FieldReference }
+        .filter { it.definingClass == player.type && it.type == VIEW_GROUP }
+        .distinctBy { it.toString() }
+
+/** The methods of [player] with a body that [method] calls directly (one level), other than [method]. */
+internal fun playerCallees(player: ClassDef, method: Method): List<Method> {
+    val called = method.code.mapNotNull { (it as? ReferenceInstruction)?.reference as? MethodReference }
+        .filter { it.definingClass == player.type }
+        .map { call -> Triple(call.name, call.parameterTypes.map(CharSequence::toString), call.returnType) }
+        .toSet()
+    return player.methods.filter {
+        it.implementation != null && it != method && Triple(it.name, it.parameters(), it.returnType) in called
+    }
+}
+
+/*
+ * Hide the pull down to lock hint (issue #289), the third switch of Hold a reel for 2x. The pill a
+ * video held for 2x shows is a Litho component made with its state, an enum whose constants keep
+ * their names (584: LX/Txp;), its speed and a flag, in one constructor (584: LX/TbY;-><init>(Txp,F,Z)).
+ * The patch hands the state to the extension's LockHint first in that constructor, which answers
+ * NORMAL, the plain 2x pill, in place of the hints while the switch is on.
+ */
+
+internal const val LOCK_HINT_CLASS = "$EXTENSION_PACKAGE/reels/LockHint;"
+internal const val LOCK_HINT_PILL = "$LOCK_HINT_CLASS->pill(Ljava/lang/Enum;)Ljava/lang/Enum;"
+
+/**
+ * Hide the 2x popups (#289) asks this first in both pills' renders, and a yes returns no component.
+ * A KComponent's render may answer null, which lays out as nothing. The hold, its lock, the overlay
+ * Facebook hides for it and the pill holder's animation all run outside the render.
+ */
+internal const val HIDES_2X_PILL = "$LOCK_HINT_CLASS->hidesPill()Z"
+private const val COMPONENT_RENDER = "render"
+
+/** The render of the Litho component [classDef]: an instance method by that kept name with one parameter, answering an object. */
+internal fun pillRender(classDef: ClassDef): Method? = classDef.methods.singleOrNull {
+    it.name == COMPONENT_RENDER && !AccessFlags.STATIC.isSet(it.accessFlags) && it.implementation != null &&
+        it.parameterTypes.size == 1 && it.returnType.startsWith("L")
+}
+
+/**
+ * Hide the 2x popups also takes the line a lock shows as it starts or ends, "Locked at 2x speed" and
+ * "Back to normal speed" (#289). Reels raise it from the gesture method as a toast in a window of its
+ * own, built only when a server flag says so, once for each end. The patch passes that flag's answer
+ * through LockHint just before each gate, so the block is skipped and the lock itself still runs.
+ */
+internal const val LOCK_POPUP_SHOWS = "$LOCK_HINT_CLASS->lockPopupShows(Z)Z"
+internal val REEL_LOCK_GESTURE_TAGS = listOf("slide_up", "slide_down")
+private const val CALLER_CONTEXT = "Lcom/facebook/common/callercontext/CallerContext;"
+
+/** The reel's lock gesture: takes the touch first, and logs which way the lock slid. */
+internal fun isReelLockGesture(method: Method): Boolean =
+    method.parameters().firstOrNull() == MOTION_EVENT && REEL_LOCK_GESTURE_TAGS.all { holdsString(method, it) }
+
+/**
+ * The gates in [gesture]: an if-eqz jumping over a block that reads a caller context and whose last
+ * call shows what it built, a virtual call taking nothing and answering nothing.
+ */
+internal fun reelLockPopupGates(gesture: Method): List<Int> {
+    val code = gesture.code
+    return code.indices.filter { index ->
+        if (code[index].opcode != Opcode.IF_EQZ) return@filter false
+        val target = branchTarget(code, index) ?: return@filter false
+        if (target <= index + 1) return@filter false
+        val last = code[target - 1]
+        val show = (last as? ReferenceInstruction)?.reference as? MethodReference ?: return@filter false
+        last.opcode == Opcode.INVOKE_VIRTUAL && show.returnType == "V" && show.parameterTypes.isEmpty() &&
+            (index until target).any { at ->
+                val read = code[at]
+                read.opcode == Opcode.SGET_OBJECT && ((read as ReferenceInstruction).reference as FieldReference).type == CALLER_CONTEXT
+            }
+    }
+}
+
+/**
+ * Feed and Watch video show the same two lines from the seek bar plugin: its listener puts a Litho
+ * component in a view for two seconds and reads the line out for screen readers. The method takes
+ * whether the lock started, and makes that component with the same flag.
+ */
+internal const val LOCK_POPUP_ANNOUNCE = "announceForAccessibility"
+
+/**
+ * Feed videos also show a "2x speed" chip teaching Facebook's own hold (#343). A small class keeps
+ * when it last showed under a kept pref key (585: LX/06yo;), and its one check answers whether to
+ * show it now, at most once per server-set interval, until Facebook's hold is used. Hush's hold
+ * takes that gesture, so the chip kept coming back. The patch asks LockHint first in the check.
+ */
+internal const val HOLD_NUX_SHOWN = "feed_video_hold_2x_speed_nux_last_shown_ms"
+internal const val HIDES_HOLD_NUX = "$LOCK_HINT_CLASS->hidesHoldNux()Z"
+
+/** The NUX check: an instance method taking nothing, answering a boolean, that reads the clock. */
+internal fun isHoldNuxCheck(method: Method): Boolean =
+    !AccessFlags.STATIC.isSet(method.accessFlags) && method.implementation != null &&
+        method.returnType == "Z" && method.parameterTypes.isEmpty() &&
+        method.code.any {
+            val called = (it as? ReferenceInstruction)?.reference as? MethodReference
+            called != null && called.definingClass == "Ljava/lang/System;" && called.name == "currentTimeMillis"
+        }
+
+/** The boolean fields of [holder] its constructors set. Where the check is inlined: the one flag that ends the tip for good. */
+internal fun holdNuxFlags(holder: ClassDef): Set<String> = holder.methods.filter { it.name == "<init>" }
+    .flatMap { it.code }.filter { it.opcode == Opcode.IPUT_BOOLEAN }
+    .mapNotNull { ((it as ReferenceInstruction).reference as FieldReference).takeIf { f -> f.definingClass == holder.type }?.name }
+    .toSet()
+
+private val CONSTANTS = setOf(Opcode.CONST_4, Opcode.CONST_16, Opcode.CONST, Opcode.CONST_HIGH16)
+
+/**
+ * Where 586's Android 9 build and 587 arm64 (LX/05iD;->A1D) inline the check into the feed video player's setup, the indexes of
+ * [method]'s reads of one of [flags] off [holder] whose next branch is an if-nez on what was read,
+ * past nothing but constants into other registers. The method reads the clock, as the check does.
+ */
+internal fun holdNuxReads(method: Method, holder: ClassDef, flags: Set<String> = holdNuxFlags(holder)): List<Int> {
+    val code = method.code
+    if (flags.isEmpty() || code.none {
+            val called = (it as? ReferenceInstruction)?.reference as? MethodReference
+            called != null && called.definingClass == "Ljava/lang/System;" && called.name == "currentTimeMillis"
+        }
+    ) return emptyList()
+    return code.indices.filter { index ->
+        val read = code[index]
+        val field = (read as? ReferenceInstruction)?.reference as? FieldReference
+        if (read.opcode != Opcode.IGET_BOOLEAN || field == null || field.definingClass != holder.type || field.name !in flags) {
+            return@filter false
+        }
+        val flag = (read as TwoRegisterInstruction).registerA
+        val next = (index + 1 until code.size).firstOrNull { code[it].opcode !in CONSTANTS } ?: return@filter false
+        (index + 1 until next).none { (code[it] as OneRegisterInstruction).registerA == flag } &&
+            code[next].opcode == Opcode.IF_NEZ && (code[next] as OneRegisterInstruction).registerA == flag
+    }
+}
+
+/*
+ * Facebook's own hold on feed videos (#343), on accounts that get it, draws a "2x speed" chip of its
+ * own while it plays the video at 2x: RichVideoAttachmentComponent's long press logs
+ * "LONG_PRESS_2X_SPEED" and turns on one boolean of the component's state (587: LX/0CJC;->invoke,
+ * case 3, LX/05im;->A0U), and the component's render draws the chip while it's on, the same chip the
+ * 2x tip is drawn with right after it. The boolean is found from the hold: the lambda logging that
+ * name updates the component's state with one case number, the component's state container sets one
+ * boolean field for that case, and the render reads that field once. Hide the 2x popups passes that
+ * read through LockHint, so the chip isn't drawn and the hold and its speed stay Facebook's.
+ */
+internal const val FEED_HOLD_LOG = "LONG_PRESS_2X_SPEED"
+internal const val HOLD_NUX_UPDATE = "updateState:RichVideoAttachmentComponent.updateHold2xNuxVisible"
+internal const val HOLD_CHIP_SHOWS = "$LOCK_HINT_CLASS->holdChipShows(Z)Z"
+
+/** A state update of the feed video component: the case number it's made with and the update's type. */
+internal data class StateUpdate(val case: Int, val type: String)
+
+/** The updates of [component]'s state that [method] makes, when it's the feed video hold logging [FEED_HOLD_LOG]. */
+internal fun holdChipUpdates(method: Method, component: String): List<StateUpdate> =
+    if (holdsString(method, FEED_HOLD_LOG)) stateUpdates(method, component) else emptyList()
+
+/**
+ * The updates of [component]'s state that [method] makes: each const-class of [component] handed
+ * straight to a call taking an update, the class and a name, with the update made before it from an
+ * object array and a constant case number, by its constructor (587's hold) or a static factory
+ * (587's 2x tip, LX/04UN;->A0Y).
+ */
+internal fun stateUpdates(method: Method, component: String): List<StateUpdate> {
+    val code = method.code
+    return code.indices.mapNotNull { at ->
+        val load = code[at]
+        if (load.opcode != Opcode.CONST_CLASS || ((load as ReferenceInstruction).reference as TypeReference).type != component) {
+            return@mapNotNull null
+        }
+        val enqueue = code.getOrNull(at + 1) ?: return@mapNotNull null
+        val call = (enqueue as? ReferenceInstruction)?.reference as? MethodReference ?: return@mapNotNull null
+        val parameters = call.parameterTypes.map(CharSequence::toString)
+        if (enqueue.opcode != Opcode.INVOKE_VIRTUAL || call.returnType != "V" || parameters.size != 3 ||
+            parameters[1] != "Ljava/lang/Class;" || parameters[2] != "Ljava/lang/String;"
+        ) return@mapNotNull null
+        val registers = (enqueue as? FiveRegisterInstruction)?.let { listOf(it.registerC, it.registerD, it.registerE) }
+            ?: return@mapNotNull null
+        if (registers[2] != (load as OneRegisterInstruction).registerA) return@mapNotNull null
+        val update = parameters[0]
+        val made = (at - 1 downTo 0).firstOrNull { caseRegister(code, it, update, registers[1]) != null } ?: return@mapNotNull null
+        val caseRegister = caseRegister(code, made, update, registers[1])!!
+        val case = (made - 1 downTo 0).firstOrNull { (code[it] as? OneRegisterInstruction)?.registerA == caseRegister && code[it].opcode.setsRegister() }
+            ?.let { code[it] as? NarrowLiteralInstruction }?.narrowLiteral ?: return@mapNotNull null
+        StateUpdate(case, update)
+    }
+}
+
+/**
+ * The register holding the case number when [code]'s instruction at [at] makes an [update] from an
+ * object array and a number into [register]: its constructor, or a static factory whose answer the
+ * next instruction takes. Null for anything else.
+ */
+private fun caseRegister(code: List<Instruction>, at: Int, update: String, register: Int): Int? {
+    val call = (code[at] as? ReferenceInstruction)?.reference as? MethodReference ?: return null
+    if (call.parameterTypes.map(CharSequence::toString) != listOf("[Ljava/lang/Object;", "I")) return null
+    val made = code[at] as? FiveRegisterInstruction ?: return null
+    val taken = code.getOrNull(at + 1)
+    return when {
+        code[at].opcode == Opcode.INVOKE_DIRECT && call.definingClass == update && call.name == "<init>" &&
+            made.registerC == register -> made.registerE
+        code[at].opcode == Opcode.INVOKE_STATIC && call.returnType == update && taken?.opcode == Opcode.MOVE_RESULT_OBJECT &&
+            (taken as OneRegisterInstruction).registerA == register -> made.registerD
+        else -> null
+    }
+}
+
+/** The types [classDef]'s methods make with new-instance, the component's state container among them. */
+internal fun madeTypes(classDef: ClassDef): Set<String> = classDef.methods.flatMap { it.code }
+    .filter { it.opcode == Opcode.NEW_INSTANCE }
+    .map { ((it as ReferenceInstruction).reference as TypeReference).type }
+    .toSet()
+
+/** [classDef]'s state update: an instance method taking [update] alone, answering nothing, that switches on its case. */
+internal fun stateUpdateMethod(classDef: ClassDef, update: String): Method? = classDef.methods.singleOrNull {
+    !AccessFlags.STATIC.isSet(it.accessFlags) && it.implementation != null && it.returnType == "V" &&
+        it.parameters() == listOf(update) && it.code.any { i -> i.opcode == Opcode.PACKED_SWITCH || i.opcode == Opcode.SPARSE_SWITCH }
+}
+
+/** The opcodes that end a switch case's straight run. */
+private val CASE_ENDS = setOf(
+    Opcode.RETURN_VOID, Opcode.RETURN, Opcode.RETURN_WIDE, Opcode.RETURN_OBJECT,
+    Opcode.GOTO, Opcode.GOTO_16, Opcode.GOTO_32, Opcode.THROW,
+)
+
+/** The boolean field of its own class that [method]'s switch sets for [case], before the case ends, or null. */
+internal fun caseFlag(method: Method, case: Int): FieldReference? {
+    val code = method.code
+    val switch = code.indexOfFirst { it.opcode == Opcode.PACKED_SWITCH || it.opcode == Opcode.SPARSE_SWITCH }
+    if (switch < 0) return null
+    val address = IntArray(code.size + 1)
+    for (index in code.indices) address[index + 1] = address[index] + code[index].codeUnits
+    val payload = code.getOrNull(address.indexOf(address[switch] + (code[switch] as OffsetInstruction).codeOffset)) as? SwitchPayload
+        ?: return null
+    val element = payload.switchElements.singleOrNull { it.key == case } ?: return null
+    val target = address.indexOf(address[switch] + element.offset).takeIf { it in code.indices } ?: return null
+    for (index in target until code.size) {
+        val instruction = code[index]
+        if (instruction.opcode == Opcode.IPUT_BOOLEAN) {
+            val field = (instruction as ReferenceInstruction).reference as FieldReference
+            return field.takeIf { it.definingClass == method.definingClass }
+        }
+        if (instruction.opcode in CASE_ENDS) return null
+    }
+    return null
+}
+
+/** The indices of [method]'s iget-boolean reads of [flag]. */
+internal fun flagReads(method: Method, flag: FieldReference): List<Int> {
+    val code = method.code
+    return code.indices.filter { index ->
+        val read = code[index]
+        val field = (read as? ReferenceInstruction)?.reference as? FieldReference
+        read.opcode == Opcode.IGET_BOOLEAN && field != null && field.definingClass == flag.definingClass &&
+            field.name == flag.name && field.type == flag.type
+    }
+}
+
+internal fun isLockPopupShower(method: Method): Boolean {
+    if (method.returnType != "V" || method.parameters() != listOf("Z")) return false
+    val calls = method.code.mapNotNull { ((it as? ReferenceInstruction)?.reference as? MethodReference)?.name }
+    return LOCK_POPUP_ANNOUNCE in calls && "postDelayed" in calls && lockPopupComponent(method) != null
+}
+
+/** The one Litho component [method] makes from a lone boolean, or null. */
+internal fun lockPopupComponent(method: Method): String? = method.code.mapNotNull {
+    val made = (it as? ReferenceInstruction)?.reference as? MethodReference ?: return@mapNotNull null
+    made.definingClass.takeIf { _ ->
+        it.opcode == Opcode.INVOKE_DIRECT && made.name == "<init>" && made.parameterTypes.map(CharSequence::toString) == listOf("Z")
+    }
+}.singleOrNull()
+
+internal val PILL_STATES = listOf(
+    "NORMAL", "LOCK_HINT", "READY_TO_LOCK", "LOCKED", "UNLOCK_HINT", "READY_TO_UNLOCK", "NUX_PROMPT",
+)
+
+/** Whether [classDef] is the 2x pill's state enum: an enum whose static initializer names every one of [PILL_STATES]. */
+internal fun isPillStates(classDef: ClassDef): Boolean {
+    if (classDef.superclass != "Ljava/lang/Enum;") return false
+    val init = classDef.methods.singleOrNull { it.name == "<clinit>" } ?: return false
+    return PILL_STATES.all { holdsString(init, it) }
+}
+
+/** Whether [method] is the 2x pill's constructor: an instance constructor taking [states], a float and a boolean. */
+internal fun isPillConstructor(method: Method, states: String): Boolean =
+    method.name == "<init>" && !AccessFlags.STATIC.isSet(method.accessFlags) &&
+        method.parameterTypes.map(CharSequence::toString) == listOf(states, "F", "Z")
+
+/*
+ * Reels draw their own 2x pill (584: LX/TZK;), made in one place with the session, its state enum
+ * (584: LX/91l;, constants named below), the video's state and two flags. The first flag (584: TZK.A03,
+ * from LX/8N6;->A0I) says whether the pill speaks in hints at all: on, a held reel reads "Pull down
+ * to lock 2x speed" (0x7f146209) or "Slide up to lock 2x speed" (0x7f146e56, picked by the second
+ * flag); off, the render skips to the plain speed (0x7f145c59, "2x"), as Facebook draws it where it
+ * has no lock. The patch hands the state and the first flag to LockHint.reelPill first in the
+ * constructor.
+ */
+internal const val LOCK_HINT_REEL_PILL = "$LOCK_HINT_CLASS->reelPill(Ljava/lang/Enum;Z)Z"
+internal val REEL_PILL_STATES = listOf(
+    "LOCKED_WITH_FOOTER", "INITIATING_LOCK", "INITIATING_RESTORE", "UNLOCKED_ORIGINAL_SPEED", "UNLOCKED_2X_SPEED",
+    "ORIGINAL_SPEED",
+)
+
+/** Whether [classDef] is the Reels 2x pill's state enum: an enum whose static initializer names every one of [REEL_PILL_STATES]. */
+internal fun isReelPillStates(classDef: ClassDef): Boolean {
+    if (classDef.superclass != "Ljava/lang/Enum;") return false
+    val init = classDef.methods.singleOrNull { it.name == "<clinit>" } ?: return false
+    return REEL_PILL_STATES.all { holdsString(init, it) }
+}
+
+/**
+ * Whether [method] is the Reels 2x pill's constructor: an instance constructor taking the session,
+ * [states], one more object and two booleans, the first being the hints flag.
+ */
+internal fun isReelPillConstructor(method: Method, states: String): Boolean {
+    if (method.name != "<init>" || AccessFlags.STATIC.isSet(method.accessFlags)) return false
+    val parameters = method.parameterTypes.map(CharSequence::toString)
+    return parameters.size == 5 && parameters[0] == FB_USER_SESSION && parameters[1] == states &&
+        parameters[2].startsWith("L") && parameters[3] == "Z" && parameters[4] == "Z"
+}

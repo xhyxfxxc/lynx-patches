@@ -1,0 +1,1194 @@
+/*
+ * Copyright 2026 Hushfacebook contributors
+ * https://github.com/SysAdminDoc/Hushfacebook
+ */
+package app.morphe.extension.facebook.download;
+
+import static app.morphe.extension.facebook.download.FragmentedMp4ForTests.DURATION;
+import static app.morphe.extension.facebook.download.FragmentedMp4ForTests.FLAGS;
+import static app.morphe.extension.facebook.download.FragmentedMp4ForTests.NON_SYNC;
+import static app.morphe.extension.facebook.download.FragmentedMp4ForTests.OFFSET;
+import static app.morphe.extension.facebook.download.FragmentedMp4ForTests.SIZE;
+import static app.morphe.extension.facebook.download.FragmentedMp4ForTests.SYNC;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+
+import com.sun.jna.Native;
+
+import org.junit.Assume;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * The join that writes the MP4 itself, for the pictures Android's MediaMuxer won't put in one:
+ * VP9 always, AV1 before Android 14. Its inputs are built the way Facebook's DASH tracks come, one
+ * fragmented MP4 a track, and its output is read back from the sample tables alone
+ * ({@link PlainMp4ForTests}). Where FFmpeg is installed, FFmpeg reads and decodes a join of real
+ * VP9, AV1 and H.264 too.
+ */
+public class Mp4JoinTest {
+    @Rule public final TemporaryFolder temp = new TemporaryFolder();
+
+    /** Three seconds of VP9 at 30 fps in one-second fragments, the way a story's VP9 track comes. */
+    private static FragmentedMp4ForTests vp9Picture() {
+        FragmentedMp4ForTests picture = FragmentedMp4ForTests.picture("vp09", 1080, 1920, 15_360);
+        for (int f = 0; f < 3; f++) {
+            FragmentedMp4ForTests.Fragment fragment = picture.fragment((long) f * 15_360);
+            // Durations and flags once in tfhd, the key frame's as the run's first sample flags.
+            fragment.tfhdDefaults = true;
+            fragment.fields = SIZE;
+            for (int i = 0; i < 30; i++) fragment.add(i == 0 ? 3_000 : 400 + i * 3 + f, 512, i == 0 ? SYNC : NON_SYNC, 0);
+        }
+        return picture;
+    }
+
+    /** Three seconds of AAC at 44.1 kHz, with the edit list that trims the encoder's 1,024 priming samples. */
+    private static FragmentedMp4ForTests aacSound() {
+        FragmentedMp4ForTests sound = FragmentedMp4ForTests.sound(44_100);
+        sound.edits = new long[][] {{0, 1_024, 0x00010000}};
+        sound.trexFlags = SYNC;
+        for (int f = 0; f < 2; f++) {
+            FragmentedMp4ForTests.Fragment fragment = sound.fragment(f * 66L * 1_024);
+            fragment.fields = DURATION | SIZE;
+            for (int i = 0; i < (f == 0 ? 66 : 65); i++) fragment.add(180 + (i * 13) % 60, 1_024, SYNC, 0);
+        }
+        return sound;
+    }
+
+    private PlainMp4ForTests.Movie join(FragmentedMp4ForTests picture, FragmentedMp4ForTests sound) throws IOException {
+        File out = joined(write(picture, "video"), sound == null ? null : write(sound, "audio"), Downloader.SILENT);
+        return PlainMp4ForTests.read(Files.readAllBytes(out.toPath()));
+    }
+
+    private File write(FragmentedMp4ForTests track, String name) throws IOException {
+        File file = temp.newFile(name + ".mp4");
+        Files.write(file.toPath(), track.build());
+        return file;
+    }
+
+    private File joined(File video, File audio, Downloader.Progress progress) throws IOException {
+        File out = temp.newFile();
+        assertTrue("the join stopped", Mp4Join.join(video, audio, out, progress));
+        return out;
+    }
+
+    /**
+     * Every sample of [in] is in [out] with its own bytes, at its own decode time, with its sync flag
+     * and shown when it was shown before, to within the output's millisecond edit list.
+     */
+    private static void assertSamples(FragmentedMp4ForTests in, PlainMp4ForTests.Track out,
+            PlainMp4ForTests.Movie movie, double tolerance) {
+        List<FragmentedMp4ForTests.Sample> samples = in.samples();
+        long[] decode = in.decodeTimes();
+        assertEquals(in.timescale, out.timescale);
+        assertEquals(samples.size(), out.count());
+        for (int i = 0; i < samples.size(); i++) {
+            assertArrayEquals("the bytes of sample " + i, in.content(i), out.sample(movie.file, i));
+            assertEquals("the decode time of sample " + i, decode[i] - decode[0], out.decodeTimes[i]);
+            assertEquals("the sync flag of sample " + i, (samples.get(i).flags & 0x00010000) == 0, out.sync[i]);
+            assertEquals("when sample " + i + " is shown", in.presentation(i), out.presentation(i, movie.timescale),
+                    tolerance);
+        }
+        int last = samples.size() - 1;
+        assertEquals(samples.get(last).duration, out.durations[last]);
+    }
+
+    @Test
+    public void aVp9PictureAndItsSoundBecomeOnePlainMp4() throws IOException {
+        FragmentedMp4ForTests picture = vp9Picture();
+        FragmentedMp4ForTests sound = aacSound();
+
+        PlainMp4ForTests.Movie movie = join(picture, sound);
+
+        assertEquals(Arrays.asList("ftyp", "moov", "mdat"), movie.topLevel);
+        assertFalse("the plain file kept an mvex", movie.moovChildren.contains("mvex"));
+        assertEquals(2, movie.tracks.size());
+        assertEquals(3, movie.nextTrackId);
+        PlainMp4ForTests.Track video = movie.tracks.get(0);
+        PlainMp4ForTests.Track audio = movie.tracks.get(1);
+        assertEquals(1, video.id);
+        assertEquals(2, audio.id);
+        assertEquals("vide", video.handler);
+        assertEquals("soun", audio.handler);
+        assertEquals("vp09", video.sampleEntry);
+        assertArrayEquals("the VP9 sample entry and its vpcC weren't copied byte for byte",
+                picture.sampleDescriptions(), video.sampleDescriptions);
+        assertArrayEquals(sound.sampleDescriptions(), audio.sampleDescriptions);
+        assertEquals(1080, video.width);
+        assertEquals(1920, video.height);
+        assertEquals(0x0100, audio.volume);
+
+        assertSamples(picture, video, movie, 1e-9);
+        assertSamples(sound, audio, movie, 1e-9);
+
+        // The picture needs no edit list; the sound keeps its priming trimmed, 1,024 samples in.
+        assertNull(video.edits);
+        long soundMs = Math.round(130 * 1_024 * 1_000.0 / 44_100);
+        assertArrayEquals(new long[] {soundMs, 1_024, 0x00010000}, audio.edits[0]);
+        assertEquals(1, audio.edits.length);
+        assertEquals(3_000, video.trackDuration);
+        assertEquals(soundMs, audio.trackDuration);
+        assertEquals(1_000, movie.timescale);
+        assertEquals(soundMs, movie.duration);
+        assertEquals(90 * 512, video.mediaDuration);
+        assertEquals(131 * 1_024, audio.mediaDuration);
+    }
+
+    /**
+     * The AAC-LC sound AacReencode makes of an xHE-AAC track comes from MediaMuxer as a plain M4A:
+     * the data first, then a moov whose sample tables list every sample, and no fragments. A VP9
+     * picture joins it the way it joins Facebook's own fragmented sound, sample for sample, with
+     * 32-bit chunk offsets and 64-bit ones.
+     */
+    @Test
+    public void aPlainSoundTheKindMediaMuxerWritesJoinsAVp9Picture() throws IOException {
+        FragmentedMp4ForTests picture = vp9Picture();
+        FragmentedMp4ForTests sound = aacSound();
+        for (boolean wide : new boolean[] {false, true}) {
+            File audio = temp.newFile("plain-" + wide + ".m4a");
+            Files.write(audio.toPath(), plainSound(sound, 7, wide));
+
+            File out = joined(write(picture, "video-" + wide), audio, Downloader.SILENT);
+            PlainMp4ForTests.Movie movie = PlainMp4ForTests.read(Files.readAllBytes(out.toPath()));
+
+            assertEquals(2, movie.tracks.size());
+            assertEquals("soun", movie.tracks.get(1).handler);
+            assertArrayEquals(sound.sampleDescriptions(), movie.tracks.get(1).sampleDescriptions);
+            assertSamples(picture, movie.tracks.get(0), movie, 1e-9);
+            assertSamples(sound, movie.tracks.get(1), movie, 1e-9);
+        }
+    }
+
+    @Test
+    public void aPlainSoundWhoseTablesPointOutsideItsDataIsRefused() throws IOException {
+        File video = write(vp9Picture(), "video");
+
+        byte[] outside = plainSound(aacSound(), 7, false);
+        // The first chunk's offset, made to point at the ftyp.
+        ByteBuffer.wrap(outside).putInt(indexOf(outside, "stco", indexOf(outside, "moov")) + 16, 0);
+        File early = temp.newFile("early.m4a");
+        Files.write(early.toPath(), outside);
+        assertRefused("lie outside the audio file's media data", video, early);
+
+        byte[] short_ = plainSound(aacSound(), 7, false);
+        // stts times one sample fewer than stsz lists: its one run, 131 samples, made 130.
+        ByteBuffer.wrap(short_).putInt(indexOf(short_, "stts", indexOf(short_, "moov")) + 16, 130);
+        File disagree = temp.newFile("disagree.m4a");
+        Files.write(disagree.toPath(), short_);
+        assertRefused("sample tables disagree", video, disagree);
+    }
+
+    /**
+     * [sound]'s samples as a plain M4A laid out the way MediaMuxer writes one: ftyp, one mdat, then
+     * a moov with no mvex whose tables list every sample in chunks of [perChunk], their offsets
+     * 64-bit with [wide].
+     */
+    private static byte[] plainSound(FragmentedMp4ForTests sound, int perChunk, boolean wide) {
+        List<FragmentedMp4ForTests.Sample> samples = sound.samples();
+        FragmentedMp4ForTests.Box file = new FragmentedMp4ForTests.Box();
+        file.box("ftyp", new FragmentedMp4ForTests.Box().ascii("isom").u32(0).ascii("isom").ascii("mp42").bytes());
+        FragmentedMp4ForTests.Box mdat = new FragmentedMp4ForTests.Box();
+        for (int i = 0; i < samples.size(); i++) mdat.put(sound.content(i));
+        long dataStart = file.size() + 8;
+        file.box("mdat", mdat.bytes());
+
+        List<long[]> times = new ArrayList<>();
+        FragmentedMp4ForTests.Box sizes = new FragmentedMp4ForTests.Box();
+        for (FragmentedMp4ForTests.Sample sample : samples) {
+            long[] last = times.isEmpty() ? null : times.get(times.size() - 1);
+            if (last != null && last[1] == sample.duration) last[0]++;
+            else times.add(new long[] {1, sample.duration});
+            sizes.u32(sample.size);
+        }
+        FragmentedMp4ForTests.Box stts = new FragmentedMp4ForTests.Box().u32(0).u32(times.size());
+        for (long[] run : times) stts.u32(run[0]).u32(run[1]);
+
+        int chunks = (samples.size() + perChunk - 1) / perChunk;
+        int lastChunk = samples.size() - (chunks - 1) * perChunk;
+        FragmentedMp4ForTests.Box stsc = new FragmentedMp4ForTests.Box();
+        if (lastChunk == perChunk) {
+            stsc.u32(0).u32(1).u32(1).u32(perChunk).u32(1);
+        } else {
+            stsc.u32(0).u32(2).u32(1).u32(perChunk).u32(1).u32(chunks).u32(lastChunk).u32(1);
+        }
+        FragmentedMp4ForTests.Box offsets = new FragmentedMp4ForTests.Box().u32(0).u32(chunks);
+        long at = dataStart;
+        for (int i = 0; i < samples.size(); i++) {
+            if (i % perChunk == 0) {
+                if (wide) offsets.u64(at);
+                else offsets.u32(at);
+            }
+            at += samples.get(i).size;
+        }
+
+        FragmentedMp4ForTests.Box stbl = new FragmentedMp4ForTests.Box();
+        stbl.box("stsd", sound.sampleDescriptions());
+        stbl.box("stts", stts.bytes());
+        stbl.box("stsc", stsc.bytes());
+        stbl.box("stsz", new FragmentedMp4ForTests.Box().u32(0).u32(0).u32(samples.size()).put(sizes.bytes()).bytes());
+        stbl.box(wide ? "co64" : "stco", offsets.bytes());
+        FragmentedMp4ForTests.Box minf = new FragmentedMp4ForTests.Box();
+        minf.box("smhd", new FragmentedMp4ForTests.Box().u32(0).u32(0).bytes());
+        minf.box("dinf", new FragmentedMp4ForTests.Box().box("dref", new FragmentedMp4ForTests.Box().u32(0).u32(1)
+                .box("url ", new FragmentedMp4ForTests.Box().u32(1).bytes()).bytes()).bytes());
+        minf.box("stbl", stbl.bytes());
+        FragmentedMp4ForTests.Box mdia = new FragmentedMp4ForTests.Box();
+        mdia.box("mdhd", new FragmentedMp4ForTests.Box().u32(0).u32(0).u32(0).u32(sound.timescale).u32(0).u16(0x55C4)
+                .u16(0).bytes());
+        mdia.box("hdlr", new FragmentedMp4ForTests.Box().u32(0).u32(0).ascii("soun").zeros(12)
+                .put("SoundHandle\0".getBytes(StandardCharsets.US_ASCII)).bytes());
+        mdia.box("minf", minf.bytes());
+
+        byte[] matrix = new FragmentedMp4ForTests.Box().u32(0x00010000).u32(0).u32(0).u32(0).u32(0x00010000).u32(0)
+                .u32(0).u32(0).u32(0x40000000).bytes();
+        FragmentedMp4ForTests.Box trak = new FragmentedMp4ForTests.Box();
+        trak.box("tkhd", new FragmentedMp4ForTests.Box().u32(7).u32(0).u32(0).u32(1).u32(0).u32(0).zeros(8).u16(0)
+                .u16(0).u16(0x0100).u16(0).put(matrix).u32(0).u32(0).bytes());
+        FragmentedMp4ForTests.Box elst = new FragmentedMp4ForTests.Box().u32(0).u32(sound.edits.length);
+        for (long[] edit : sound.edits) elst.u32(edit[0]).u32(edit[1]).u32(edit[2]);
+        trak.box("edts", new FragmentedMp4ForTests.Box().box("elst", elst.bytes()).bytes());
+        trak.box("mdia", mdia.bytes());
+
+        FragmentedMp4ForTests.Box moov = new FragmentedMp4ForTests.Box();
+        moov.box("mvhd", new FragmentedMp4ForTests.Box().u32(0).u32(0).u32(0).u32(sound.movieTimescale).u32(0)
+                .u32(0x00010000).u16(0x0100).zeros(10).put(matrix).zeros(24).u32(2).bytes());
+        moov.box("trak", trak.bytes());
+        file.box("moov", moov.bytes());
+        return file.bytes();
+    }
+
+    /**
+     * Pictures in B-frame order keep their composition offsets, and the edit list that starts them
+     * at their first shown frame. When the picture shows and when its sound plays both stay where
+     * they were, so the two stay in sync.
+     */
+    @Test
+    public void bFramesKeepTheirOffsetsAndTheirEditList() throws IOException {
+        FragmentedMp4ForTests picture = bFramePicture(0, 1_024);
+        picture.edits = new long[][] {{0, 1_024, 0x00010000}};
+
+        PlainMp4ForTests.Movie movie = join(picture, aacSound());
+
+        PlainMp4ForTests.Track video = movie.tracks.get(0);
+        assertEquals(0, video.compositionVersion);
+        assertEquals(1, video.edits.length);
+        assertEquals(1_024, video.edits[0][1]);
+        assertSamples(picture, video, movie, 1e-9);
+        assertSamples(aacSound(), movie.tracks.get(1), movie, 1e-9);
+        assertEquals("the first frame isn't shown at the start", 0.0, video.presentation(0, movie.timescale), 1e-9);
+    }
+
+    /**
+     * A version 1 run can give negative composition offsets and no edit list. The plain file gives
+     * every offset plus the most negative one, in a version 0 ctts every player reads, and an edit
+     * list that starts that much later: each frame is still shown when it was.
+     */
+    @Test
+    public void negativeOffsetsBecomeAnEditList() throws IOException {
+        FragmentedMp4ForTests picture = bFramePicture(1, 0);
+
+        PlainMp4ForTests.Movie movie = join(picture, null);
+
+        PlainMp4ForTests.Track video = movie.tracks.get(0);
+        assertEquals("negative offsets were kept", 0, video.compositionVersion);
+        for (long offset : video.compositionOffsets) assertTrue(offset >= 0);
+        assertEquals(1, video.edits.length);
+        assertEquals(512, video.edits[0][1]);
+        assertSamples(picture, video, movie, 1e-9);
+    }
+
+    /** Thirty frames in I P B B order, offsets from each frame's decode time to its shown time plus [delay]. */
+    private static FragmentedMp4ForTests bFramePicture(int trunVersion, long delay) {
+        FragmentedMp4ForTests picture = FragmentedMp4ForTests.picture("avc1", 720, 1280, 15_360);
+        FragmentedMp4ForTests.Fragment fragment = picture.fragment(0L);
+        fragment.trunVersion = trunVersion;
+        fragment.fields = DURATION | SIZE | FLAGS | OFFSET;
+        for (int k = 0; k < 30; k++) {
+            int shown = k == 0 ? 0 : 3 * ((k - 1) / 3) + new int[] {3, 1, 2}[(k - 1) % 3];
+            fragment.add(700 + k, 512, k == 0 ? SYNC : NON_SYNC, (shown - k) * 512L + delay);
+        }
+        return picture;
+    }
+
+    /**
+     * A track whose first fragment starts past zero is shown that late: the plain file's samples
+     * start at zero, and an empty edit keeps the delay. The same when an edit list's media time is
+     * before the first sample.
+     */
+    @Test
+    public void aTrackThatStartsLateKeepsItsDelay() throws IOException {
+        FragmentedMp4ForTests picture = FragmentedMp4ForTests.picture("vp09", 1080, 1920, 15_360);
+        FragmentedMp4ForTests.Fragment fragment = picture.fragment(15_360L);
+        for (int i = 0; i < 30; i++) fragment.add(500, 512, i == 0 ? SYNC : NON_SYNC, 0);
+        FragmentedMp4ForTests sound = FragmentedMp4ForTests.sound(44_100);
+        sound.edits = new long[][] {{0, 1_024, 0x00010000}};
+        FragmentedMp4ForTests.Fragment late = sound.fragment(2_048L);
+        for (int i = 0; i < 40; i++) late.add(200, 1_024, SYNC, 0);
+
+        PlainMp4ForTests.Movie movie = join(picture, sound);
+
+        PlainMp4ForTests.Track video = movie.tracks.get(0);
+        assertEquals(2, video.edits.length);
+        assertEquals("the delay isn't an empty edit", -1, video.edits[0][1]);
+        assertEquals(1_000, video.edits[0][0]);
+        assertEquals(1.0, video.presentation(0, movie.timescale), 1e-9);
+        assertSamples(picture, video, movie, 1e-9);
+        assertEquals(2, movie.tracks.get(1).edits.length);
+        assertSamples(sound, movie.tracks.get(1), movie, 0.0005);
+    }
+
+    /**
+     * The fragment layouts ISO allows and a DASH packager uses: an absolute base in tfhd, runs that
+     * follow each other with no data offset, defaults from trex or tfhd, a fragment with no tfdt, a
+     * gap before a fragment's tfdt, a version 1 run, and a last mdat that runs to the end of the file.
+     */
+    @Test
+    public void everyFragmentLayoutIsRead() throws IOException {
+        FragmentedMp4ForTests picture = FragmentedMp4ForTests.picture("vp09", 640, 360, 15_360);
+        picture.trexDuration = 512;
+        picture.trexFlags = NON_SYNC;
+        picture.lastBoxToTheEnd = true;
+
+        FragmentedMp4ForTests.Fragment perSample = picture.fragment(0L);
+        for (int i = 0; i < 10; i++) perSample.add(300 + i, 400 + i, i == 0 ? SYNC : NON_SYNC, 0);
+
+        FragmentedMp4ForTests.Fragment following = picture.fragment(null);
+        following.explicitBase = true;
+        following.runs = 3;
+        following.fields = SIZE;
+        for (int i = 0; i < 12; i++) following.add(200 + i, 512, i == 0 ? SYNC : NON_SYNC, 0);
+
+        FragmentedMp4ForTests.Fragment gap = picture.fragment(4_045L + 12 * 512 + 100);
+        gap.tfhdDefaults = true;
+        gap.fields = SIZE;
+        for (int i = 0; i < 8; i++) gap.add(250 + i, 256, i == 0 ? SYNC : NON_SYNC, 0);
+
+        FragmentedMp4ForTests.Fragment version1 = picture.fragment(null);
+        version1.trunVersion = 1;
+        version1.explicitBase = true;
+        version1.runs = 2;
+        version1.fields = DURATION | SIZE | FLAGS | OFFSET;
+        for (int i = 0; i < 6; i++) version1.add(100 + i, 512, SYNC, 0);
+
+        PlainMp4ForTests.Movie movie = join(picture, null);
+
+        assertEquals(Arrays.asList("ftyp", "moov", "mdat"), movie.topLevel);
+        assertSamples(picture, movie.tracks.get(0), movie, 1e-9);
+    }
+
+    @Test
+    public void sampleDataCannotReferToBoxHeaders() throws IOException {
+        byte[] moofHeader = smallPicture(20).build();
+        ByteBuffer.wrap(moofHeader).putInt(indexOf(moofHeader, "trun") + 16, 0);
+        assertPayloadRefused("media data", moofHeader);
+
+        byte[] mdatHeader = smallPicture(20).build();
+        ByteBuffer.wrap(mdatHeader).putInt(indexOf(mdatHeader, "trun") + 16,
+                indexOf(mdatHeader, "mdat") - indexOf(mdatHeader, "moof"));
+        assertPayloadRefused("media data", mdatHeader);
+    }
+
+    @Test
+    public void sampleDataCannotReferToAnUnrelatedBox() throws IOException {
+        byte[] bytes = smallPicture(4).build();
+        ByteBuffer.wrap(bytes).putInt(indexOf(bytes, "trun") + 16,
+                indexOf(bytes, "free") + 8 - indexOf(bytes, "moof"));
+        assertPayloadRefused("media data", bytes);
+    }
+
+    @Test
+    public void fragmentsMustHaveMediaDataBoxes() throws IOException {
+        byte[] bytes = smallPicture(20).build();
+        ByteBuffer.wrap(bytes).putInt(indexOf(bytes, "mdat") + 4, 0x66726565);
+        assertPayloadRefused("media data", bytes);
+    }
+
+    @Test
+    public void aSampleCannotCrossBetweenMediaDataPayloads() throws IOException {
+        FragmentedMp4ForTests picture = smallPicture(20, 20);
+        FragmentedMp4ForTests.Fragment fragment = picture.fragments.get(0);
+        fragment.runs = 2;
+        fragment.separateMdats = true;
+        byte[] bytes = picture.build();
+        ByteBuffer.wrap(bytes).putInt(indexOf(bytes, "trun") + 16,
+                indexOf(bytes, "mdat") + 8 + 18 - indexOf(bytes, "moof"));
+        assertPayloadRefused("media data", bytes);
+    }
+
+    @Test
+    public void aRunEndCannotWrapPastTheFile() throws IOException {
+        FragmentedMp4ForTests picture = smallPicture(20);
+        picture.fragments.get(0).explicitBase = true;
+        byte[] bytes = picture.build();
+        ByteBuffer.wrap(bytes).putLong(indexOf(bytes, "tfhd") + 16, Long.MAX_VALUE - 2);
+        assertPayloadRefused("past the end", bytes);
+    }
+
+    @Test
+    public void unsignedBaseOffsetsCannotWrapIntoTheFile() throws IOException {
+        FragmentedMp4ForTests picture = smallPicture(20);
+        FragmentedMp4ForTests.Fragment fragment = picture.fragments.get(0);
+        fragment.explicitBase = true;
+        fragment.firstDataOffset = 32;
+        byte[] bytes = picture.build();
+        ByteBuffer.wrap(bytes).putLong(indexOf(bytes, "tfhd") + 16, -32);
+        assertPayloadRefused("data offset", bytes);
+    }
+
+    @Test
+    public void addingARunOffsetCannotOverflow() throws IOException {
+        FragmentedMp4ForTests picture = smallPicture(20);
+        FragmentedMp4ForTests.Fragment fragment = picture.fragments.get(0);
+        fragment.explicitBase = true;
+        fragment.firstDataOffset = 32;
+        byte[] bytes = picture.build();
+        ByteBuffer.wrap(bytes).putLong(indexOf(bytes, "tfhd") + 16, Long.MAX_VALUE - 2);
+        assertPayloadRefused("data offset", bytes);
+    }
+
+    @Test
+    public void multipleExtendedMediaBoxesAndNegativeRunOffsetsKeepTheirSamples() throws IOException {
+        FragmentedMp4ForTests picture = smallPicture(20, 30, 40);
+        FragmentedMp4ForTests.Fragment fragment = picture.fragments.get(0);
+        fragment.runs = 3;
+        fragment.separateMdats = true;
+        fragment.extendedMdat = true;
+        fragment.mdatBeforeMoof = true;
+        FragmentedMp4ForTests.Fragment last = picture.fragment(null);
+        last.runs = 2;
+        last.separateMdats = true;
+        last.extendedMdat = true;
+        last.add(55, 512, SYNC, 0).add(40, 512, NON_SYNC, 0);
+        picture.lastBoxToTheEnd = true;
+
+        PlainMp4ForTests.Movie movie = join(picture, null);
+        assertSamples(picture, movie.tracks.get(0), movie, 1e-9);
+    }
+
+    @Test
+    public void aNegativeOffsetCanReadMediaBeforeAnAbsoluteBasePastTheFile() throws IOException {
+        FragmentedMp4ForTests picture = smallPicture(20);
+        FragmentedMp4ForTests.Fragment fragment = picture.fragments.get(0);
+        fragment.explicitBase = true;
+        fragment.firstDataOffset = -24;
+        byte[] bytes = picture.build();
+        ByteBuffer data = ByteBuffer.wrap(bytes);
+        int base = indexOf(bytes, "tfhd") + 16;
+        data.putLong(base, data.getLong(base) + 24);
+        File input = temp.newFile();
+        Files.write(input.toPath(), bytes);
+        PlainMp4ForTests.Movie movie = PlainMp4ForTests.read(Files.readAllBytes(
+                joined(input, null, Downloader.SILENT).toPath()));
+        assertSamples(picture, movie.tracks.get(0), movie, 1e-9);
+    }
+
+    @Test
+    public void overlappingRunsCanReadTheSamePayload() throws IOException {
+        FragmentedMp4ForTests picture = smallPicture(20, 20);
+        picture.fragments.get(0).runs = 2;
+        byte[] bytes = picture.build();
+        int first = indexOf(bytes, "trun");
+        int second = indexOf(bytes, "trun", first + 8);
+        ByteBuffer.wrap(bytes).putInt(second + 16, ByteBuffer.wrap(bytes).getInt(first + 16));
+        File input = temp.newFile();
+        Files.write(input.toPath(), bytes);
+        PlainMp4ForTests.Movie movie = PlainMp4ForTests.read(Files.readAllBytes(
+                joined(input, null, Downloader.SILENT).toPath()));
+        PlainMp4ForTests.Track video = movie.tracks.get(0);
+        assertEquals(2, video.count());
+        assertArrayEquals(picture.content(0), video.sample(movie.file, 0));
+        assertArrayEquals(picture.content(0), video.sample(movie.file, 1));
+    }
+
+    @Test
+    public void emptySamplesDoNotClaimMediaHeaderBytes() throws IOException {
+        FragmentedMp4ForTests picture = smallPicture(0, 20);
+        picture.fragments.get(0).runs = 2;
+        picture.fragments.get(0).separateMdats = true;
+        PlainMp4ForTests.Movie movie = join(picture, null);
+        assertSamples(picture, movie.tracks.get(0), movie, 1e-9);
+    }
+
+    private static FragmentedMp4ForTests smallPicture(int... sizes) {
+        FragmentedMp4ForTests picture = FragmentedMp4ForTests.picture("vp09", 160, 90, 15_360);
+        FragmentedMp4ForTests.Fragment fragment = picture.fragment(0L);
+        for (int i = 0; i < sizes.length; i++) fragment.add(sizes[i], 512, i == 0 ? SYNC : NON_SYNC, 0);
+        return picture;
+    }
+
+    private void assertPayloadRefused(String why, byte[] bytes) throws IOException {
+        File input = temp.newFile();
+        Files.write(input.toPath(), bytes);
+        File out = temp.newFile();
+        IOException refused = assertThrows(IOException.class, () -> Mp4Join.join(input, null, out, Downloader.SILENT));
+        assertEquals("the invalid input reached the output writer", 0L, out.length());
+        assertTrue(refused.getMessage(), refused.getMessage().contains(why));
+    }
+
+    /**
+     * The tracks alternate in the file by time, half a second of one and then the other, the way
+     * MediaMuxer lays them out: a player starting the file finds the picture and the sound of the
+     * same moment near each other and never seeks across the whole file.
+     */
+    @Test
+    public void theTracksAlternateEveryHalfSecond() throws IOException {
+        PlainMp4ForTests.Movie movie = join(vp9Picture(), aacSound());
+
+        List<double[]> chunks = new ArrayList<>();
+        for (PlainMp4ForTests.Track track : movie.tracks) {
+            int count = 0;
+            for (long[] chunk : track.chunks) {
+                int first = (int) chunk[1];
+                int last = first + (int) chunk[2] - 1;
+                double start = track.decodeTimes[first] / (double) track.timescale;
+                double end = (track.decodeTimes[last] + track.durations[last]) / (double) track.timescale;
+                double longest = track.durations[last] / (double) track.timescale;
+                assertTrue("a chunk of " + (end - start) + " s", end - start <= 0.5 + longest + 1e-9);
+                chunks.add(new double[] {chunk[0], start});
+                count++;
+            }
+            assertTrue(track.handler + " is in " + count + " chunks", count >= 6);
+        }
+        chunks.sort((a, b) -> Double.compare(a[0], b[0]));
+        double latest = 0;
+        for (double[] chunk : chunks) {
+            assertTrue("a chunk starting at " + chunk[1] + " s comes after one at " + latest + " s",
+                    chunk[1] >= latest - 0.5 - 1e-9);
+            latest = Math.max(latest, chunk[1]);
+        }
+    }
+
+    /** Cancel is read before every chunk, and a cancelled join says so rather than finishing. */
+    @Test
+    public void aCancelStopsTheCopyBetweenChunks() throws IOException {
+        AtomicInteger asked = new AtomicInteger();
+        AtomicInteger joining = new AtomicInteger();
+        Downloader.Progress progress = new Downloader.Progress() {
+            @Override public void transferred(long done, long total) {
+            }
+
+            @Override public void reading(Runnable close) {
+            }
+
+            @Override public boolean cancelled() {
+                return asked.incrementAndGet() > 4;
+            }
+
+            @Override public void joining() {
+                joining.incrementAndGet();
+            }
+        };
+
+        File out = temp.newFile();
+        assertFalse(Mp4Join.join(write(vp9Picture(), "video"), write(aacSound(), "audio"), out, progress));
+        assertEquals("cancel wasn't read once before the copy and once before each chunk", 5, asked.get());
+        assertEquals(1, joining.get());
+    }
+
+    @Test
+    public void aPictureWithNoSoundIsOneTrack() throws IOException {
+        FragmentedMp4ForTests picture = vp9Picture();
+        PlainMp4ForTests.Movie movie = join(picture, null);
+
+        assertEquals(1, movie.tracks.size());
+        assertEquals(2, movie.nextTrackId);
+        assertSamples(picture, movie.tracks.get(0), movie, 1e-9);
+    }
+
+    /**
+     * What the join can't copy fails as an IOException, never a runtime exception from a cut-short
+     * buffer, so the save falls back to the single file and says why.
+     */
+    @Test
+    public void whatTheJoinCantCopyFailsAsAnIOException() throws IOException {
+        File sound = write(aacSound(), "audio");
+
+        FragmentedMp4ForTests encrypted = FragmentedMp4ForTests.picture("encv", 1080, 1920, 15_360);
+        encrypted.fragment(0L).add(100, 512, SYNC, 0);
+        assertRefused("encrypted", write(encrypted, "encrypted"), sound);
+
+        FragmentedMp4ForTests empty = FragmentedMp4ForTests.picture("vp09", 1080, 1920, 15_360);
+        assertRefused("no samples", write(empty, "empty"), sound);
+
+        FragmentedMp4ForTests plain = vp9Picture();
+        plain.samplesInMoov = true;
+        assertRefused("outside its fragments", write(plain, "plain"), sound);
+
+        File picture = write(vp9Picture(), "video");
+        assertRefused("holds no sound track", picture, picture);
+
+        // Cut inside the last mdat, which its moof, read first, already points past.
+        byte[] whole = vp9Picture().build();
+        File cut = temp.newFile("cut.mp4");
+        Files.write(cut.toPath(), Arrays.copyOf(whole, whole.length - 100));
+        assertRefused("samples run past the end of the video file", cut, sound);
+
+        // Cut inside the moov.
+        File head = temp.newFile("head.mp4");
+        Files.write(head.toPath(), Arrays.copyOf(whole, indexOf(whole, "stsd")));
+        assertRefused("a box runs past the end of the video file", head, sound);
+
+        FragmentedMp4ForTests toTheEnd = vp9Picture();
+        toTheEnd.lastBoxToTheEnd = true;
+        byte[] endless = toTheEnd.build();
+        File short_ = temp.newFile("short.mp4");
+        Files.write(short_.toPath(), Arrays.copyOf(endless, endless.length - 100));
+        assertRefused("samples run past the end of the video file", short_, sound);
+
+        File garbage = temp.newFile("garbage.mp4");
+        byte[] noise = new byte[4_096];
+        for (int i = 0; i < noise.length; i++) noise[i] = (byte) (i * 37 + 11);
+        Files.write(garbage.toPath(), noise);
+        assertThrows(IOException.class, () -> Mp4Join.join(garbage, sound, temp.newFile(), Downloader.SILENT));
+
+        // A box inside the moov that says it's longer than its parent holds.
+        byte[] broken = vp9Picture().build();
+        broken[indexOf(broken, "stsd")] = 0x7F;
+        File inside = temp.newFile("inside.mp4");
+        Files.write(inside.toPath(), broken);
+        assertThrows(IOException.class, () -> Mp4Join.join(inside, sound, temp.newFile(), Downloader.SILENT));
+    }
+
+    private void assertRefused(String why, File video, File audio) {
+        IOException refused = assertThrows(IOException.class,
+                () -> Mp4Join.join(video, audio, temp.newFile(), Downloader.SILENT));
+        assertTrue(refused.getMessage(), refused.getMessage().contains(why));
+    }
+
+    private static int indexOf(byte[] bytes, String type) {
+        return indexOf(bytes, type, 0);
+    }
+
+    private static int indexOf(byte[] bytes, String type, int from) {
+        byte[] wanted = type.getBytes(StandardCharsets.US_ASCII);
+        outer:
+        for (int i = from; i + 4 <= bytes.length; i++) {
+            for (int k = 0; k < 4; k++) if (bytes[i + k] != wanted[k]) continue outer;
+            return i - 4;
+        }
+        throw new AssertionError("no " + type);
+    }
+
+    // ---------------------------------------------------------------- FFmpeg, where it's installed
+
+    private static File codecTool(String name) {
+        return findTool(name, System.getenv("HUSHFACEBOOK_TEST_" + name.toUpperCase(Locale.ROOT)),
+                System.getenv("PATH"), System.getProperty("os.name").startsWith("Windows"));
+    }
+
+    private static File findTool(String name, String configured, String path, boolean windows) {
+        if (configured != null && !configured.isBlank()) {
+            File file = new File(configured).getAbsoluteFile();
+            assertTrue("HUSHFACEBOOK_TEST_" + name.toUpperCase(Locale.ROOT)
+                    + " must name an executable file: " + file, file.isFile() && file.canExecute());
+            return file;
+        }
+        if (path == null) return null;
+        String executable = name + (windows ? ".exe" : "");
+        for (String directory : path.split(File.pathSeparator, -1)) {
+            // An empty PATH entry implicitly searches the working directory. Do not pick a
+            // checkout's arbitrary executable when a maintainer hasn't configured a tool.
+            if (directory.isEmpty()) continue;
+            if (directory.startsWith("\"") && directory.endsWith("\"")) {
+                directory = directory.substring(1, directory.length() - 1);
+            }
+            File file = new File(directory, executable).getAbsoluteFile();
+            if (file.isFile() && file.canExecute()) return file;
+        }
+        return null;
+    }
+
+    @Test
+    public void explicitCodecToolWinsOverPathIncludingDirectoriesWithSpaces() throws Exception {
+        File configured = temp.newFile("configured encoder.exe");
+        assertTrue(configured.setExecutable(true));
+        File directory = temp.newFolder("path with spaces");
+        File onPath = new File(directory, "ffmpeg.exe");
+        assertTrue(onPath.createNewFile());
+        assertTrue(onPath.setExecutable(true));
+        assertEquals(configured, findTool("ffmpeg", configured.getPath(), directory.getPath(), true));
+        assertEquals(onPath, findTool("ffmpeg", null, "\"" + directory.getPath() + "\"", true));
+    }
+
+    @Test
+    public void explicitMissingCodecToolFailsInsteadOfFallingBack() throws Exception {
+        File directory = temp.newFolder("available");
+        File available = new File(directory, "ffprobe.exe");
+        assertTrue(available.createNewFile());
+        assertTrue(available.setExecutable(true));
+        File missing = new File(temp.getRoot(), "missing.exe");
+        AssertionError failure = assertThrows(AssertionError.class,
+                () -> findTool("ffprobe", missing.getPath(), directory.getPath(), true));
+        assertTrue(failure.getMessage(), failure.getMessage().contains("HUSHFACEBOOK_TEST_FFPROBE"));
+        assertTrue(failure.getMessage(), failure.getMessage().contains(missing.getPath()));
+        assertThrows(AssertionError.class,
+                () -> findTool("ffmpeg", directory.getPath(), directory.getPath(), true));
+    }
+
+    @Test
+    public void codecDiscoveryUsesPathOrderAndBothExecutableNames() throws Exception {
+        File first = temp.newFolder("first");
+        File second = temp.newFolder("second");
+        File firstProbe = new File(first, "ffprobe.exe");
+        File secondProbe = new File(second, "ffprobe.exe");
+        File unixEncoder = new File(second, "ffmpeg");
+        for (File file : Arrays.asList(firstProbe, secondProbe, unixEncoder)) {
+            assertTrue(file.createNewFile());
+            assertTrue(file.setExecutable(true));
+        }
+        String path = first.getPath() + File.pathSeparator + second.getPath();
+        assertEquals(firstProbe, findTool("ffprobe", "", path, true));
+        assertEquals(unixEncoder, findTool("ffmpeg", null, path, false));
+        assertNull(findTool("ffmpeg", null, path, true));
+        assertNull(findTool("ffprobe", null, null, true));
+        assertNull(findTool("ffprobe", null, File.pathSeparator, true));
+    }
+
+    /**
+     * Real VP9, AV1 and H.264 with B-frames, each beside real AAC, fragmented as a DASH packager
+     * writes them. FFmpeg reads every packet of the join as it read it in the tracks, the same size,
+     * flags and presentation time, and decodes the whole file without an error. Runs only where
+     * FFmpeg is installed.
+     *
+     * <p>H.264 with negative offsets and no edit list is the one FFmpeg reads differently: it shows
+     * such a fragment later by its most negative offset (its dts_shift), where ISO 14496-12 and
+     * ExoPlayer show each frame at its composition time. The join turns those offsets into an edit
+     * list, which FFmpeg reads the ISO way. So there every frame is shown the same amount earlier
+     * than FFmpeg shows the fragment's, and the first, composed at zero, at zero.
+     */
+    @Test
+    public void ffmpegReadsAndDecodesTheJoinOfRealTracks() throws Exception {
+        File ffmpeg = codecTool("ffmpeg");
+        File ffprobe = codecTool("ffprobe");
+        Assume.assumeTrue("Codec verification skipped (1 test): "
+                + (ffmpeg == null ? "ffmpeg " : "") + (ffprobe == null ? "ffprobe " : "")
+                + "not found. Set HUSHFACEBOOK_TEST_FFMPEG and HUSHFACEBOOK_TEST_FFPROBE or add both to PATH.",
+                ffmpeg != null && ffprobe != null);
+        File folder = temp.newFolder("ffmpeg");
+        File sound = encode(ffmpeg, folder, "sound.mp4", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "3",
+                "-c:a", "aac", "-b:a", "64k", "-f", "mp4", "-movflags", "+dash+global_sidx");
+        String[][] pictures = {
+            {"vp9", "-c:v", "libvpx-vp9", "-deadline", "realtime", "-cpu-used", "8", "-b:v", "300k", "-g", "30",
+                "-f", "mp4", "-movflags", "+dash+global_sidx"},
+            {"av1", "-c:v", "libsvtav1", "-preset", "12", "-g", "30", "-f", "mp4", "-movflags", "+dash+global_sidx"},
+            {"h264", "-c:v", "libx264", "-preset", "ultrafast", "-bf", "2", "-g", "30", "-f", "mp4", "-movflags",
+                "+dash+global_sidx"},
+            {"h264-negative", "-c:v", "libx264", "-preset", "ultrafast", "-bf", "2", "-g", "30", "-f", "mp4",
+                "-frag_duration", "1000000", "-movflags",
+                "frag_keyframe+empty_moov+default_base_moof+negative_cts_offsets"},
+        };
+        for (String[] kind : pictures) {
+            List<String> args = new ArrayList<>(Arrays.asList("-f", "lavfi", "-i", "testsrc2=size=320x240:rate=30",
+                    "-t", "3"));
+            args.addAll(Arrays.asList(kind).subList(1, kind.length));
+            File picture = encode(ffmpeg, folder, kind[0] + ".mp4", args.toArray(new String[0]));
+            File out = new File(folder, kind[0] + "-joined.mp4");
+            assertTrue(Mp4Join.join(picture, sound, out, Downloader.SILENT));
+
+            PlainMp4ForTests.Movie movie = PlainMp4ForTests.read(Files.readAllBytes(out.toPath()));
+            assertEquals(kind[0], Arrays.asList("ftyp", "moov", "mdat"), movie.topLevel);
+            String before = packets(ffprobe, picture, "v:0");
+            String after = packets(ffprobe, out, "v:0");
+            if (kind[0].equals("h264-negative")) {
+                long[] shownBefore = column(before, 0);
+                long[] shownAfter = column(after, 0);
+                assertEquals(kind[0], shownBefore.length, shownAfter.length);
+                long earlier = shownBefore[0] - shownAfter[0];
+                assertTrue(kind[0] + " has no negative offset to show", earlier > 0);
+                for (int i = 0; i < shownBefore.length; i++) {
+                    assertEquals(kind[0] + " packet " + i, shownBefore[i] - earlier, shownAfter[i]);
+                }
+                assertEquals(0, shownAfter[0]);
+                before = before.replaceAll("(?m)^-?\\d+,", "");
+                after = after.replaceAll("(?m)^-?\\d+,", "");
+            }
+            assertEquals(kind[0], before, after);
+            assertEquals(kind[0], packets(ffprobe, sound, "a:0"), packets(ffprobe, out, "a:0"));
+            String streams = run(ffprobe.getPath(), "-v", "error", "-show_entries", "stream=codec_name,width,height",
+                    "-of", "csv=p=0", out.getPath());
+            assertEquals(kind[0], kind[0].replace("-negative", "") + ",320,240\naac\n", streams.replace("\r", ""));
+            assertEquals(kind[0] + " didn't decode cleanly", "", run(ffmpeg.getPath(), "-v", "error", "-xerror", "-i",
+                    out.getPath(), "-f", "null", "-"));
+        }
+    }
+
+    /**
+     * A real plain AAC-LC M4A, its moov after its data the way MediaMuxer writes AacReencode's
+     * sound, joins a real VP9 picture: FFmpeg reads both tracks' packets back unchanged, sees AAC-LC,
+     * and decodes the join cleanly.
+     */
+    @Test
+    public void ffmpegReadsAPlainSoundJoinedToRealVp9() throws Exception {
+        File ffmpeg = codecTool("ffmpeg");
+        File ffprobe = codecTool("ffprobe");
+        Assume.assumeTrue("Codec verification skipped (1 test): "
+                + (ffmpeg == null ? "ffmpeg " : "") + (ffprobe == null ? "ffprobe " : "")
+                + "not found. Set HUSHFACEBOOK_TEST_FFMPEG and HUSHFACEBOOK_TEST_FFPROBE or add both to PATH.",
+                ffmpeg != null && ffprobe != null);
+        File folder = temp.newFolder("plain");
+        File sound = encode(ffmpeg, folder, "sound.m4a", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100",
+                "-t", "3", "-c:a", "aac", "-b:a", "64k", "-f", "mp4");
+        File picture = encode(ffmpeg, folder, "vp9.mp4", "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=30", "-t", "3",
+                "-c:v", "libvpx-vp9", "-deadline", "realtime", "-cpu-used", "8", "-b:v", "300k", "-g", "30", "-f", "mp4",
+                "-movflags", "+dash+global_sidx");
+        byte[] plain = Files.readAllBytes(sound.toPath());
+        assertTrue("the M4A's moov comes after its data", indexOf(plain, "mdat") < indexOf(plain, "moov"));
+        File out = new File(folder, "joined.mp4");
+        assertTrue(Mp4Join.join(picture, sound, out, Downloader.SILENT));
+
+        assertEquals(packets(ffprobe, picture, "v:0"), packets(ffprobe, out, "v:0"));
+        assertEquals(packets(ffprobe, sound, "a:0"), packets(ffprobe, out, "a:0"));
+        assertEquals("vp9,320,240\naac\n", run(ffprobe.getPath(), "-v", "error", "-show_entries",
+                "stream=codec_name,width,height", "-of", "csv=p=0", out.getPath()).replace("\r", ""));
+        assertEquals("LC", run(ffprobe.getPath(), "-v", "error", "-select_streams", "a:0", "-show_entries",
+                "stream=profile", "-of", "csv=p=0", out.getPath()).trim());
+        assertEquals("the join didn't decode cleanly", "", run(ffmpeg.getPath(), "-v", "error", "-xerror", "-i",
+                out.getPath(), "-f", "null", "-"));
+    }
+
+    /** Column [index] of every line of [csv], as numbers. */
+    private static long[] column(String csv, int index) {
+        String[] lines = csv.trim().split("\\r?\\n");
+        long[] values = new long[lines.length];
+        for (int i = 0; i < lines.length; i++) values[i] = Long.parseLong(lines[i].split(",")[index]);
+        return values;
+    }
+
+    private static File encode(File ffmpeg, File folder, String name, String... args) throws Exception {
+        File out = new File(folder, name);
+        List<String> command = new ArrayList<>(Arrays.asList(ffmpeg.getPath(), "-v", "error", "-y"));
+        command.addAll(Arrays.asList(args));
+        command.add(out.getPath());
+        // SVT-AV1 prints its settings whatever FFmpeg's log level, so only the exit code counts here.
+        run(command.toArray(new String[0]));
+        return out;
+    }
+
+    /**
+     * Each packet of [stream] as its presentation time, size and flags. Not its duration: FFmpeg
+     * reports none for a fragment's samples whose duration comes from tfhd. Nor the side data it
+     * adds to a plain file's last AAC packet, whose short duration (the same one the fragment gave)
+     * it reads as padding to discard.
+     */
+    private static String packets(File ffprobe, File file, String stream) throws Exception {
+        return run(ffprobe.getPath(), "-v", "error", "-select_streams", stream, "-show_entries",
+                "packet=pts,size,flags", "-of", "csv=p=0", file.getPath()).replaceAll(",+(\\r?\\n)", "$1");
+    }
+
+    /** What [command] prints, once it ends with 0. Java starts it with no console window. */
+    private static String run(String... command) throws Exception {
+        return run(120_000, command);
+    }
+
+    private static String run(long timeoutMillis, String... command) throws Exception {
+        assertTrue("positive subprocess deadline required", timeoutMillis > 0);
+        Path output = Files.createTempFile("hushfacebook-codec-", ".log");
+        CodecProcess process = null;
+        Throwable failure = null;
+        try {
+            long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+            // Ownership is established before execution; an exited parent cannot hide its children.
+            process = CodecProcess.open(output, deadline, command);
+            while (process.isRunning()) {
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0) {
+                    throw new TimeoutException();
+                }
+                long wait = Math.min(remaining, TimeUnit.MILLISECONDS.toNanos(25));
+                TimeUnit.NANOSECONDS.sleep(wait);
+            }
+            String text = text(output);
+            assertEquals(text, 0, process.exitCode());
+            return text;
+        } catch (TimeoutException timeout) {
+            if (process != null) {
+                try { process.close(); }
+                catch (Throwable cleanup) { timeout.addSuppressed(cleanup); }
+                process = null;
+            }
+            AssertionError timedOut = new AssertionError("timed out: " + command[0] + "\n" + text(output), timeout);
+            failure = timedOut;
+            throw timedOut;
+        } catch (Throwable caught) {
+            failure = caught;
+            throw caught;
+        } finally {
+            try {
+                if (process != null) process.close();
+                Files.deleteIfExists(output);
+            } catch (Throwable cleanup) {
+                if (failure != null) failure.addSuppressed(cleanup);
+                else throw cleanup;
+            }
+        }
+    }
+
+    private static String text(Path output) throws IOException {
+        return new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
+    }
+
+    // Unit tests run on JDK 25. Reflection keeps JDK-only ProcessHandle out of Android's boot API.
+    private static final Class<?> HANDLE = processHandle();
+
+    private static Class<?> processHandle() {
+        try { return Class.forName("java.lang.ProcessHandle"); }
+        catch (ClassNotFoundException missing) { throw new AssertionError("JDK ProcessHandle required", missing); }
+    }
+
+    private static String[] tool(String mode, File marker) throws Exception {
+        File java = new File(System.getProperty("java.home"), "bin/" + (File.separatorChar == '\\' ? "java.exe" : "java"));
+        File classes = new File(CodecPipeTool.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        File jna = new File(Native.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        return new String[]{java.getPath(), "--enable-native-access=ALL-UNNAMED", "-cp",
+                classes.getPath() + File.pathSeparator + jna.getPath(), CodecPipeTool.class.getName(), mode, marker.getPath()};
+    }
+
+    private static void dead(File marker) throws Exception {
+        for (String line : Files.readAllLines(marker.toPath(), StandardCharsets.UTF_8)) {
+            long pid = Long.parseLong(line);
+            java.util.Optional<?> handle = (java.util.Optional<?>) HANDLE.getMethod("of", long.class).invoke(null, pid);
+            assertFalse("owned tool still alive: " + pid, handle.isPresent() && (Boolean) HANDLE.getMethod("isAlive").invoke(handle.get()));
+        }
+    }
+
+    /**
+     * The deadline the helper-tool tests give a run. A cold JVM start with JNA took longer than three
+     * seconds on a loaded machine (pre-push gates beside other builds, 2026-10-06), so a tool hadn't
+     * printed that it was ready when its deadline came and the run read as the wrong timeout. These
+     * tests are about what happens at a deadline, not about speed, so the room costs only wall time.
+     */
+    private static final long TOOL_DEADLINE = 10_000;
+    /** Each helper-tool test's own limit: its deadline, the cleanup after it, and a slow start. */
+    private static final long TEST_TIMEOUT = 30_000;
+    /**
+     * The deadline for the tree and orphan tools, which start three JVMs one after another before the
+     * last prints child-ready. Ten seconds didn't cover three cold starts beside other builds
+     * (2026-10-07), and the run read as a timeout with no child-ready in its output.
+     */
+    private static final long CHAIN_DEADLINE = 25_000;
+    /** The tree and orphan tests' own limit: the longer deadline, its cleanup, and the starts. */
+    private static final long CHAIN_TEST_TIMEOUT = 60_000;
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void aToolHoldingStdoutOpenStopsAtItsDeadlineAndKeepsDiagnostics() throws Exception {
+        File marker = temp.newFile("hang-pids.txt");
+        long start = System.nanoTime();
+        AssertionError failure = assertThrows(AssertionError.class, () -> run(TOOL_DEADLINE, tool("hang", marker)));
+        assertTrue(failure.getMessage(), failure.getMessage().startsWith("timed out:"));
+        assertTrue(failure.getMessage(), failure.getMessage().contains("parent-ready"));
+        assertTrue("deadline was ineffective",
+                System.nanoTime() - start < TimeUnit.MILLISECONDS.toNanos(TOOL_DEADLINE + CodecProcess.CLOSE_GRACE_MS + 2_000));
+        dead(marker);
+    }
+
+    @Test(timeout = CHAIN_TEST_TIMEOUT)
+    public void aToolAndItsInheritedOutputChildStopAtTheDeadline() throws Exception {
+        File marker = temp.newFile("tree-pids.txt");
+        AssertionError failure = assertThrows(AssertionError.class, () -> run(CHAIN_DEADLINE, tool("tree", marker)));
+        assertTrue(failure.getMessage(), failure.getMessage().startsWith("timed out:"));
+        assertTrue(failure.getMessage(), failure.getMessage().contains("parent-ready"));
+        assertTrue(failure.getMessage(), failure.getMessage().contains("child-ready"));
+        assertEquals(3, Files.readAllLines(marker.toPath(), StandardCharsets.UTF_8).size());
+        dead(marker);
+    }
+
+    @Test(timeout = CHAIN_TEST_TIMEOUT)
+    public void anExitedToolCannotLeaveItsOutputChildRunning() throws Exception {
+        File marker = temp.newFile("orphan-pids.txt");
+        AssertionError failure = assertThrows(AssertionError.class, () -> run(CHAIN_DEADLINE, tool("orphan", marker)));
+        assertTrue(failure.getMessage(), failure.getMessage().startsWith("timed out:"));
+        assertTrue(failure.getMessage(), failure.getMessage().contains("child-ready"));
+        assertEquals(3, Files.readAllLines(marker.toPath(), StandardCharsets.UTF_8).size());
+        dead(marker);
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void nonzeroToolsFailWithTheirPrintedDiagnostic() throws Exception {
+        File marker = temp.newFile("fail-pids.txt");
+        AssertionError failure = assertThrows(AssertionError.class, () -> run(TOOL_DEADLINE, tool("fail", marker)));
+        assertTrue(failure.getMessage(), failure.getMessage().contains("encoder-error"));
+        assertFalse("nonzero exit was misclassified as a timeout", failure.getMessage().startsWith("timed out:"));
+        dead(marker);
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void completedToolOutputLargerThanAPipeBufferIsKeptExactly() throws Exception {
+        File marker = temp.newFile("success-pids.txt");
+        String printed = run(TOOL_DEADLINE, tool("success", marker));
+        assertEquals(1024 * 1024, printed.length());
+        for (int i = 0; i < printed.length(); i++) assertEquals((char) ('a' + i % 26), printed.charAt(i));
+        dead(marker);
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void startupUsesTheSameDeadlineAndCannotReleaseALateTool() throws Exception {
+        File marker = temp.newFile("not-started.txt");
+        AssertionError failure = assertThrows(AssertionError.class, () -> run(1, tool("success", marker)));
+        assertTrue(failure.getMessage(), failure.getMessage().startsWith("timed out:"));
+        assertEquals("tool ran after its deadline", 0, marker.length());
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void ownedLauncherPreservesArgumentsWithoutShellQuoting() throws Exception {
+        File marker = temp.newFile("arguments with spaces.txt");
+        List<String> command = new ArrayList<>(Arrays.asList(tool("arguments", marker)));
+        command.addAll(Arrays.asList("left space", "quote\"slash\\", "münchen 😀"));
+        assertEquals("left space\nquote\"slash\\\nmünchen 😀", run(TOOL_DEADLINE, command.toArray(new String[0])));
+        dead(marker);
+    }
+
+    /** A failed RELEASE flush leaves its byte buffered, so close retries it after the launcher exits. */
+    @Test public void anExitedLaunchersClosedPipeDoesNotFailCleanup() throws Exception {
+        boolean[] closed = {false};
+        java.io.BufferedOutputStream pipe = new java.io.BufferedOutputStream(new java.io.OutputStream() {
+            @Override public void write(int value) throws IOException { throw new IOException("The pipe is being closed"); }
+            @Override public void close() { closed[0] = true; }
+        });
+        pipe.write('R');
+        assertThrows(IOException.class, pipe::flush);
+        Process exited = new Process() {
+            @Override public java.io.OutputStream getOutputStream() { return pipe; }
+            @Override public java.io.InputStream getInputStream() { return new java.io.ByteArrayInputStream(new byte[0]); }
+            @Override public java.io.InputStream getErrorStream() { return getInputStream(); }
+            @Override public int waitFor() { return 0; }
+            @Override public int exitValue() { return 0; }
+            @Override public boolean isAlive() { return false; }
+            @Override public void destroy() { }
+        };
+        java.lang.reflect.Constructor<CodecProcess> constructor = CodecProcess.class.getDeclaredConstructor(long.class);
+        constructor.setAccessible(true);
+        CodecProcess owned = constructor.newInstance(System.nanoTime() + TimeUnit.SECONDS.toNanos(1));
+        java.lang.reflect.Field launcher = CodecProcess.class.getDeclaredField("launcher");
+        launcher.setAccessible(true);
+        launcher.set(owned, exited);
+        owned.close();
+        assertTrue("the underlying pipe must still close", closed[0]);
+        assertFalse(exited.isAlive());
+    }
+
+    @Test(timeout = CHAIN_TEST_TIMEOUT)
+    public void losingThePrivateLauncherStillStopsItsWholeToolTree() throws Exception {
+        File marker = temp.newFile("launcher-loss-pids.txt");
+        File otherMarker = temp.newFile("launcher-loss-unrelated.txt");
+        Process other = new ProcessBuilder(tool("hang", otherMarker)).redirectErrorStream(true)
+                .redirectOutput(temp.newFile("launcher-loss-unrelated.log")).start();
+        Path output = temp.newFile("launcher-loss.log").toPath();
+        CodecProcess owned = null;
+        List<Object> children = new ArrayList<>();
+        try {
+            long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(CHAIN_DEADLINE);
+            owned = CodecProcess.open(output, deadline, tool("tree", marker));
+            while (!text(output).contains("child-ready")) {
+                assertTrue("tool tree exited before readiness", owned.isRunning());
+                assertTrue("tool tree did not become ready", System.nanoTime() < deadline);
+                Thread.sleep(10);
+            }
+            assertEquals(3, Files.readAllLines(marker.toPath(), StandardCharsets.UTF_8).size());
+            for (String line : Files.readAllLines(marker.toPath(), StandardCharsets.UTF_8)) {
+                java.util.Optional<?> handle = (java.util.Optional<?>) HANDLE.getMethod("of", long.class)
+                        .invoke(null, Long.parseLong(line));
+                assertTrue("recorded tool exited before launcher loss", handle.isPresent());
+                children.add(handle.get());
+            }
+            java.lang.reflect.Field field = CodecProcess.class.getDeclaredField("launcher");
+            field.setAccessible(true);
+            Process launcher = (Process) field.get(owned);
+            java.lang.reflect.Field group = CodecProcess.class.getDeclaredField("pid");
+            group.setAccessible(true);
+            java.util.Optional<?> guard = (java.util.Optional<?>) HANDLE.getMethod("of", long.class)
+                    .invoke(null, ((Integer) group.get(owned)).longValue());
+            launcher.destroyForcibly();
+            assertTrue("private launcher did not stop", launcher.waitFor(10, TimeUnit.SECONDS));
+            long closing = System.nanoTime();
+            owned.close();
+            assertTrue("launcher-loss cleanup exceeded its deadline", System.nanoTime() - closing
+                    < TimeUnit.MILLISECONDS.toNanos(CodecProcess.CLOSE_GRACE_MS + 2_000));
+            dead(marker);
+            assertFalse("group guard survived cleanup", guard.isPresent()
+                    && (Boolean) HANDLE.getMethod("isAlive").invoke(guard.get()));
+            assertTrue("launcher-loss cleanup terminated an unrelated process", other.isAlive());
+        } finally {
+            try { if (owned != null) owned.close(); }
+            finally {
+                // Keep the failing version of this test from leaking its known, pinned identities.
+                for (int i = children.size() - 1; i >= 0; i--) {
+                    HANDLE.getMethod("destroyForcibly").invoke(children.get(i));
+                }
+                if (com.sun.jna.Platform.isLinux()) {
+                    CodecProcess.Posix api = Native.load(com.sun.jna.Platform.C_LIBRARY_NAME, CodecProcess.Posix.class);
+                    long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+                    for (Object child : children) {
+                        int pid = Math.toIntExact((Long) HANDLE.getMethod("pid").invoke(child));
+                        while (api.waitpid(pid, new com.sun.jna.ptr.IntByReference(), 1) == 0
+                                && System.nanoTime() < until) Thread.sleep(5);
+                    }
+                }
+                other.destroyForcibly();
+                assertTrue("unrelated probe cleanup failed", other.waitFor(10, TimeUnit.SECONDS));
+            }
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void controlEofBeforeStartCannotLaunchTheTool() throws Exception {
+        Path control = temp.newFolder("control-eof").toPath();
+        File marker = temp.newFile("control-eof-pids.txt");
+        Files.write(control.resolve("command"), String.join("\0", tool("success", marker))
+                .getBytes(StandardCharsets.UTF_8));
+        java.lang.reflect.Method command = CodecProcess.class.getDeclaredMethod("launcherCommand", Path.class);
+        command.setAccessible(true);
+        @SuppressWarnings("unchecked") List<String> arguments = (List<String>) command.invoke(null, control);
+        Process launcher = new ProcessBuilder(arguments).redirectErrorStream(true)
+                .redirectOutput(temp.newFile("control-eof.log")).start();
+        try {
+            long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TOOL_DEADLINE);
+            while (!Files.exists(control.resolve("ready"))) {
+                assertTrue("launcher exited before readiness", launcher.isAlive());
+                assertTrue("launcher did not become ready", System.nanoTime() < deadline);
+                Thread.sleep(10);
+            }
+            launcher.getOutputStream().close();
+            assertTrue("EOF did not stop the unstarted launcher", launcher.waitFor(
+                    CodecProcess.CLOSE_GRACE_MS, TimeUnit.MILLISECONDS));
+            assertEquals("tool started after control EOF", 0, marker.length());
+        } finally {
+            launcher.destroyForcibly();
+            assertTrue("unstarted launcher cleanup failed", launcher.waitFor(10, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void aDeadlineCannotKillAProcessOutsideItsOwnershipBoundary() throws Exception {
+        File otherMarker = temp.newFile("unrelated.txt");
+        Process other = new ProcessBuilder(tool("hang", otherMarker)).redirectErrorStream(true)
+                .redirectOutput(temp.newFile("unrelated.log")).start();
+        try {
+            File marker = temp.newFile("owned.txt");
+            assertThrows(AssertionError.class, () -> run(TOOL_DEADLINE, tool("hang", marker)));
+            dead(marker);
+            assertTrue("cleanup terminated an unrelated process", other.isAlive());
+        } finally {
+            other.destroyForcibly();
+            assertTrue("unrelated probe cleanup failed", other.waitFor(10, TimeUnit.SECONDS));
+        }
+    }
+}

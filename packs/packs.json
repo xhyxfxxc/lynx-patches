@@ -16,7 +16,8 @@
         "tasks": ":patches:generatePatchesList :patches:buildAndroid",
         "output": "patches/build/libs/patches-*.mpp",
         "args": ""
-      }
+      },
+      "commit": "7c0e085e4e8c63c2868c7f6aa89978ee8c43295e"
     },
     "instagram": {
       "title": "HushGram (Lynx build)",

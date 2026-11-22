@@ -1,0 +1,1366 @@
+/*
+ * Copyright 2026 Hushfacebook contributors
+ * https://github.com/SysAdminDoc/Hushfacebook
+ */
+package app.morphe.extension.facebook.reels;
+
+import android.icu.text.DateFormat;
+import android.view.View;
+
+import androidx.annotation.Nullable;
+
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
+
+import app.morphe.extension.facebook.ads.MarketplaceListingAge;
+import app.morphe.extension.facebook.download.PostDetails;
+import app.morphe.extension.facebook.feed.FeedFilter;
+import app.morphe.extension.facebook.settings.FamilyNames;
+import app.morphe.extension.facebook.settings.Settings;
+import app.morphe.extension.shared.L10n;
+import app.morphe.extension.shared.Logger;
+import app.morphe.extension.shared.Utils;
+import app.morphe.extension.shared.diagnostics.FeedFilterCounters;
+import app.morphe.extension.shared.diagnostics.HookStatus;
+import app.morphe.extension.shared.settings.BaseSettings;
+import app.morphe.extension.shared.settings.BooleanSetting;
+
+/**
+ * What the Clean up Reels patch asks before a reel's footer is built.
+ *
+ * <p>Three switches, five hooks, all in the Reels viewer of Facebook 577 and 580:
+ *
+ * <ul>
+ *   <li>The chips under a reel come from one method that walks the reel's attribution models and
+ *       builds the list of those it will draw. The patch hands that list here before each return,
+ *       and {@link #filterChips} answers the chips to keep, or null to keep the list as it came.
+ *       Each chip is a generated model that answers its GraphQL type with {@code getTypeName()},
+ *       and only the types in {@link #HIDDEN_CHIPS} go. A type this doesn't know stays. The line
+ *       naming the reel's sound, "Original audio" or a song, is one of those chips, and it goes
+ *       under its own switch ({@link #SOUNDTRACK_CHIP}, #200). The footer draws nothing for a
+ *       list left empty. The Reels tab draws that line in a component of its own, which picks the
+ *       soundtrack out of the models itself, and {@link #hideAudioLine} is asked first thing there.
+ *       "Made with Edits" under the caption is a component of its own too, drawn from a flag on the
+ *       video, and {@link #hideEditsLabel} is asked first thing there under the chips switch (#314).
+ *   <li>The Follow button beside a reel's author is built only when Facebook's Follow check
+ *       answers yes, and {@link #hideFollowButton} is asked first thing in that check. The author
+ *       row asks it on every surface, the Reels tab included. So do the author rows of sponsored
+ *       reels and the feed, about a reel attached to a post.
+ *   <li>An author you already follow gets a Following button there instead, which Facebook's own
+ *       config getter for removing it takes away when it answers true. {@link #hideFollowingButton}
+ *       is asked first thing in that getter. The row reads the getter only for such an author,
+ *       which is why it alone left the Follow button on everyone else's reels.
+ *   <li>A full-screen video's author row builds a pill beside the name that says Subscribe for some
+ *       owners and Follow for the rest. The row hands {@link #showAuthorPill} both its answers
+ *       where it decides to build the pill. A builder Facebook shares for the same pill elsewhere
+ *       notes which one it builds ({@link #noteAuthorPill}), and its callers hand
+ *       {@link #authorPillSlot} the slot they wrap it in. Only a Subscribe pill goes (#291). Some
+ *       Pages get a fan-subscription pill there instead, from a builder that never asks the owner,
+ *       and the row hands each slot it wraps that pill in to {@link #fanPillSlot}.
+ *   <li>The comment Facebook picks to show under a reel and the bubbles of friends who reacted each
+ *       come from a query a runnable starts. {@link #skipHotComment} and {@link #skipSocialBubbles}
+ *       are asked first thing in each, and true makes the runnable return before it queries. The
+ *       author and caption row starts a comment query of its own, for the comment it swaps in for
+ *       the caption a few seconds in, and {@link #skipCaptionComment} is asked first in that (#464).
+ *   <li>Each button down a reel's right side is one vertical button component whose constructor
+ *       takes the text under the icon. {@link #countText} is handed that text first thing in the
+ *       constructor and answers what the button keeps (#180).
+ *   <li>The sidebar builds those buttons by walking a list of types, one icon constant each.
+ *       {@link #hideSidebarButton} is handed each type as it's read, and true skips Save or the
+ *       direct WhatsApp button (#190, #243).
+ *   <li>The speaker button under them comes from one of two places, picked by a server flag: the
+ *       video controls build it only when one check of Facebook's answers yes, and
+ *       {@link #showsSoundButton} is handed that answer before they branch on it. Otherwise the
+ *       footer builds it, and {@link #soundButton} is handed what was built before the footer's
+ *       null check. Either way the button stays out while the switch is on (#190). Move the speaker
+ *       above the three dots leaves those two with nothing to build and has the side column build
+ *       the footer's button from the reel's corner: {@link #cornerForSide} (#331).
+ *   <li>A video that keeps buffering has Facebook post a runnable that shows "This is taking a
+ *       while. Try checking your network connection." {@link #hideSlowConnectionMessage} is asked
+ *       first thing in it, and true makes it return before the message is built (#222).
+ *   <li>A wide video in the Reels viewer gets a Fullscreen pill in the black space under it, a
+ *       component of its own that draws nothing while the phone is sideways. {@link
+ *       #hideFullscreenPill} is asked first thing as it draws, and true answers that same nothing
+ *       (#394).
+ *   <li>A video opened from the feed gets an UP NEXT bar under its seek bar, naming the video
+ *       Facebook lines up after it. Facebook's controller for that bar looks the next video up once
+ *       per video, keeps what came back, and hands it to the bar and the end screen. {@link
+ *       #skipUpNextFetch} is asked first thing in the lookup, and true returns before it queries.
+ *       {@link #hideUpNextVideos} is asked first thing in the hand-out, and true answers an empty
+ *       list, Facebook's own answer for a video with nothing lined up (#367). The player also keeps
+ *       the bar's height empty under the seek bar from the first frame. {@link #skipUpNextRoom} is
+ *       asked first thing where that height is stored, and true leaves none (#375).
+ *   <li>Each tile of the feed's Reels row plays a short clip of its reel that Facebook picks, and
+ *       a clip it can't use comes out as the first second, played over and over (#228).
+ *       {@link #allowsPreviewClip} is handed the last check before the tile asks for its clip, and
+ *       false takes Facebook's own path for a tile with no clip. {@link #previewClipEnd} is handed
+ *       the position the tile's player stops and loops at, and answers -1, the player's own
+ *       default, so the reel plays to its end.
+ *   <li>A reel whose comments are turned off gets no Comment button down its right side, though
+ *       its feed post still shows one that opens them to read. {@link #showsCommentButton} is
+ *       handed Facebook's can-comment answer in each sidebar builder, and true draws the button
+ *       (#299).
+ *   <li>The date a reel or full-screen video was posted is built under its author only when a
+ *       server switch says so, and it's off for most accounts. {@link #showsPostDate} is handed
+ *       that answer, and true draws the date (#296).
+ * </ul>
+ *
+ * <p>Every hook fails open: until the settings are ready, while Hushfacebook is paused, with a
+ * switch off, or when something throws, Facebook's own path runs.
+ */
+@SuppressWarnings("unused")
+public final class ReelDeclutter {
+    /**
+     * The GraphQL types of the chips the chips switch hides: the prompts to make something of your
+     * own (Remix, Use template, Add yours, Edits) and the promotions (Stars, instant games, a
+     * partner app, a link out of Facebook). Facebook 577 and 580 both name all eight in the method
+     * the patch hooks, and the patch holds each build to them.
+     */
+    static final String[] HIDDEN_CHIPS = {
+            "XFBFBShortsRemixAttribution",
+            "XFBFBShortsTemplateAttribution",
+            "XFBFBShortsAddYoursStickerAttribution",
+            "XFBFBShortsEditsAppAttribution",
+            "XFBFBShortsSendStarsAttribution",
+            "XFBFBShortsInstantGamesAttribution",
+            "XFBFBShortsPartnerAppAttribution",
+            "XFBFBShortsExternalLinkAttribution",
+    };
+
+    /**
+     * The GraphQL type of the line naming a reel's sound, "Original audio" or a song, which the audio
+     * line switch hides on its own (#200). The chips switch leaves it, and the patch holds the builder
+     * to it as it does to the hidden chips.
+     */
+    static final String SOUNDTRACK_CHIP = "XFBFBShortsSoundtrackTitle";
+
+    /** The diagnostic counter routes. */
+    static final String CHIPS_ROUTE = "Reel chips";
+    static final String FOLLOW_ROUTE = "Reel Follow button";
+    static final String FOOTER_ROUTE = "Reel footer queries";
+
+    /** Counted under its own name each time the search pill isn't built. */
+    static final String SEARCH_ROUTE = "Reel search pill";
+    static final String SEARCH_PILL = "search pill";
+    static final String COMMENT_SEARCH_PILL = "comment search pill";
+    /** The search bar over a reel opened from a profile, and its send button, each counted as it's handed in. */
+    static final String SEARCH_BAR = "search bar";
+
+    /** Counted under its own name each time the Reels tab's audio line isn't drawn. */
+    static final String AUDIO_ROUTE = "Reel audio line";
+    static final String AUDIO_LINE = "audio line";
+
+    /** Counted under its own name each time a reel's "Made with Edits" line isn't drawn (#314). */
+    static final String EDITS_ROUTE = "Reel Edits line";
+    static final String EDITS_LABEL = "Made with Edits";
+
+    /** Counted under its own name each time a video's slow connection message isn't shown. */
+    static final String SLOW_ROUTE = "Slow connection message";
+    static final String SLOW_MESSAGE = "slow connection message";
+
+    /** Counted under its own name each time a wide video's Fullscreen pill isn't drawn (#394). */
+    static final String FULLSCREEN_ROUTE = "Video Fullscreen pill";
+    static final String FULLSCREEN_PILL = "Fullscreen pill";
+
+    /**
+     * Counted under its own name each time a feed or search video's full-screen or picture-in-picture
+     * button is left out (#478).
+     */
+    static final String FEED_VIDEO_ROUTE = "Feed video buttons";
+    static final String FEED_VIDEO_FULLSCREEN = "full-screen button";
+    static final String FEED_VIDEO_PIP = "picture-in-picture button";
+
+    /**
+     * Counted under its own name each time the Add friend sheet over a reel a non-friend shared is
+     * kept from opening (#486).
+     */
+    static final String FRIEND_SHEET_ROUTE = "Shared reel friend sheet";
+    static final String FRIEND_SHEET = "Add friend sheet";
+
+    /**
+     * Counted under its own name each time the UP NEXT bar's lookup is skipped, each time its
+     * videos are handed out empty (#367), each time no room is kept for it and each time the
+     * full-screen viewer's UP NEXT pill isn't shown (#375).
+     */
+    static final String UP_NEXT_ROUTE = "Video Up next";
+    static final String UP_NEXT_FETCH = "Up next lookup";
+    static final String UP_NEXT_VIDEOS = "Up next videos";
+    static final String UP_NEXT_ROOM = "Up next room";
+    static final String UP_NEXT_PILL = "Up next pill";
+
+    /**
+     * Counted under its own name for each tile of the feed's Reels row, as its end is handed in, and
+     * removed each time a tile that had an end plays its whole reel. The clip check is tallied as its
+     * own kind: Facebook asks it only while one of its server flags is on, and the end on every tile.
+     */
+    static final String PREVIEW_ROUTE = "Feed reel previews";
+    static final String PREVIEW_CLIP = "preview clip";
+    static final String PREVIEW_END = "clip end";
+    static final String PREVIEW_NO_END = "no end";
+
+    /** Counted under its own name each time a reel with comments turned off gets its Comment button anyway. */
+    static final String COMMENT_ROUTE = "Reel Comment button";
+    static final String COMMENTS_OFF = "comments off";
+
+    /** Counted under its own name each time a reel's post date is drawn where the server left it out. */
+    static final String DATE_ROUTE = "Reel post date";
+    static final String DATE_HIDDEN = "date left out";
+    /** Counted under the date's name each time Hush words a reel's post date itself (#357). */
+    static final String DATE_WORDED = "date worded";
+    /** Counted under the date's name each time the date goes in front of a reel's song line (#357). */
+    static final String DATE_ON_SONG = "date on song line";
+    /** Counted under the date's name each time a footer keeps its date beside a recommendation reason (#496). */
+    static final String DATE_BESIDE_REASON = "date beside reason";
+    /** Counted under the date's name each time the date goes in front of a silent reel's sound label (#496). */
+    static final String DATE_ON_SOUND = "date on sound label";
+    /** The type of the attribution a reel's sound is labeled from, "Reel has no sound" on a silent one. */
+    static final String SOUNDTRACK = "XFBFBShortsSoundtrackTitle";
+    /** What goes between the date and the song, the dot Facebook joins the artist and title with. */
+    static final String DOT = " " + (char) 0xB7 + " ";
+    /** How far ahead of the phone's clock a post time can be and still read as just posted. */
+    static final long FUTURE_SLACK_SECONDS = 60;
+
+    /** What the tile's player reads as no stop position: the default its settings builder starts with. */
+    static final int NO_END = -1;
+
+    /** Counted under its own name each time a sidebar button's number is taken away. */
+    static final String COUNTS_ROUTE = "Reel counts";
+    static final String COUNT = "button count";
+
+    /** Counted under its own name each time a sidebar button is skipped. */
+    static final String SIDEBAR_ROUTE = "Reel sidebar buttons";
+    static final String SAVE_BUTTON = "Save button";
+    static final String WHATSAPP_BUTTON = "WhatsApp button";
+    static final String LIKE_BUTTON = "Like button";
+    static final String COMMENT_BUTTON = "Comment button";
+    static final String REPOST_BUTTON = "Repost button";
+    static final String SHARE_BUTTON = "Share button";
+    static final String SOUND_BUTTON = "speaker button";
+    /** Counted under the family's name each time the side column builds a reel's speaker (#331). */
+    static final String SPEAKER_MOVED = "speaker kept above the three dots";
+    /** How many reels the side column's speaker is remembered for, far past what a viewer keeps built. */
+    static final int MOVED_SPEAKERS_KEPT = 24;
+    /** Reels whose speaker goes to their side column, oldest first, by identity: nothing's asked of Facebook's objects. */
+    private static final ArrayList<MovedSpeaker> MOVED_SPEAKERS = new ArrayList<>();
+    /** Set while the side column asks Facebook's builder for the speaker, on the thread that asks. */
+    private static final ThreadLocal<Boolean> BUILDING_SIDE_SPEAKER = new ThreadLocal<>();
+
+    /** A reel whose speaker goes to its side column, and the corner to build it from once there is one. */
+    private static final class MovedSpeaker {
+        final WeakReference<Object> reel;
+        WeakReference<Object> corner;
+
+        MovedSpeaker(Object reel) {
+            this.reel = new WeakReference<>(reel);
+        }
+    }
+
+    /**
+     * The constant of Facebook's icon enum the reel sidebar builds its Save button for (#190). The
+     * sidebar walks one constant per button, and the enum's names are kept as strings in the app,
+     * so {@code name()} reads this on any build. Like, Comment and Share are LIKE, COMMENT and SHARE (#265).
+     */
+    static final String SAVE_TYPE = "BOOKMARK";
+    static final String WHATSAPP_TYPE = "APP_WHATSAPP";
+    static final String LIKE_TYPE = "LIKE";
+    static final String COMMENT_TYPE = "COMMENT";
+    /** Repost, the two arrows the sidebar's list builder puts in ahead of Share (#450, 587). */
+    static final String REPOST_TYPE = "RESHARE";
+    static final String SHARE_TYPE = "SHARE";
+
+    /**
+     * What a hidden count becomes: one zero-width space. The button still has a text row, so it
+     * keeps the height it has with a number and the icons above and below it don't move, but the
+     * row shows nothing. A null text would drop the row and pull every icon under it up.
+     */
+    static final String NO_COUNT = String.valueOf((char) 0x200B);
+
+    /** The kind a chip is counted under when its type can't be read. It stays. */
+    static final String UNREADABLE = "unreadable type";
+
+    /** The author row's buttons in the report, each counted under the hook that asked. */
+    static final String FOLLOW = "Follow button";
+    static final String FOLLOWING = "Following button";
+
+    /** Counted under its own name for each pill beside a video's author, Follow or Subscribe (#291). */
+    static final String SUBSCRIBE_ROUTE = "Video Subscribe button";
+    static final String SUBSCRIBE = "Subscribe button";
+
+    /**
+     * Whether the pill the shared builder last built on this thread says Subscribe. The builder
+     * notes it just before it builds the pill, and its caller takes the note right after it wraps
+     * the pill, all in one call on one thread.
+     */
+    private static final ThreadLocal<Boolean> BUILDING_SUBSCRIBE = new ThreadLocal<>();
+
+    /** The footer queries' kinds in the report. */
+    static final String HOT_COMMENT = "hot comment";
+    static final String SOCIAL_BUBBLES = "friends' reactions";
+    static final String CAPTION_COMMENT = "caption comment";
+
+    /** What has had its debug line, so each kind of change is logged once. */
+    private static final Set<String> LOGGED = ConcurrentHashMap.newKeySet();
+
+    /**
+     * The pill containers {@link #hideUpNextPill} hid, held weakly, with how each showed before, so
+     * the next other pill puts it back. One Facebook had already put away isn't in here.
+     */
+    private static final Map<View, Integer> HID_PILLS = new WeakHashMap<>();
+
+    private ReelDeclutter() {
+    }
+
+    /**
+     * Injection point, before each return of the method that builds a reel's chip list. The chips
+     * to keep, when the switch took any out, or null to keep the list Facebook built. The patch
+     * rebuilds its list from the answer. Never throws.
+     *
+     * @param chips the list Facebook is about to return, an ImmutableList of attribution models.
+     */
+    public static Object[] filterChips(Object chips) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (!(chips instanceof List)) return null;
+            List<?> list = (List<?>) chips;
+            FeedFilterCounters.sawList(CHIPS_ROUTE, list.size());
+            if (list.isEmpty() || !Utils.settingsReady()) return null;
+            boolean hideChips = Settings.HIDE_REEL_CHIPS.get();
+            boolean audioLine = Settings.HIDE_REEL_AUDIO_LINE.get();
+            if (!hideChips && !audioLine) return null;
+
+            List<Object> kept = new ArrayList<>(list.size());
+            for (Object chip : list) {
+                // Facebook's list can't hold null, and the list the patch rebuilds can't either.
+                if (chip == null) return null;
+                String type = FeedFilter.typeName(chip);
+                // The report names every chip type a reel carried, which is how a new one is found.
+                FeedFilterCounters.sawKind(CHIPS_ROUTE, type == null ? UNREADABLE : type);
+                if ((hideChips && isHiddenChip(type)) || (audioLine && SOUNDTRACK_CHIP.equals(type))) {
+                    FeedFilterCounters.removed(CHIPS_ROUTE, 1, type);
+                    logOnce("chip " + type, () -> "Reel chips: hid " + type);
+                    continue;
+                }
+                kept.add(chip);
+            }
+            return kept.size() == list.size() ? null : kept.toArray();
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, "reel chips", failure);
+            Logger.printException(() -> "Reel chips: could not filter the list", failure);
+            return null;
+        }
+    }
+
+    /** Whether a chip of this GraphQL type is one the chips switch hides. */
+    static boolean isHiddenChip(String type) {
+        if (type == null) return false;
+        for (String hidden : HIDDEN_CHIPS) {
+            if (hidden.equals(type)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Injection point, first thing in Facebook's check for whether a reel's author row offers a
+     * Follow button. True makes the check answer no, so the row is built without one, as it is
+     * for an author Facebook won't let you follow. Never throws: false runs Facebook's own check.
+     */
+    public static boolean hideFollowButton() {
+        return hideAuthorButton(FOLLOW);
+    }
+
+    /**
+     * Injection point, first thing in Facebook's config getter for removing the Following button
+     * an author you already follow gets in a reel's author row. True makes the getter answer true,
+     * so the row is built without it. Never throws: false runs Facebook's own getter.
+     */
+    public static boolean hideFollowingButton() {
+        return hideAuthorButton(FOLLOWING);
+    }
+
+    /** Both of the Follow switch's hooks: [button] names the one that asked. */
+    private static boolean hideAuthorButton(String button) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(FOLLOW_ROUTE, 1);
+            FeedFilterCounters.sawKind(FOLLOW_ROUTE, button);
+            boolean hide = Utils.settingsReady() && Settings.HIDE_REEL_FOLLOW_BUTTON.get();
+            if (hide) {
+                FeedFilterCounters.removed(FOLLOW_ROUTE, 1, button);
+                logOnce(button, () -> "Reel Follow button: hid the " + button);
+            }
+            return hide;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, button, failure);
+            Logger.printException(() -> "Reel Follow button: could not read its switch for the " + button, failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, in a full-screen video's author row, where Facebook decides to build the pill
+     * beside the author's name (#291). Handed whether the pill would say Subscribe, which the row
+     * worked out from the video's owner a moment before, and whether the row builds it at all.
+     * False takes the row's own way for a video with no pill. Never throws: anything but a
+     * Subscribe pill with the switch on answers what Facebook decided.
+     */
+    public static boolean showAuthorPill(boolean subscribe, boolean show) {
+        return show && !hideSubscribePill(subscribe);
+    }
+
+    /**
+     * Injection point, in the builder Facebook shares for the same pill in two other spots, just
+     * before it builds it (#291). Remembers on this thread whether the pill says Subscribe, for the
+     * caller's {@link #authorPillSlot} a moment later. Never throws.
+     */
+    public static void noteAuthorPill(boolean subscribe) {
+        BUILDING_SUBSCRIBE.set(subscribe);
+    }
+
+    /**
+     * Injection point, in each caller of that builder, right after it wraps the pill in the slot the
+     * row lays out (#291). Null is what the slot holds when Facebook shows no pill there, and it's
+     * the answer for a Subscribe pill while the switch is on. Takes the builder's note either way.
+     * Never throws: anything else answers the slot as it came.
+     */
+    public static Object authorPillSlot(Object slot) {
+        boolean subscribe = Boolean.TRUE.equals(BUILDING_SUBSCRIBE.get());
+        BUILDING_SUBSCRIBE.remove();
+        return hideSubscribePill(subscribe) ? null : slot;
+    }
+
+    /**
+     * Injection point, in the viewer's author row, right after it wraps the fan-subscription pill
+     * some Pages get instead in one of its slots (#291). That pill says Subscribe whoever owns the
+     * video, so null, the slot for no pill, is the answer while the switch is on. Never throws:
+     * anything else answers the slot as it came.
+     */
+    public static Object fanPillSlot(Object slot) {
+        return hideSubscribePill(true) ? null : slot;
+    }
+
+    /**
+     * Injection point, in the reel row that builds a pill of its own, right after it asks whether
+     * the author gets Subscribe (#291). -1 takes the row's way for an author with no pill, and 1
+     * and 0 are the yes and no it asked for. Never throws: anything but a Subscribe pill with the
+     * switch on answers what Facebook decided.
+     */
+    public static int authorPillAnswer(boolean subscribe) {
+        if (hideSubscribePill(subscribe)) return -1;
+        return subscribe ? 1 : 0;
+    }
+
+    /** Whether the pill goes: a Subscribe pill, counted as either kind, while the switch is on. */
+    private static boolean hideSubscribePill(boolean subscribe) {
+        String pill = subscribe ? SUBSCRIBE : FOLLOW;
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(SUBSCRIBE_ROUTE, 1);
+            FeedFilterCounters.sawKind(SUBSCRIBE_ROUTE, pill);
+            boolean hide = subscribe && Utils.settingsReady() && Settings.HIDE_VIDEO_SUBSCRIBE_BUTTON.get();
+            if (hide) {
+                FeedFilterCounters.removed(SUBSCRIBE_ROUTE, 1, pill);
+                logOnce(SUBSCRIBE, () -> "Video Subscribe button: hid it");
+            }
+            return hide;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, pill, failure);
+            Logger.printException(() -> "Video Subscribe button: could not read its switch", failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, first thing in the runnable that queries the comment Facebook previews under
+     * a reel. True makes it return without querying, so nothing is previewed. Never throws.
+     */
+    public static boolean skipHotComment() {
+        return skipFooterQuery(HOT_COMMENT);
+    }
+
+    /**
+     * Injection point, first thing in the runnable that queries which friends reacted to a reel.
+     * True makes it return without querying, so no bubbles are drawn. Never throws.
+     */
+    public static boolean skipSocialBubbles() {
+        return skipFooterQuery(SOCIAL_BUBBLES);
+    }
+
+    /**
+     * Injection point, first thing in the runnable the author and caption row starts for the
+     * comment it swaps in for the caption a few seconds in, "Name commented: ..." (#464). True
+     * makes it return without querying, so the caption stays. Never throws.
+     */
+    public static boolean skipCaptionComment() {
+        return skipFooterQuery(CAPTION_COMMENT);
+    }
+
+    private static boolean skipFooterQuery(String kind) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(FOOTER_ROUTE, 1);
+            FeedFilterCounters.sawKind(FOOTER_ROUTE, kind);
+            boolean skip = Utils.settingsReady() && Settings.HIDE_REEL_SOCIAL_FOOTER.get();
+            if (skip) {
+                FeedFilterCounters.removed(FOOTER_ROUTE, 1, kind);
+                logOnce("footer " + kind, () -> "Reel footer: skipped the " + kind + " query");
+            }
+            return skip;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, kind + " query", failure);
+            Logger.printException(() -> "Reel footer: could not read its switch", failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, first thing in the component that draws the audio line on the Reels tab
+     * (#200). That row picks the soundtrack out of the reel's attribution models on its own, so the
+     * chip filter never sees it. True makes it draw nothing, as it does for a reel with no sound
+     * line. Never throws: false draws it as before.
+     */
+    public static boolean hideAudioLine() {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(AUDIO_ROUTE, 1);
+            FeedFilterCounters.sawKind(AUDIO_ROUTE, AUDIO_LINE);
+            boolean hide = Utils.settingsReady() && Settings.HIDE_REEL_AUDIO_LINE.get();
+            if (hide) {
+                FeedFilterCounters.removed(AUDIO_ROUTE, 1, AUDIO_LINE);
+                logOnce(AUDIO_LINE, () -> "Reel audio line: not drawn");
+            }
+            return hide;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, AUDIO_LINE, failure);
+            Logger.printException(() -> "Reel audio line: could not read its switch", failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, first thing in the component that draws "Made with Edits" under the caption of
+     * a video made in Meta's Edits app (#314). It reads that from the video on its own, so the chip
+     * filter never sees it, and it goes with the chips switch, which already hides the Edits chip.
+     * True makes it draw nothing, as it does for a video made anywhere else. Never throws: false
+     * draws it as before.
+     */
+    public static boolean hideEditsLabel() {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(EDITS_ROUTE, 1);
+            FeedFilterCounters.sawKind(EDITS_ROUTE, EDITS_LABEL);
+            boolean hide = Utils.settingsReady() && Settings.HIDE_REEL_CHIPS.get();
+            if (hide) {
+                FeedFilterCounters.removed(EDITS_ROUTE, 1, EDITS_LABEL);
+                logOnce(EDITS_LABEL, () -> "Reel Edits line: not drawn");
+            }
+            return hide;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, EDITS_LABEL, failure);
+            Logger.printException(() -> "Reel Edits line: could not read its switch", failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, first thing in the runnable Facebook posts when a video has been loading for
+     * a while, which shows "This is taking a while. Try checking your network connection." (#222).
+     * True makes it return before the message is built, as it does on its own when the video started
+     * playing in the meantime. The video keeps loading either way. Never throws: false shows it.
+     */
+    public static boolean hideSlowConnectionMessage() {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(SLOW_ROUTE, 1);
+            FeedFilterCounters.sawKind(SLOW_ROUTE, SLOW_MESSAGE);
+            boolean hide = Utils.settingsReady() && Settings.HIDE_SLOW_CONNECTION_MESSAGE.get();
+            if (hide) {
+                FeedFilterCounters.removed(SLOW_ROUTE, 1, SLOW_MESSAGE);
+                logOnce(SLOW_MESSAGE, () -> "Slow connection message: not shown");
+            }
+            return hide;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, SLOW_MESSAGE, failure);
+            Logger.printException(() -> "Slow connection message: could not read its switch", failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, first thing in the render of the Fullscreen pill under a wide video in the
+     * Reels viewer (#394). True makes the render answer null, the nothing it answers on its own while
+     * the phone is sideways, so no pill is drawn. Never throws: false draws it.
+     */
+    public static boolean hideFullscreenPill() {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(FULLSCREEN_ROUTE, 1);
+            FeedFilterCounters.sawKind(FULLSCREEN_ROUTE, FULLSCREEN_PILL);
+            boolean hide = Utils.settingsReady() && Settings.HIDE_REEL_FULLSCREEN_PILL.get();
+            if (hide) {
+                FeedFilterCounters.removed(FULLSCREEN_ROUTE, 1, FULLSCREEN_PILL);
+                logOnce(FULLSCREEN_PILL, () -> "Video Fullscreen pill: not drawn");
+            }
+            return hide;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, FULLSCREEN_PILL, failure);
+            Logger.printException(() -> "Video Fullscreen pill: could not read its switch", failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, first thing in the include check of the full-screen button on a video in the
+     * feed or in search results (#478). True makes the check answer false, so the player leaves the
+     * button out. Never throws: false leaves Facebook's own check to answer.
+     */
+    public static boolean hideFeedVideoFullscreen() {
+        return hideFeedVideoButton(FEED_VIDEO_FULLSCREEN);
+    }
+
+    /**
+     * Injection point, first thing in the include checks of both picture-in-picture buttons on a
+     * video in the feed or in search results (#478). Same answers as {@link #hideFeedVideoFullscreen}.
+     */
+    public static boolean hideFeedVideoPip() {
+        return hideFeedVideoButton(FEED_VIDEO_PIP);
+    }
+
+    private static boolean hideFeedVideoButton(String kind) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(FEED_VIDEO_ROUTE, 1);
+            FeedFilterCounters.sawKind(FEED_VIDEO_ROUTE, kind);
+            boolean hide = Utils.settingsReady() && Settings.HIDE_FEED_VIDEO_BUTTONS.get();
+            if (hide) {
+                FeedFilterCounters.removed(FEED_VIDEO_ROUTE, 1, kind);
+                logOnce(kind, () -> "Feed video buttons: " + kind + " left out");
+            }
+            return hide;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, kind, failure);
+            Logger.printException(() -> "Feed video buttons: could not read the switch for the " + kind, failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, first thing in the run() of the Runnable the reel viewer posts to open the
+     * "[Name] shared this reel. Add him as a friend" sheet over a reel someone who isn't your friend
+     * shared (#486). True makes run() return before it opens the sheet, so the reel plays with
+     * nothing over it and nothing is sent. Never throws: false lets Facebook decide.
+     */
+    public static boolean hideSharedReelFriendSheet() {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(FRIEND_SHEET_ROUTE, 1);
+            FeedFilterCounters.sawKind(FRIEND_SHEET_ROUTE, FRIEND_SHEET);
+            boolean hide = Utils.settingsReady() && Settings.HIDE_SHARED_REEL_FRIEND_SHEET.get();
+            if (hide) {
+                FeedFilterCounters.removed(FRIEND_SHEET_ROUTE, 1, FRIEND_SHEET);
+                logOnce(FRIEND_SHEET, () -> "Shared reel friend sheet: kept closed");
+            }
+            return hide;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, FRIEND_SHEET, failure);
+            Logger.printException(() -> "Shared reel friend sheet: could not read its switch", failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, first thing in the lookup of the video Facebook lines up after one opened from
+     * the feed, the one its UP NEXT bar names (#367). True makes it return before it queries, so the
+     * video never gets one. Never throws: false looks it up.
+     */
+    public static boolean skipUpNextFetch() {
+        return hidesUpNext(UP_NEXT_FETCH, "Up next: not looked up");
+    }
+
+    /**
+     * Injection point, first thing in what hands the UP NEXT bar and the end screen the videos looked
+     * up after one (#367). True makes it answer an empty list, as Facebook does for a video with
+     * nothing lined up, so a lookup made before the switch went on shows nothing either. Never
+     * throws: false hands out what was found.
+     */
+    public static boolean hideUpNextVideos() {
+        return hidesUpNext(UP_NEXT_VIDEOS, "Up next: no video handed out");
+    }
+
+    /**
+     * Injection point, first thing in what stores the UP NEXT bar's height as the room the player
+     * keeps empty under the seek bar (#375). True makes it return before it writes, so the video
+     * keeps no room, Facebook's own state for a video with no bar. Never throws: false keeps it.
+     */
+    public static boolean skipUpNextRoom() {
+        return hidesUpNext(UP_NEXT_ROOM, "Up next: no room kept under the seek bar");
+    }
+
+    /**
+     * Injection point, first thing in what shows a pill over the bottom of the full-screen viewer a
+     * feed video opens in (#375), with
+     * the pill's container, its kind and the two kinds that are the UP NEXT pill: the one over a
+     * video and the one over a card that isn't a video. True when the pill is one of those and the
+     * switch is on: the container is hidden and Facebook returns before it shows it. Any other pill,
+     * the 2x speed one included, and any pill once the switch is off, gets a container this hid shown
+     * again first, since Facebook only shows what's inside it. Never throws: false shows the pill.
+     */
+    public static boolean hideUpNextPill(@Nullable View pill, @Nullable Integer kind, int peekKind, int nextKind) {
+        boolean upNext = kind != null && (kind == peekKind || kind == nextKind);
+        if (!upNext || !hidesUpNext(UP_NEXT_PILL, "Up next: pill not shown")) {
+            showHiddenPill(pill);
+            return false;
+        }
+        try {
+            if (pill != null) {
+                int was = pill.getVisibility();
+                pill.setVisibility(View.GONE);
+                if (was != View.GONE) {
+                    synchronized (HID_PILLS) {
+                        HID_PILLS.put(pill, was);
+                    }
+                }
+            }
+        } catch (Throwable failure) {
+            Logger.printException(() -> "Up next pill: could not hide its container", failure);
+        }
+        return true;
+    }
+
+    private static void showHiddenPill(@Nullable View pill) {
+        if (pill == null) return;
+        try {
+            Integer was;
+            synchronized (HID_PILLS) {
+                was = HID_PILLS.remove(pill);
+            }
+            if (was != null) pill.setVisibility(was);
+        } catch (Throwable failure) {
+            Logger.printException(() -> "Up next pill: could not show its container again", failure);
+        }
+    }
+
+    private static boolean hidesUpNext(String kind, String message) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(UP_NEXT_ROUTE, 1);
+            FeedFilterCounters.sawKind(UP_NEXT_ROUTE, kind);
+            boolean hide = Utils.settingsReady() && Settings.HIDE_UP_NEXT.get();
+            if (hide) {
+                FeedFilterCounters.removed(UP_NEXT_ROUTE, 1, kind);
+                logOnce(kind, () -> message);
+            }
+            return hide;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, kind, failure);
+            Logger.printException(() -> kind + ": could not read its switch", failure);
+            return false;
+        }
+    }
+
+    /** Whether the feed's Reels row tiles play their whole reel: the switch, once the settings can be read. */
+    private static boolean playsFeedReelsWhole() {
+        return Utils.settingsReady() && Settings.PLAY_FEED_REELS_WHOLE.get();
+    }
+
+    /**
+     * Injection point, in the render of a tile of the feed's Reels row, handed the last check
+     * Facebook makes before it asks for the short clip the tile plays (#228). False takes Facebook's
+     * own path for a tile with no clip: no start partway in, no speed change, no seek back to the
+     * clip's start each loop. Never throws: anything going wrong answers what it was handed.
+     */
+    public static boolean allowsPreviewClip(boolean allowed) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawKind(PREVIEW_ROUTE, PREVIEW_CLIP);
+            if (!playsFeedReelsWhole()) return allowed;
+            logOnce(PREVIEW_CLIP, () -> "Feed reel previews: skipping the clip");
+            return false;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, PREVIEW_CLIP, failure);
+            Logger.printException(() -> "Feed reel previews: could not read their switch", failure);
+            return allowed;
+        }
+    }
+
+    /**
+     * Injection point, in the same render, handed the position in milliseconds the tile's player
+     * stops and starts over at, before it's stored (#228). Answers {@link #NO_END} while the switch
+     * is on, so the reel plays to its end. Never throws: anything going wrong answers what it was handed.
+     */
+    public static int previewClipEnd(int endMs) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(PREVIEW_ROUTE, 1);
+            boolean hasEnd = endMs >= 0;
+            FeedFilterCounters.sawKind(PREVIEW_ROUTE, hasEnd ? PREVIEW_END : PREVIEW_NO_END);
+            if (!playsFeedReelsWhole()) return endMs;
+            if (hasEnd) {
+                FeedFilterCounters.removed(PREVIEW_ROUTE, 1, PREVIEW_END);
+                logOnce(PREVIEW_END, () -> "Feed reel previews: playing the whole reel, not stopping at " + endMs + " ms");
+            }
+            return NO_END;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, PREVIEW_CLIP, failure);
+            return endMs;
+        }
+    }
+
+    /**
+     * Injection point, in each builder of a reel's sidebar, handed Facebook's answer to whether you
+     * can comment on the reel, right before the builder leaves the Comment button out for a no
+     * (#299). True while the switch is on, so the button is drawn and opens the comments to read.
+     * Never throws: anything going wrong answers what it was handed.
+     */
+    public static boolean showsCommentButton(boolean canComment) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (canComment || !Utils.settingsReady() || !Settings.SHOW_REEL_COMMENT_BUTTON.get()) return canComment;
+            FeedFilterCounters.removed(COMMENT_ROUTE, 1, COMMENTS_OFF);
+            logOnce(COMMENTS_OFF, () -> "Reel Comment button: drawn on a reel with comments turned off");
+            return true;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, COMMENTS_OFF, failure);
+            return canComment;
+        }
+    }
+
+    /**
+     * Injection point, in the helper that builds the post date under a reel's or a full-screen
+     * video's author, handed the server switch's answer to whether that line is drawn, right before
+     * the helper draws nothing for a no (#296). True while the switch is on, so the date shows.
+     * Never throws: anything going wrong answers what it was handed.
+     */
+    public static boolean showsPostDate(boolean shown) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (shown || !Utils.settingsReady() || !Settings.SHOW_REEL_POST_DATE.get()) return shown;
+            FeedFilterCounters.removed(DATE_ROUTE, 1, DATE_HIDDEN);
+            logOnce(DATE_HIDDEN, () -> "Reel post date: drawn where the server left it out");
+            return true;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, DATE_HIDDEN, failure);
+            return shown;
+        }
+    }
+
+    /**
+     * Injection point, in the reel footer's builder, handed the server flag that swaps the line under
+     * a reel's author for its recommendation reason alone, the date and every other label dropped
+     * (#496). So a reel with a reason showed no date and the next one without did. No while the
+     * switch is on, so the date stays on the line. Never throws: anything going wrong answers what it
+     * was handed.
+     */
+    public static boolean reasonAlone(boolean alone) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (!alone || !Utils.settingsReady() || !Settings.SHOW_REEL_POST_DATE.get()) return alone;
+            FeedFilterCounters.removed(DATE_ROUTE, 1, DATE_BESIDE_REASON);
+            logOnce(DATE_BESIDE_REASON, () -> "Reel post date: kept beside a recommendation reason");
+            return false;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, DATE_BESIDE_REASON, failure);
+            return alone;
+        }
+    }
+
+    /**
+     * Injection point, in the same helper, handed Facebook's words for the post date and the time the
+     * reel was posted, in seconds, right before a null draws nothing (#357). Facebook words a date
+     * older than a few days only behind more server switches, so a reel past them showed no date even
+     * with the switch on. Never throws: anything going wrong answers what it was handed.
+     */
+    @Nullable
+    public static String postDateText(@Nullable String text, long seconds) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (!Utils.settingsReady()) return text;
+            String worded = postDate(text, seconds, System.currentTimeMillis(), Settings.REEL_POST_DATE_STYLE.get(),
+                    Settings.SHOW_REEL_POST_DATE.get(), L10n.locale(), TimeZone.getDefault());
+            if (worded == null || worded.equals(text)) return text;
+            FeedFilterCounters.removed(DATE_ROUTE, 1, DATE_WORDED);
+            logOnce(DATE_WORDED, () -> "Reel post date: worded as " + Settings.REEL_POST_DATE_STYLE.get());
+            return worded;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, DATE_WORDED, failure);
+            return text;
+        }
+    }
+
+    /**
+     * Injection point, in the Reels tab's audio line, handed the "artist · title" line it just joined
+     * and the reel's story (#357). Facebook draws one line under a reel's author, and on a reel with a
+     * song that line is the song's, so no date showed on most reels even with the switch on. With the
+     * switch on the date goes in front of the song, read from the story's creation time and worded the
+     * way the date style says. Never throws: anything going wrong answers what it was handed.
+     */
+    @Nullable
+    public static String audioLineText(@Nullable String line, @Nullable Object story) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (line == null || !Utils.settingsReady() || !Settings.SHOW_REEL_POST_DATE.get()) return line;
+            Date posted = PostDetails.postedOf(story);
+            if (posted == null) return line;
+            String dated = audioLine(line, posted.getTime() / 1000, System.currentTimeMillis(),
+                    Settings.REEL_POST_DATE_STYLE.get(), L10n.locale(), TimeZone.getDefault());
+            if (dated.equals(line)) return line;
+            FeedFilterCounters.removed(DATE_ROUTE, 1, DATE_ON_SONG);
+            logOnce(DATE_ON_SONG, () -> "Reel post date: put in front of the song line");
+            return dated;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, DATE_ON_SONG, failure);
+            return line;
+        }
+    }
+
+    /** The story the soundtrack's own ticker label was asked for with, kept for {@link #soundTickerText}. */
+    private static final ThreadLocal<WeakReference<Object>> SOUND_STORY = new ThreadLocal<>();
+
+    /**
+     * Injection point, in the reel footer's builder, handed one attribution's label right before it
+     * becomes a ticker label under the author, the attribution and the reel's story (#496). A reel
+     * without sound has no song line, so its soundtrack attribution's label, "Reel has no sound",
+     * takes that spot and no date showed. With the switch on the date goes in front of that label the
+     * way it does a song's. Never throws: anything going wrong answers what it was handed.
+     */
+    @Nullable
+    public static String soundLabelText(@Nullable String label, @Nullable Object attribution, @Nullable Object story) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (label == null || !Utils.settingsReady() || !Settings.SHOW_REEL_POST_DATE.get()) return label;
+            String type = FeedFilter.typeName(attribution);
+            if (!SOUNDTRACK.equals(type)) return label;
+            Date posted = PostDetails.postedOf(story);
+            if (posted == null) return label;
+            String dated = soundLabel(label, type, posted.getTime() / 1000, System.currentTimeMillis(),
+                    Settings.REEL_POST_DATE_STYLE.get(), L10n.locale(), TimeZone.getDefault());
+            if (dated.equals(label)) return label;
+            FeedFilterCounters.removed(DATE_ROUTE, 1, DATE_ON_SOUND);
+            logOnce(DATE_ON_SOUND, () -> "Reel post date: put in front of the sound label");
+            return dated;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, DATE_ON_SOUND, failure);
+            return label;
+        }
+    }
+
+    /**
+     * Injection point, at the start of the helper that builds the soundtrack's ticker label on its own
+     * when the footer's come up empty, handed the reel's story (#496). The helper clears the register
+     * holding it before the label is built, so it's kept here for {@link #soundTickerText}.
+     */
+    public static void soundStory(@Nullable Object story) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            SOUND_STORY.set(story == null ? null : new WeakReference<>(story));
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, DATE_ON_SOUND, failure);
+        }
+    }
+
+    /**
+     * Injection point, in that helper, handed the soundtrack's label and attribution right before its
+     * ticker label is built (#496): {@link #soundLabelText} with the story {@link #soundStory} kept.
+     */
+    @Nullable
+    public static String soundTickerText(@Nullable String label, @Nullable Object attribution) {
+        WeakReference<Object> kept = SOUND_STORY.get();
+        SOUND_STORY.remove();
+        return soundLabelText(label, attribution, kept == null ? null : kept.get());
+    }
+
+    /**
+     * An attribution's [label] under a reel's author with the day the reel was posted, at [seconds],
+     * in front when the attribution's [type] is the soundtrack's: "3 weeks ago · Reel has no sound".
+     * Any other attribution's label stays as it was.
+     */
+    static String soundLabel(String label, @Nullable String type, long seconds, long nowMillis, ReelDateStyle style,
+                             Locale locale, TimeZone zone) {
+        return SOUNDTRACK.equals(type) ? audioLine(label, seconds, nowMillis, style, locale, zone) : label;
+    }
+
+    /**
+     * A reel's song [line] with the day it was posted, at [seconds], in front: "3 weeks ago · Artist ·
+     * Original audio", or the day itself with The date picked. A time that can't be a post's keeps the
+     * line as it was.
+     */
+    static String audioLine(String line, long seconds, long nowMillis, ReelDateStyle style, Locale locale, TimeZone zone) {
+        String date = postDate(null, seconds, nowMillis, style, true, locale, zone);
+        return date == null || date.isEmpty() ? line : date + DOT + line;
+    }
+
+    /**
+     * What the post date reads for a reel posted at [seconds], seen at [nowMillis]: the day it was
+     * posted with The date picked, otherwise "3 weeks ago" in [locale] while [always] (the switch)
+     * is on. Facebook's own [text] is "2d" for a recent reel but the day itself for an older one past
+     * its server switches, so with the switch on one reel read "2d" and the next "Oct 12" (#424).
+     * With the switch off and How long ago picked, the line keeps Facebook's own words, blank
+     * included. A time that can't be a post's, none or one in the future, keeps [text].
+     */
+    @Nullable
+    static String postDate(@Nullable String text, long seconds, long nowMillis, ReelDateStyle style, boolean always,
+            Locale locale, TimeZone zone) {
+        if (seconds <= 0 || seconds > nowMillis / 1000 + FUTURE_SLACK_SECONDS) return text;
+        if (style == ReelDateStyle.DATE) return dayPosted(seconds * 1000, nowMillis, locale, zone);
+        if (!always) return text;
+        return MarketplaceListingAge.ago(Math.max(0, nowMillis / 1000 - seconds), locale);
+    }
+
+    /** "Oct 12" for a day this year and "Oct 12, 2025" for one before, in [locale]'s order. */
+    static String dayPosted(long millis, long nowMillis, Locale locale, TimeZone zone) {
+        Calendar posted = Calendar.getInstance(zone, locale);
+        posted.setTimeInMillis(millis);
+        Calendar now = Calendar.getInstance(zone, locale);
+        now.setTimeInMillis(nowMillis);
+        String skeleton = posted.get(Calendar.YEAR) == now.get(Calendar.YEAR) ? "MMMd" : "yMMMd";
+        DateFormat format = DateFormat.getInstanceForSkeleton(skeleton, locale);
+        format.setTimeZone(android.icu.util.TimeZone.getTimeZone(zone.getID()));
+        return format.format(new Date(millis));
+    }
+
+    /**
+     * Injection point, first thing in the builder of the search pill under a reel's caption (#173).
+     * True makes the builder answer with Facebook's own empty component, so no pill is drawn.
+     * Never throws: false builds the pill as before.
+     */
+    public static boolean hideSearchPill() {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(SEARCH_ROUTE, 1);
+            FeedFilterCounters.sawKind(SEARCH_ROUTE, SEARCH_PILL);
+            boolean hide = Utils.settingsReady() && Settings.HIDE_REEL_SEARCH_PILL.get();
+            if (hide) {
+                FeedFilterCounters.removed(SEARCH_ROUTE, 1, SEARCH_PILL);
+                logOnce(SEARCH_PILL, () -> "Reel search pill: not built");
+            }
+            return hide;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, SEARCH_PILL, failure);
+            Logger.printException(() -> "Reel search pill: could not read its switch", failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, right after the comment sheet's builder reads the search prompt it puts over
+     * a reel's comments (#197). Null while the search pill switch is on, which is the path Facebook
+     * takes for a sheet that has no prompt, so the row isn't built. Never throws: off, paused, before
+     * the settings are ready or on a failure the prompt comes back as it was handed in.
+     *
+     * @param prompt Facebook's SearchPromptParam, or null when the sheet has none.
+     */
+    public static Object commentSearchPrompt(Object prompt) {
+        if (prompt == null) return null;
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(SEARCH_ROUTE, 1);
+            FeedFilterCounters.sawKind(SEARCH_ROUTE, COMMENT_SEARCH_PILL);
+            if (!Utils.settingsReady() || !Settings.HIDE_REEL_SEARCH_PILL.get()) return prompt;
+            FeedFilterCounters.removed(SEARCH_ROUTE, 1, COMMENT_SEARCH_PILL);
+            logOnce(COMMENT_SEARCH_PILL, () -> "Reel search pill: none over the comments");
+            return null;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, COMMENT_SEARCH_PILL, failure);
+            Logger.printException(() -> "Reel search pill: could not read its switch for the comments", failure);
+            return prompt;
+        }
+    }
+
+    /**
+     * Injection point, in place of the call that puts the search bar, or the send button beside it,
+     * into the header over a reel opened from a profile (#201). Null while the search pill switch is
+     * on, which that call skips, as it does a part Facebook didn't build. Never throws: off, paused,
+     * before the settings are ready or on a failure the part comes back as it was handed in.
+     *
+     * @param part Facebook's component for the bar or the button, or null when it built none.
+     */
+    public static Object searchBarPart(Object part) {
+        if (part == null) return null;
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            FeedFilterCounters.sawList(SEARCH_ROUTE, 1);
+            FeedFilterCounters.sawKind(SEARCH_ROUTE, SEARCH_BAR);
+            if (!Utils.settingsReady() || !Settings.HIDE_REEL_SEARCH_PILL.get()) return part;
+            FeedFilterCounters.removed(SEARCH_ROUTE, 1, SEARCH_BAR);
+            logOnce(SEARCH_BAR, () -> "Reel search pill: no search bar over the reel");
+            return null;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, SEARCH_BAR, failure);
+            Logger.printException(() -> "Reel search pill: could not read its switch for the search bar", failure);
+            return part;
+        }
+    }
+
+    /**
+     * Injection point, first thing in the constructor of the vertical button a reel's sidebar is
+     * made of (Like, Comment, Share and the rest), handed the text the button shows under its icon.
+     * A text holding a number becomes {@link #NO_COUNT} while the switch is on, so the icon stays
+     * and nothing shows under it. A word such as "Share" stays, and so does a missing text. Never
+     * throws: off, paused, before the settings are ready or on a failure the text comes back as it
+     * was handed in.
+     */
+    public static String countText(String text) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (text == null || !Utils.settingsReady() || !Settings.HIDE_REEL_COUNTS.get()) return text;
+            if (!holdsDigit(text)) return text;
+            FeedFilterCounters.sawList(COUNTS_ROUTE, 1);
+            FeedFilterCounters.sawKind(COUNTS_ROUTE, COUNT);
+            FeedFilterCounters.removed(COUNTS_ROUTE, 1, COUNT);
+            logOnce(COUNT, () -> "Reel counts: a sidebar button's number was taken away");
+            return NO_COUNT;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, COUNT, failure);
+            return text;
+        }
+    }
+
+    /**
+     * Injection point, in the reel sidebar builders, handed each button type before anything is
+     * built for it (#190, #243). True skips that type, so the button isn't built, marked or named,
+     * and the others close the gap. Like, Comment, Repost, Share, Save and direct WhatsApp each have
+     * their own switch (#265, #450). Never throws: off, paused, before the settings are ready, for any other
+     * type or on a failure the button is built as before.
+     *
+     * @param type the constant of Facebook's icon enum the sidebar is about to build a button for.
+     */
+    public static boolean hideSidebarButton(Object type) {
+        String button = SAVE_BUTTON;
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (!(type instanceof Enum)) return false;
+            BooleanSetting setting;
+            switch (((Enum<?>) type).name()) {
+                case SAVE_TYPE: setting = Settings.HIDE_REEL_SAVE_BUTTON; break;
+                case WHATSAPP_TYPE: button = WHATSAPP_BUTTON; setting = Settings.HIDE_REEL_WHATSAPP_BUTTON; break;
+                case LIKE_TYPE: button = LIKE_BUTTON; setting = Settings.HIDE_REEL_LIKE_BUTTON; break;
+                case COMMENT_TYPE: button = COMMENT_BUTTON; setting = Settings.HIDE_REEL_COMMENT_BUTTON; break;
+                case REPOST_TYPE: button = REPOST_BUTTON; setting = Settings.HIDE_REEL_REPOST_BUTTON; break;
+                case SHARE_TYPE: button = SHARE_BUTTON; setting = Settings.HIDE_REEL_SHARE_BUTTON; break;
+                default: return false;
+            }
+            if (!Utils.settingsReady()) return false;
+            if (!setting.get()) return false;
+            FeedFilterCounters.sawList(SIDEBAR_ROUTE, 1);
+            FeedFilterCounters.sawKind(SIDEBAR_ROUTE, button);
+            FeedFilterCounters.removed(SIDEBAR_ROUTE, 1, button);
+            String hidden = button;
+            logOnce(hidden, () -> "Reel sidebar: skipped the " + hidden);
+            return true;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, button, failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injection point, in the reel viewer, handed Facebook's answer to whether the speaker button
+     * at the bottom of the sidebar is built (#190). Answers false while the switch is on, so the
+     * viewer takes its own branch for a reel without the button. Never throws: off, paused, before
+     * the settings are ready, when Facebook already said no or on a failure, Facebook's answer
+     * stands.
+     *
+     * @param shows whether Facebook would build the speaker button.
+     */
+    public static boolean showsSoundButton(boolean shows) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (!shows || !Utils.settingsReady() || !Settings.HIDE_REEL_SOUND_BUTTON.get()) return shows;
+            FeedFilterCounters.sawList(SIDEBAR_ROUTE, 1);
+            FeedFilterCounters.sawKind(SIDEBAR_ROUTE, SOUND_BUTTON);
+            FeedFilterCounters.removed(SIDEBAR_ROUTE, 1, SOUND_BUTTON);
+            logOnce(SOUND_BUTTON, () -> "Reel sidebar: left out the speaker button");
+            return false;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, SOUND_BUTTON, failure);
+            return shows;
+        }
+    }
+
+    /**
+     * Injection point, in the reel footer, handed the speaker button Facebook just built, or null
+     * when it built none (#190). Answers null while the switch is on, so the footer's own null check
+     * leaves the button out. Asks {@link #showsSoundButton}, so both places the speaker can come
+     * from answer to one switch and count the same way.
+     *
+     * @param button the speaker button's component, or null.
+     */
+    public static Object soundButton(Object button) {
+        return button == null || showsSoundButton(true) ? button : null;
+    }
+
+    /** Whether Move the speaker above the three dots is on. */
+    private static boolean movesSpeaker() {
+        return Utils.settingsReady() && Settings.REEL_SPEAKER_ABOVE_MENU.get();
+    }
+
+    /** The mark for the reel, or null. Call with {@link #MOVED_SPEAKERS} held. */
+    private static MovedSpeaker movedSpeaker(Object reel) {
+        for (int i = MOVED_SPEAKERS.size() - 1; i >= 0; i--) {
+            MovedSpeaker mark = MOVED_SPEAKERS.get(i);
+            if (mark.reel.get() == reel) return mark;
+        }
+        return null;
+    }
+
+    /** The corner remembered for the reel, while the reel's speaker goes to its side column, or null. */
+    private static Object rememberedCorner(Object reel) {
+        synchronized (MOVED_SPEAKERS) {
+            MovedSpeaker mark = movedSpeaker(reel);
+            return mark == null || mark.corner == null ? null : mark.corner.get();
+        }
+    }
+
+    /**
+     * Injection point, in the reel's builder, handed the reel as it fills the side column's field
+     * (#331): this reel's side column is one that can take the speaker. A reel the builder gives
+     * another column never gets here, and stays as Facebook has it. Never throws.
+     *
+     * @param reel the reel.
+     */
+    public static void sideColumnComing(Object reel) {
+        try {
+            if (reel == null || !movesSpeaker()) return;
+            synchronized (MOVED_SPEAKERS) {
+                MovedSpeaker mark = movedSpeaker(reel);
+                if (mark != null) {
+                    mark.corner = null;
+                    return;
+                }
+                if (MOVED_SPEAKERS.size() >= MOVED_SPEAKERS_KEPT) MOVED_SPEAKERS.remove(0);
+                MOVED_SPEAKERS.add(new MovedSpeaker(reel));
+            }
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, SPEAKER_MOVED, failure);
+        }
+    }
+
+    /**
+     * Injection point, in the corner the reel's builder just made, unless the side column is one
+     * that leaves before it assembles its buttons (#331). From here on the reel's speaker goes to
+     * the side column, which reads what it needs from this corner. Never throws.
+     *
+     * @param reel the reel.
+     * @param corner the component whose column holds the speaker on Facebook's own layout.
+     */
+    public static void rememberCorner(Object reel, Object corner) {
+        try {
+            if (reel == null) return;
+            synchronized (MOVED_SPEAKERS) {
+                MovedSpeaker mark = movedSpeaker(reel);
+                if (mark != null) mark.corner = new WeakReference<>(corner);
+            }
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, SPEAKER_MOVED, failure);
+        }
+    }
+
+    /**
+     * Injection point, in the side column, right before it assembles its buttons (#331). Answers the
+     * corner to build the speaker from, or null for no speaker here: the switch is off, the speaker
+     * is hidden, the app is paused, or the reel keeps its speaker where Facebook put it. Never throws.
+     *
+     * @param reel the reel.
+     */
+    public static Object cornerForSide(Object reel) {
+        try {
+            HookStatus.invoked(FamilyNames.REEL_DECLUTTER);
+            if (reel == null || !movesSpeaker() || !showsSoundButton(true)) return null;
+            Object corner = rememberedCorner(reel);
+            if (corner != null) BUILDING_SIDE_SPEAKER.set(Boolean.TRUE);
+            return corner;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, SPEAKER_MOVED, failure);
+            return null;
+        }
+    }
+
+    /**
+     * Injection point, in the side column, handed the speaker it just built from the corner, or null
+     * when Facebook's builder made none (#331).
+     *
+     * @param button the speaker button's component, or null.
+     */
+    public static Object sideSpeaker(Object button) {
+        BUILDING_SIDE_SPEAKER.remove();
+        if (button != null) HookStatus.counted(FamilyNames.REEL_DECLUTTER, SPEAKER_MOVED);
+        return button;
+    }
+
+    /**
+     * Injection point, in the corner and the video controls, handed the speaker they just built and
+     * the reel (#331). Answers null for a reel whose speaker goes to the side column, so it never
+     * shows two, and what was built for any other. Never throws.
+     *
+     * @param button the speaker button's component, or null.
+     * @param reel the reel.
+     */
+    public static Object speakerStays(Object button, Object reel) {
+        if (button == null) return null;
+        try {
+            return movesSpeaker() && rememberedCorner(reel) != null ? null : button;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, SPEAKER_MOVED, failure);
+            return button;
+        }
+    }
+
+    /**
+     * Injection point, in the speaker builder, handed whether it leaves the speaker to the video
+     * controls (#331). A server flag says so on some accounts, and the side column needs the speaker
+     * built all the same, so the answer is false while it asks. Every other caller gets Facebook's.
+     *
+     * @param leaves whether Facebook would leave the speaker to the video controls.
+     */
+    public static boolean footerLeavesSpeaker(boolean leaves) {
+        return leaves && BUILDING_SIDE_SPEAKER.get() == null;
+    }
+
+    /**
+     * Injection point, in the side column's render, handed which layout of buttons Facebook picked
+     * (#331). Only the newer one assembles the buttons the speaker joins, so it's yes while the switch
+     * is on. Never throws: off, paused, before the settings are ready, or on a failure, Facebook's
+     * answer stands.
+     *
+     * @param newer whether Facebook would draw the newer layout.
+     */
+    public static boolean speakerLayout(boolean newer) {
+        try {
+            return newer || movesSpeaker();
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.REEL_DECLUTTER, SPEAKER_MOVED, failure);
+            return newer;
+        }
+    }
+
+    /** Whether the text has a digit in any script, which a count always has and a word doesn't. */
+    static boolean holdsDigit(String text) {
+        for (int i = 0; i < text.length(); i++) {
+            if (Character.isDigit(text.charAt(i))) return true;
+        }
+        return false;
+    }
+
+    /**
+     * A debug line the first time each kind of change happens, and only once the settings can be read
+     * and Debug logging is on, so turning logging on later still gets the line. These hooks run on
+     * every reel the viewer builds, and a line each time would bury the log.
+     */
+    private static void logOnce(String key, Logger.LogMessage message) {
+        if (!Utils.settingsReady() || !BaseSettings.DEBUG.get()) return;
+        if (LOGGED.add(key)) Logger.printDebug(message);
+    }
+
+    /** Forgets which lines were logged, so a test sees each one again. */
+    static void forgetLoggedForTests() {
+        LOGGED.clear();
+    }
+}

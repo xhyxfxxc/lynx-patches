@@ -1,0 +1,1477 @@
+/*
+ * Copyright 2026 Hushfacebook contributors
+ * https://github.com/SysAdminDoc/Hushfacebook
+ */
+package app.morphe.extension.facebook.navigation;
+
+import android.app.Activity;
+import android.app.Application;
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.ColorFilter;
+import android.graphics.Outline;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
+import android.graphics.RecordingCanvas;
+import android.graphics.RenderEffect;
+import android.graphics.RenderNode;
+import android.graphics.Shader;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.RippleDrawable;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.SystemClock;
+import android.view.SurfaceView;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewParent;
+import android.view.ViewTreeObserver;
+import android.widget.FrameLayout;
+
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
+
+import app.morphe.extension.facebook.settings.FamilyNames;
+import app.morphe.extension.facebook.settings.Settings;
+import app.morphe.extension.facebook.settings.SettingsStatus;
+import app.morphe.extension.shared.Logger;
+import app.morphe.extension.shared.Utils;
+import app.morphe.extension.shared.diagnostics.HookStatus;
+
+/**
+ * See-through bars (#124). Facebook's feed list already runs the full height of its main screen,
+ * under the top bar and the tab bar, and pads its first and last posts clear of them, so each bar
+ * only has to stop hiding what's under it. Both are found by classes Redex keeps: the top bar's
+ * NavigationBar and the tab bar's TabBarContainerLayout, which draws the selected tab's line in its
+ * onDraw. Each bar is the highest view above one of those that is still bar sized, and every
+ * background in it that spans the bar (most of its width and at least half the height of its row)
+ * is a fill: Facebook's own drawable, in the colour the theme, Material You or AMOLED gave it, with
+ * its alpha scaled down. A row is the NavigationBar's or the TabBarContainerLayout's own height,
+ * since with the tab bar at the top one holder stacks both rows and neither fill is half of it
+ * (#171). Small backgrounds, such as a badge or a round button, and a tab's touch ripple keep
+ * theirs, and nothing is laid out again, so the icons, the selected tab's line, the touch targets
+ * and the insets stay as they were.
+ *
+ * <p>Facebook sets a bar's colour and alpha again when the theme changes, a page swaps the top
+ * bar's content, or its own header fades, so the check runs as each frame of the main screen
+ * draws. A fill whose colour or alpha isn't what this left on it has been changed by Facebook, and
+ * what it shows now becomes Facebook's alpha, the one scaled and the one given back. Off, paused,
+ * or with the settings not ready, every fill gets Facebook's alpha back on the next frame, and a
+ * drawable Facebook takes out of a bar gets it back at once, in case Facebook puts it somewhere
+ * else.
+ *
+ * <p>On Android 12 and newer each bar also gets frost: the view drawn just before the bar, the one
+ * under it, records the part of itself the bar covers into a RenderNode each frame, and draws that
+ * blurred in its overlay, so the blur sits between the feed and the bar's tint. RenderEffect only
+ * blurs a view's own content, which is why the copy is needed. It costs one recording and one blur
+ * per bar per frame, and only while a frame draws anyway. The copy is drawn and blurred at a
+ * quarter of the bar's size ({@link #FROST_SCALE}) and drawn back at full size (#461). The frost
+ * fades and moves with the bar, so a bar sliding away takes its frost along. It stays inside the bar's rows,
+ * so a holder taller than its tabs can't blur a band of the feed above them, and a SurfaceView is
+ * left out of the copy: drawing one a second time moves or drops its video surface, and the reel
+ * went black (#171). The copy is drawn around it and cleared where it is, so the video shows
+ * through the tint the way it shows through its own hole. A page showing one used to get no frost
+ * at all, and a feed video scrolling into view turned both bars from frost to a dark strip (#250).
+ * Only one on screen counts: Reels' page waiting beside Home with its video kept every tab plain
+ * once Reels had been opened, which read as the frost coming and going (#188).
+ *
+ * <p>A SurfaceView's video is a layer the display hardware puts behind the window, so no copy of
+ * the window holds it and the frost can't blur it. On phones where Facebook gives feed videos
+ * their own SurfaceView, the bar over one showed the video sharp under its tint, a dark strip that
+ * came and went as videos played and scrolled by (#250). While the bars are see-through, feed
+ * videos draw into a TextureView instead, through the player hook of Turn off HDR brightness
+ * (TextureVideo), and are frosted with the rest of the feed. Reels keep their SurfaceView.
+ *
+ * <p>Not every tab's page runs under the tab bar. Marketplace is a React Native page that its
+ * FrameLayout holder stops at the tab bar's top edge, so nothing was there to show through (#250).
+ * While the bars are see-through or the tab bar is rounded, a page that stops at the tab bar's top
+ * edge through its holder's bottom padding or its own bottom margin, at least half the window tall
+ * and with a gap covering the tab bar's rows, gets that gap taken away and runs under the bar the
+ * way Home's feed does. With the pill alone, that gap showed black around it (#412). Where the bar
+ * stays put, on an account Facebook keeps it on or with Keep the tab bar on screen, Facebook pads
+ * the tabs' own pager up to the bar instead, so every tab's page stops there and the window's
+ * background showed around the pill, white in light mode (#471). That pager's bottom padding is
+ * a gap like the holder's, taken once for all the pages in it. The gap comes back when both
+ * switches are off. A page Facebook keeps putting the gap back on is left as
+ * Facebook has it, so the two never fight over its layout. A list that pages, as the Reels viewer
+ * does, keeps its gap instead: its rows keep their height, so stretched it showed the next reel
+ * under the bar, and its gap is painted black (#412). Video controls Facebook pins to the
+ * bottom of a whole-screen viewer, as the Reels tab does its time and seek bar, are held above the
+ * tab bar's rows meanwhile ({@link ControlsLift}).
+ *
+ * <p>Any failure gives every fill back and stops the bars of that screen, which then look stock.
+ */
+public final class TranslucentBars {
+    /** Facebook's main screen, a manifest component, the one screen with both bars over the feed. */
+    static final String MAIN_SCREEN = "com.facebook.katana.activity.FbMainTabActivity";
+    /** The top bar's own view, a class Redex keeps. */
+    static final String TOP_BAR = "com.facebook.navigation.navbar.NavigationBar";
+    /** The tab bar's row of tabs, a class Redex keeps. */
+    static final String TAB_BAR = "com.facebook.navigation.tabbar.ui.TabBarContainerLayout";
+
+    /** How much of a bar's own alpha stays with nothing blurred under it. */
+    static final int PLAIN_ALPHA = 0xC0;
+    /** How much stays over frost, which takes the busy detail out of what shows through. */
+    static final int FROSTED_ALPHA = 0xA6;
+    /** The frost's blur radius, in dp. */
+    static final float FROST_RADIUS_DP = 18f;
+    /**
+     * How many times smaller the frost is drawn before its blur. The blur takes the detail out
+     * anyway, so the small copy looks the same and is a sixteenth of the pixels for the graphics
+     * chip to draw and blur on each frame (#461). Android's own window blur works at a quarter too.
+     */
+    static final int FROST_SCALE = 4;
+    /** How long a screen without both bars waits before it looks for them again. */
+    static final long RESCAN_MS = 1000;
+    /** How far below a bar's top view a fill can sit. The top bar's NavigationBar is seven down. */
+    static final int MAX_DEPTH = 12;
+    /** How far below the view under the tab bar a page that stops at the bar can sit. Marketplace's is a few down. */
+    static final int STRETCH_DEPTH = 8;
+    /** How far inside a stretched page a list that pages can sit. The Reels viewer is fourteen down from every tab's holder. */
+    static final int INSIDE_DEPTH = 24;
+    /** How soon after a stretch Facebook putting the gap back counts as it wanting the gap. */
+    static final long PUT_BACK_MS = 3000;
+    /** How many put-backs in a row leave a page as Facebook has it. */
+    static final int MAX_PUT_BACKS = 3;
+    /**
+     * How long a page left as Facebook has it waits before it's tried again. Marketplace's React
+     * page lays its gap out again a few times while it loads after a swipe from Home, and left
+     * alone for good it kept the black bar under the pill until Facebook restarted (#468).
+     */
+    static final long LEFT_ALONE_MS = 10_000;
+    /** The list class every feed and the Reels viewer use, which Redex keeps. */
+    static final String LIST = "androidx.recyclerview.widget.RecyclerView";
+    /** The pager class Facebook's tabs page through, which Redex keeps too (#471). */
+    static final String PAGER = "androidx.viewpager.widget.ViewPager";
+    /** The colour under a paging list's gap: the Reels viewer's own black. */
+    static final int BACKDROP_COLOUR = 0xFF000000;
+
+    /** Counted each time a fill of Facebook's is made see-through, not each frame. */
+    static final String MADE_SEE_THROUGH = "Bar background made see-through";
+    /** Counted each time a bar gets its frost. */
+    static final String FROSTED = "Bar frosted";
+    /** Counted each time a bar is frosted from a view that holds its rows on screen, not its whole box. */
+    static final String UNDER_ITS_ROWS = "Bar frosted from the view under its rows";
+    /** Counted each time a bar finds no view under it, which leaves it the plain dark strip (#250). */
+    static final String NOTHING_UNDER = "Bar with no view under it";
+    /** Counted each time the switch going off or a pause gives the fills back. */
+    static final String GIVEN_BACK = "Bar backgrounds given back";
+    /** Counted each time a page that stopped at the tab bar is stretched under it (#250). */
+    static final String STRETCHED = "Page stretched under the tab bar";
+    /** Counted each time Facebook kept putting a page's gap back and it was left alone. */
+    static final String LEFT_SHORT = "Page left stopping at the tab bar";
+    /** Counted each time a paging list keeps its gap and gets black under it instead (#412). */
+    static final String BACKED = "Paging list given black under the tab bar";
+
+    private static final String FAMILY = FamilyNames.BOTTOM_TAB_BAR;
+
+    private static boolean watching;
+
+    /** Each main screen's window and its bars. */
+    static final Map<View, Bars> WINDOWS = new WeakHashMap<>();
+
+    private TranslucentBars() {
+    }
+
+    /**
+     * Called once per Facebook start, from the settings entry's onApplicationCreate, with the tab bar
+     * patch in the build. Each main screen gets its bars as it resumes; the switch is asked per frame.
+     */
+    public static synchronized void watch(Context context) {
+        try {
+            if (watching || !(context instanceof Application)) return;
+            ((Application) context).registerActivityLifecycleCallbacks(new Screens());
+            watching = true;
+        } catch (Throwable failure) {
+            HookStatus.threw(FAMILY, "see-through bars", failure);
+        }
+    }
+
+    /** Whether the bars are see-through now: the switch on, nothing paused, the settings ready. */
+    public static boolean on() {
+        return Utils.settingsReady() && Settings.TRANSLUCENT_BARS.get();
+    }
+
+    /**
+     * Whether pages run under the tab bar now, as See-through bars and Rounded tab bar both have
+     * them do, so whatever Facebook pins to a page's bottom edge can end up behind the tabs (#412).
+     */
+    public static boolean stretchesPages() {
+        return on() || RoundedTabBar.on();
+    }
+
+    /** Says the tab bar patch is in the build, or with null, asks SettingsStatus again. */
+    static volatile Boolean inBuildForTests;
+
+    /**
+     * Whether a feed video should draw with the rest of the window now, so the frost blurs it
+     * (#250): the tab bar patch in the build, Android 12 or newer, and the bars see-through.
+     */
+    public static boolean blursVideos() {
+        Boolean forced = inBuildForTests;
+        boolean inBuild = forced != null ? forced : SettingsStatus.bottomTabBar();
+        return inBuild && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && on();
+    }
+
+    /** The alpha a fill gets for [facebooks], Facebook's own alpha on it, with or without frost under it. */
+    static int seeThrough(int facebooks, boolean frosted) {
+        return seeThrough(facebooks, keptAlpha(frosted));
+    }
+
+    /** The alpha a fill gets for [facebooks], Facebook's own alpha on it, keeping [kept] of 255 of it. */
+    static int seeThrough(int facebooks, int kept) {
+        return facebooks * kept / 255;
+    }
+
+    /**
+     * How much of a bar's own alpha stays, of 255: the Bar opacity picked (#425), or with none
+     * picked, {@link #FROSTED_ALPHA} over frost and {@link #PLAIN_ALPHA} without.
+     */
+    static int keptAlpha(boolean frosted) {
+        int picked = Utils.settingsReady() ? opacityPercent(Settings.SEE_THROUGH_OPACITY.get()) : -1;
+        if (picked < 0) return frosted ? FROSTED_ALPHA : PLAIN_ALPHA;
+        return Math.round(picked * 255f / 100f);
+    }
+
+    /** The lowest Bar opacity a person can pick, in percent: nothing of the bars' own color. */
+    public static final int MIN_OPACITY = 0;
+    /** The highest, the bars as solid as Facebook draws them. */
+    public static final int MAX_OPACITY = 100;
+    /** What's kept with no opacity picked, in percent, for the row's summary: {@link #PLAIN_ALPHA}. */
+    public static final int PLAIN_PERCENT = Math.round(PLAIN_ALPHA * 100f / 255f);
+    /** The same over frost: {@link #FROSTED_ALPHA}. */
+    public static final int FROSTED_PERCENT = Math.round(FROSTED_ALPHA * 100f / 255f);
+
+    /**
+     * The Bar opacity [saved] picks, in percent, held to {@link #MIN_OPACITY} to
+     * {@link #MAX_OPACITY}, or -1 for none: blank or not a number.
+     */
+    public static int opacityPercent(@Nullable String saved) {
+        return percent(saved, MIN_OPACITY, MAX_OPACITY, -1);
+    }
+
+    /**
+     * A percent typed in a size or opacity row, [saved], held to [min] to [max]: [blank] when
+     * it's empty or not a number.
+     */
+    public static int percent(@Nullable String saved, int min, int max, int blank) {
+        if (saved == null) return blank;
+        String text = saved.trim();
+        if (text.isEmpty() || text.length() > 4) return blank;
+        try {
+            return Math.max(min, Math.min(max, Integer.parseInt(text)));
+        } catch (NumberFormatException notANumber) {
+            return blank;
+        }
+    }
+
+    /**
+     * The bar [anchor] is part of: its highest ancestor still bar sized, one whose parent is more
+     * than a third of [windowHeight] tall. [anchor] itself when its parent already is.
+     */
+    static View barOf(View anchor, int windowHeight) {
+        View bar = anchor;
+        ViewParent parent = anchor.getParent();
+        while (parent instanceof View) {
+            View up = (View) parent;
+            if (up.getHeight() * 3 > windowHeight) break;
+            bar = up;
+            parent = up.getParent();
+        }
+        return bar;
+    }
+
+    /**
+     * Whether [view]'s background [drawn] fills [bar], whose rows are [row] pixels tall: it spans
+     * nine tenths of the bar's width and half a row's height, and isn't a touch ripple, which is
+     * clear until a tab is pressed.
+     */
+    static boolean fills(View view, @Nullable Drawable drawn, View bar, int row) {
+        if (drawn == null || drawn instanceof RippleDrawable) return false;
+        return bar.getWidth() > 0 && view.getWidth() * 10 >= bar.getWidth() * 9 && view.getHeight() * 2 >= row;
+    }
+
+    /**
+     * Keeps the frost [area] inside [rows], the bar's rows on screen in a window [windowHeight]
+     * tall, on the feed's side: a bar in the lower half is frosted from its rows down, one in the
+     * upper half from its rows up. The status bar and gesture insets past the rows stay frosted.
+     */
+    static void keepInside(Rect area, Rect rows, int windowHeight) {
+        if (rows.isEmpty()) return;
+        if (rows.centerY() * 2 > windowHeight) {
+            area.top = Math.max(area.top, rows.top);
+        } else {
+            area.bottom = Math.min(area.bottom, rows.bottom);
+        }
+    }
+
+    /**
+     * Keeps the frost [area] inside [bar]'s pill when Rounded tab bar made it one (#344), with
+     * [pill] scratch space: the radius its corners get, 0 for a bar that isn't a pill.
+     */
+    static float keepInPill(Rect area, View bar, Rect pill) {
+        float corner = RoundedTabBar.pillInWindow(bar, pill);
+        if (corner <= 0f) return 0f;
+        if (!area.intersect(pill)) area.setEmpty();
+        return Math.min(corner, area.height() / 2f);
+    }
+
+    /**
+     * Whether [host] is a SurfaceView or shows one: a visible one somewhere inside its box. One that's
+     * hidden, or laid out or scrolled outside the box, isn't on screen to be moved, the way Facebook
+     * 583 keeps each opened tab's page beside the one shown in a pager (#188). [box] is scratch space.
+     */
+    static boolean holdsSurface(View host, Rect box) {
+        if (host instanceof SurfaceView) return true;
+        box.set(0, 0, host.getWidth(), host.getHeight());
+        return surfaceInside(host, box);
+    }
+
+    /**
+     * Draws [host] on [canvas], which starts at its top left, for the frost: all of it but the
+     * SurfaceViews on screen in it. A branch holding one is drawn child by child around it, only
+     * the children reaching into [area], in [host]'s coordinates, and the copy is cleared where
+     * the video is. [box] is scratch space.
+     */
+    static void record(View host, Canvas canvas, Rect area, Rect box) {
+        if (host instanceof SurfaceView) {
+            canvas.drawRect(0, 0, host.getWidth(), host.getHeight(), CLEAR);
+        } else if (holdsSurface(host, box)) {
+            drawAround((ViewGroup) host, canvas, area, box);
+        } else {
+            canvas.translate(-host.getScrollX(), -host.getScrollY());
+            host.draw(canvas);
+        }
+    }
+
+    /** [group]'s background, then each of its children that reaches into [area], the way record does it. */
+    private static void drawAround(ViewGroup group, Canvas canvas, Rect area, Rect box) {
+        Drawable background = group.getBackground();
+        if (background != null) background.draw(canvas);
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+            if (child.getVisibility() != View.VISIBLE || child.getAlpha() <= 0f) continue;
+            int dx = child.getLeft() - group.getScrollX();
+            int dy = child.getTop() - group.getScrollY();
+            int left = dx + Math.round(child.getTranslationX());
+            int top = dy + Math.round(child.getTranslationY());
+            if (!area.intersects(left, top, left + child.getWidth(), top + child.getHeight())) continue;
+            int saved = canvas.save();
+            canvas.translate(dx, dy);
+            if (!child.getMatrix().isIdentity()) canvas.concat(child.getMatrix());
+            area.offset(-left, -top);
+            try {
+                record(child, canvas, area, box);
+            } finally {
+                area.offset(left, top);
+                canvas.restoreToCount(saved);
+            }
+        }
+    }
+
+    /** Clears what's drawn under it, where a video is left out of the frost. */
+    private static final Paint CLEAR = clear();
+
+    private static Paint clear() {
+        Paint paint = new Paint();
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+        return paint;
+    }
+
+    /** Whether a visible child of [view] is or holds a SurfaceView inside [box], in [view]'s coordinates. */
+    private static boolean surfaceInside(View view, Rect box) {
+        if (!(view instanceof ViewGroup)) return false;
+        ViewGroup group = (ViewGroup) view;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+            if (child.getVisibility() != View.VISIBLE) continue;
+            int dx = child.getLeft() + Math.round(child.getTranslationX()) - group.getScrollX();
+            int dy = child.getTop() + Math.round(child.getTranslationY()) - group.getScrollY();
+            box.offset(-dx, -dy);
+            boolean shows = box.intersects(0, 0, child.getWidth(), child.getHeight())
+                    && (child instanceof SurfaceView || surfaceInside(child, box));
+            box.offset(dx, dy);
+            if (shows) return true;
+        }
+        return false;
+    }
+
+    /**
+     * The view under [bar]: the last visible one its parent draws before it whose box holds the bar's
+     * box, or null. The feed's page for the tab bar, and the page and tab bar's holder for the top bar.
+     */
+    @Nullable
+    static View under(View bar) {
+        ViewParent parent = bar.getParent();
+        if (!(parent instanceof ViewGroup)) return null;
+        ViewGroup group = (ViewGroup) parent;
+        for (int i = group.indexOfChild(bar) - 1; i >= 0; i--) {
+            View child = group.getChildAt(i);
+            if (child.getVisibility() != View.VISIBLE || child.getWidth() <= 0 || child.getHeight() <= 0) continue;
+            if (child.getLeft() <= bar.getLeft() && child.getRight() >= bar.getRight()
+                    && child.getTop() <= bar.getTop() && child.getBottom() >= bar.getBottom()) {
+                return child;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The view under [bar] when none in its parent holds its whole box: the last visible one drawn
+     * before it, in its parent or further up, that holds [rows], the bar's rows on screen in the
+     * window, or null. A page can stop short of a holder that reaches past the rows, or sit a level
+     * up, and still show under the bar, which then read as a dark strip with the feed sharp behind
+     * it (#250). [origin] is scratch space.
+     */
+    @Nullable
+    static View reachingUnder(View bar, Rect rows, int[] origin) {
+        if (rows.isEmpty()) return null;
+        View above = bar;
+        ViewParent parent = bar.getParent();
+        while (parent instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) parent;
+            for (int i = group.indexOfChild(above) - 1; i >= 0; i--) {
+                View child = group.getChildAt(i);
+                if (child.getVisibility() != View.VISIBLE || child.getWidth() <= 0 || child.getHeight() <= 0) continue;
+                child.getLocationInWindow(origin);
+                if (origin[0] <= rows.left && origin[1] <= rows.top
+                        && origin[0] + child.getWidth() >= rows.right && origin[1] + child.getHeight() >= rows.bottom) {
+                    return child;
+                }
+            }
+            above = group;
+            parent = group.getParent();
+        }
+        return null;
+    }
+
+    /**
+     * Each view in [view] that stops at [edge], the tab bar's top in the window, into [found]: at
+     * least [minHeight] tall, its bottom on the edge, and kept off the bar by a gap of at least
+     * [minGap] ({@link #gapBelow}). Searched down to {@link #STRETCH_DEPTH}, through views that reach
+     * the edge only. Every one counts: a tab's page waiting beside the screen stops at the edge too,
+     * and taking only the first one found left Marketplace short behind it (#412). [origin] is
+     * scratch space.
+     */
+    static void stopsAt(View view, int edge, int minHeight, int minGap, int[] origin, int depth, List<View> found) {
+        if (view.getVisibility() != View.VISIBLE || view.getHeight() <= 0) return;
+        view.getLocationInWindow(origin);
+        int bottom = origin[1] + view.getHeight();
+        if (bottom < edge - 1) return;
+        if (Math.abs(bottom - edge) <= 1 && view.getHeight() >= minHeight && gapBelow(view) >= minGap) {
+            found.add(view);
+            return;
+        }
+        if (depth >= STRETCH_DEPTH || !(view instanceof ViewGroup)) return;
+        ViewGroup group = (ViewGroup) view;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            stopsAt(group.getChildAt(i), edge, minHeight, minGap, origin, depth + 1, found);
+        }
+    }
+
+    /**
+     * Each list in [view] that pages ({@link #pages}) once [taken] pixels are allowed for, into
+     * [found], searched down to {@link #INSIDE_DEPTH} through views whose bottom is [bottom] in the
+     * window: the lists a stretched page took with it. Facebook keeps every tab's page in one holder,
+     * so stretching it on Home stretched the Reels viewer too, and the next reel showed under the
+     * pill (#412). A list's own rows aren't searched. [origin] is scratch space.
+     */
+    static void pagingInside(View view, int bottom, int taken, int[] origin, int depth, List<View> found) {
+        if (view.getVisibility() != View.VISIBLE || view.getHeight() <= 0) return;
+        view.getLocationInWindow(origin);
+        if (Math.abs(origin[1] + view.getHeight() - bottom) > 1) return;
+        if (isList(view)) {
+            if (pages(view, taken)) found.add(view);
+            return;
+        }
+        if (depth >= INSIDE_DEPTH || !(view instanceof ViewGroup)) return;
+        ViewGroup group = (ViewGroup) view;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            pagingInside(group.getChildAt(i), bottom, taken, origin, depth + 1, found);
+        }
+    }
+
+    /** Whether [view] is a RecyclerView, the list every feed and the Reels viewer are, by its class name. */
+    static boolean isList(View view) {
+        return isA(view, LIST);
+    }
+
+    /** Whether [view] is a ViewPager, the pager Facebook's tabs page through, by its class name. */
+    static boolean isPager(View view) {
+        return isA(view, PAGER);
+    }
+
+    private static boolean isA(View view, String className) {
+        for (Class<?> type = view.getClass(); type != null && type != View.class; type = type.getSuperclass()) {
+            if (className.equals(type.getName())) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Whether [view] is a list that pages, as the Reels viewer does: it scrolls up and down and a
+     * row of it is as tall as the list was before [taken] pixels of gap were taken away. Stretched,
+     * its rows keep that height, so the next one showed under the tab bar (#412).
+     */
+    static boolean pages(View view, int taken) {
+        if (!isList(view) || !(view.canScrollVertically(1) || view.canScrollVertically(-1))) return false;
+        ViewGroup list = (ViewGroup) view;
+        int row = list.getHeight() - list.getPaddingTop() - list.getPaddingBottom() - taken;
+        for (int i = 0; i < list.getChildCount(); i++) {
+            if (Math.abs(list.getChildAt(i).getHeight() - row) <= 2) return true;
+        }
+        return false;
+    }
+
+    /**
+     * [view]'s top in the window where it's laid out, before any scale or slide: the edge a page
+     * stops at. Rounded tab bar draws the bar 90% of its size, which moves the row's drawn top a few
+     * pixels off that edge (#412).
+     */
+    static int laidOutTop(View view) {
+        int top = view.getTop();
+        ViewParent parent = view.getParent();
+        while (parent instanceof View) {
+            View holder = (View) parent;
+            top += holder.getTop() - holder.getScrollY();
+            parent = holder.getParent();
+        }
+        return top;
+    }
+
+    /**
+     * The gap under [view] that its holder's bottom padding and its own bottom margin make, or 0
+     * when it isn't laid out by those alone (another holder, a gravity, a height of its own). The
+     * holder is a FrameLayout, or the tabs' ViewPager on a bar that stays put (#471).
+     */
+    static int gapBelow(View view) {
+        ViewParent parent = view.getParent();
+        if (!(parent instanceof FrameLayout) && !(parent instanceof ViewGroup && isPager((View) parent))) return 0;
+        ViewGroup holder = (ViewGroup) parent;
+        int margin = bottomMargin(view);
+        int gap = holder.getPaddingBottom() + margin;
+        return gap > 0 && view.getBottom() + margin == holder.getHeight() - holder.getPaddingBottom() ? gap : 0;
+    }
+
+    private static int bottomMargin(View view) {
+        ViewGroup.LayoutParams params = view.getLayoutParams();
+        return params instanceof ViewGroup.MarginLayoutParams ? ((ViewGroup.MarginLayoutParams) params).bottomMargin : 0;
+    }
+
+    /** A page stretched under the tab bar: the gap Facebook gave it, taken away while the bars are see-through. */
+    static final class Stretch {
+        /**
+         * The padding taken off each holder, by the holder. Every tab's page in the tabs' pager
+         * shares its padding (#471): the first page found takes it, and the rest count it as theirs,
+         * so the Reels page found after Home's still gets black under its reel.
+         */
+        static final Map<View, Integer> TAKEN = new WeakHashMap<>();
+
+        private WeakReference<ViewGroup> holder = new WeakReference<>(null);
+        /** Facebook's bottom padding on the holder, and its bottom margin on the page. */
+        int padding;
+        int margin;
+        long takenAt;
+        int putBacks;
+        boolean leftAlone;
+        /** When it was left alone, which {@link #LEFT_ALONE_MS} counts from. */
+        long leftAt;
+
+        /** Takes [view]'s gap away: its holder's bottom padding and its own bottom margin. */
+        void take(View view, long now) {
+            ViewGroup holder = (ViewGroup) view.getParent();
+            this.holder = new WeakReference<>(holder);
+            padding = holder.getPaddingBottom();
+            if (padding > 0) {
+                TAKEN.put(holder, padding);
+            } else {
+                Integer shared = TAKEN.get(holder);
+                if (shared != null) padding = shared;
+            }
+            margin = bottomMargin(view);
+            takenAt = now;
+            if (padding > 0) holder.setPadding(holder.getPaddingLeft(), holder.getPaddingTop(), holder.getPaddingRight(), 0);
+            if (margin > 0) {
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) view.getLayoutParams();
+                params.bottomMargin = 0;
+                view.setLayoutParams(params);
+            }
+        }
+
+        /** Facebook's gap back on [view], where nothing has set it since. */
+        void giveBack(View view) {
+            ViewGroup holder = this.holder.get();
+            if (holder != null && padding > 0 && holder.getPaddingBottom() == 0) {
+                holder.setPadding(holder.getPaddingLeft(), holder.getPaddingTop(), holder.getPaddingRight(), padding);
+            }
+            if (holder != null) TAKEN.remove(holder);
+            if (margin > 0 && view.getParent() == holder && bottomMargin(view) == 0) {
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) view.getLayoutParams();
+                params.bottomMargin = margin;
+                view.setLayoutParams(params);
+            }
+        }
+    }
+
+    /**
+     * Black in a paging list's holder, from [taken] pixels above the list's bottom down, drawn in the
+     * holder's overlay (#412). A list that keeps its gap takes none; one a stretched page took with
+     * it is blacked over the part its reels no longer fill, while they still page short of it. The
+     * list's place is read as it draws, so a gap Facebook changes is followed.
+     */
+    static final class Backdrop extends Drawable {
+        private final WeakReference<View> list;
+        private final WeakReference<ViewGroup> holder;
+        private int taken;
+        private final Paint paint = new Paint();
+        private final Rect area = new Rect();
+
+        Backdrop(View list, ViewGroup holder, int taken) {
+            this.list = new WeakReference<>(list);
+            this.holder = new WeakReference<>(holder);
+            this.taken = taken;
+            paint.setColor(BACKDROP_COLOUR);
+        }
+
+        /** Black over [taken] pixels instead, where the tab bar's top has moved since. */
+        void take(int taken) {
+            if (this.taken == taken) return;
+            this.taken = taken;
+            invalidateSelf();
+        }
+
+        /** The holder's box, which the overlay draws it in. */
+        void fit() {
+            ViewGroup holder = this.holder.get();
+            if (holder == null) return;
+            Rect bounds = getBounds();
+            if (bounds.right != holder.getWidth() || bounds.bottom != holder.getHeight() || bounds.left != 0 || bounds.top != 0) {
+                setBounds(0, 0, holder.getWidth(), holder.getHeight());
+                invalidateSelf();
+            }
+        }
+
+        /** Out of the holder's overlay. */
+        void remove() {
+            ViewGroup holder = this.holder.get();
+            if (holder != null) holder.getOverlay().remove(this);
+        }
+
+        /**
+         * The part of the holder it paints: under the list's reel, or nothing when the list has gone
+         * or its reels fill it again.
+         */
+        boolean paints(Rect into) {
+            View list = this.list.get();
+            ViewGroup holder = this.holder.get();
+            if (list == null || holder == null || list.getParent() != holder || list.getVisibility() != View.VISIBLE) return false;
+            if (taken > 0 && !pages(list, taken)) return false;
+            into.set(0, list.getBottom() - taken, holder.getWidth(), holder.getHeight());
+            return !into.isEmpty();
+        }
+
+        @Override
+        public void draw(Canvas canvas) {
+            if (paints(area)) canvas.drawRect(area, paint);
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+            paint.setAlpha(alpha);
+        }
+
+        @Override
+        public void setColorFilter(@Nullable ColorFilter filter) {
+            paint.setColorFilter(filter);
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
+    }
+
+    /** What shows whether a fill changed: its colour for a plain colour, its alpha for anything else. */
+    static int reading(Drawable drawn) {
+        if (drawn instanceof android.graphics.drawable.ColorDrawable) {
+            return ((android.graphics.drawable.ColorDrawable) drawn).getColor();
+        }
+        return drawn.getAlpha();
+    }
+
+    /** The bars of [window], made once and asked every frame. */
+    static Bars attach(View window) {
+        synchronized (WINDOWS) {
+            Bars bars = WINDOWS.get(window);
+            if (bars == null) {
+                bars = new Bars(window, TOP_BAR, TAB_BAR);
+                WINDOWS.put(window, bars);
+                ViewTreeObserver observer = window.getViewTreeObserver();
+                observer.addOnPreDrawListener(bars);
+                observer.addOnWindowFocusChangeListener(bars);
+            }
+            return bars;
+        }
+    }
+
+    /** Gives each main screen its bars as it resumes. */
+    static final class Screens implements Application.ActivityLifecycleCallbacks {
+        @Override
+        public void onActivityResumed(Activity activity) {
+            if (!MAIN_SCREEN.equals(activity.getClass().getName()) || activity.getWindow() == null) return;
+            // The pill first, so the frost of a frame reads where the pill is that frame (#344).
+            try {
+                RoundedTabBar.attach(activity.getWindow().getDecorView());
+            } catch (Throwable failure) {
+                HookStatus.threw(FAMILY, "rounded tab bar", failure);
+            }
+            try {
+                attach(activity.getWindow().getDecorView());
+            } catch (Throwable failure) {
+                HookStatus.threw(FAMILY, "see-through bars", failure);
+            }
+        }
+
+        @Override
+        public void onActivityCreated(Activity activity, @Nullable Bundle state) {
+        }
+
+        @Override
+        public void onActivityStarted(Activity activity) {
+        }
+
+        @Override
+        public void onActivityPaused(Activity activity) {
+        }
+
+        @Override
+        public void onActivityStopped(Activity activity) {
+        }
+
+        @Override
+        public void onActivitySaveInstanceState(Activity activity, Bundle state) {
+        }
+
+        @Override
+        public void onActivityDestroyed(Activity activity) {
+        }
+    }
+
+    /** A fill made see-through: Facebook's alpha, what it read afterwards, and the last frame it was seen. */
+    static final class Fill {
+        int facebooks;
+        int left;
+        /** How much of Facebook's alpha it was left with, of 255, so a new Bar opacity shows (#425). */
+        int kept = -1;
+        int frame;
+    }
+
+    /** One window's bars, asked as each frame draws. */
+    static final class Bars implements ViewTreeObserver.OnPreDrawListener, ViewTreeObserver.OnWindowFocusChangeListener {
+        private final WeakReference<View> window;
+        private final String topBar;
+        private final String tabBar;
+        /** Every top bar and tab bar view the last look found. */
+        private final List<WeakReference<View>> anchors = new ArrayList<>();
+        /** Each fill made see-through, by the drawable itself. */
+        final Map<Drawable, Fill> fills = new IdentityHashMap<>();
+        /** Each bar's frost, by the bar. */
+        private final Map<View, Object> frosts = new IdentityHashMap<>();
+        /**
+         * The part of one bar's fills on screen this frame, in the window, one fill's or anchor's
+         * part (also the surface check's scratch box), and the bar's rows.
+         */
+        private final Rect seen = new Rect();
+        private final Rect visible = new Rect();
+        private final Rect rows = new Rect();
+        /** A rounded tab bar's pill on screen, in the window. */
+        private final Rect pill = new Rect();
+        private final int[] origin = new int[2];
+        /** The bars with no view holding their box, by the bar: whether one holds their rows. */
+        private final Map<View, Boolean> shortOfBox = new IdentityHashMap<>();
+        /** Each page stretched under the tab bar, by the page (#250). */
+        final Map<View, Stretch> stretched = new WeakHashMap<>();
+        /** Facebook's video controls held above the tab bar while pages run under it (#412). */
+        final ControlsLift controls = new ControlsLift();
+        /** Each paging list's black under its gap, by the list (#412). */
+        final Map<View, Backdrop> backdrops = new WeakHashMap<>();
+        /** The pages one look finds stopping at the tab bar, and the stretched lists found to page. */
+        private final List<View> found = new ArrayList<>();
+        private boolean describedNothingUnder;
+        private long nextLook;
+        private long nextStretch;
+        /** Whether a frame is booked for when the stretch may look again ({@link #wakeAfter}). */
+        private boolean wakeBooked;
+        private final Runnable wake = this::wake;
+        /** Whether a frame is booked for when a page left alone is tried again ({@link #retryAfter}). */
+        private boolean retryBooked;
+        private final Runnable retry = this::retry;
+        private int frame;
+        private boolean stopped;
+
+        Bars(View window, String topBar, String tabBar) {
+            this.window = new WeakReference<>(window);
+            this.topBar = topBar;
+            this.tabBar = tabBar;
+        }
+
+        @Override
+        public boolean onPreDraw() {
+            try {
+                update();
+            } catch (Throwable failure) {
+                HookStatus.threw(FAMILY, "see-through bars", failure);
+                stop();
+            }
+            return true;
+        }
+
+        /** The settings page closing hands the window its focus back, so a change there shows now. */
+        @Override
+        public void onWindowFocusChanged(boolean hasFocus) {
+            View window = this.window.get();
+            if (hasFocus && window != null && !stopped) window.invalidate();
+        }
+
+        /** One frame: the fills made see-through or given back, and the frost brought up to date. */
+        void update() {
+            View window = this.window.get();
+            if (window == null || stopped) return;
+            boolean seeThrough = on();
+            if (!seeThrough && !RoundedTabBar.on()) {
+                giveBack();
+                return;
+            }
+            // Rounded tab bar alone still runs the page under the bar, so the feed shows around
+            // the pill instead of black (#412), with the fills Facebook's and no frost.
+            if (!seeThrough) giveBackFills();
+            long now = SystemClock.uptimeMillis();
+            if (lookAgain() && now >= nextLook) {
+                nextLook = now + RESCAN_MS;
+                look(window);
+            }
+            frame++;
+            int height = window.getHeight();
+            boolean blurs = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && window.isHardwareAccelerated();
+            // The top of the tab bar's rows on screen, when they're along the bottom.
+            int cover = Integer.MAX_VALUE;
+            boolean stretchLooked = false;
+            boolean stretchWaits = false;
+            for (int i = 0; i < anchors.size(); i++) {
+                View anchor = shown(i);
+                if (anchor == null) continue;
+                View bar = barOf(anchor, height);
+                if (bar.getWidth() <= 0 || bar.getHeight() <= 0 || barBefore(bar, i, height)) continue;
+                // With the tab bar at the top, both anchors share one holder: one pass, both rows.
+                int row = bar.getHeight();
+                rows.setEmpty();
+                for (int k = i; k < anchors.size(); k++) {
+                    View other = shown(k);
+                    if (other == null || barOf(other, height) != bar) continue;
+                    if (other.getHeight() > 0) row = Math.min(row, other.getHeight());
+                    if (other.getGlobalVisibleRect(visible)) rows.union(visible);
+                }
+                boolean tabsBelow = tabBar.equals(anchor.getClass().getName()) && rows.top > height / 2;
+                if (tabsBelow) cover = Math.min(cover, rows.top);
+                if (tabsBelow && now >= nextStretch) {
+                    nextStretch = now + RESCAN_MS;
+                    stretchLooked = true;
+                    int edge = laidOutTop(anchor);
+                    reachUnder(bar, edge, rows.height(), height, now);
+                    controls.find(under(bar), edge, height);
+                } else if (tabsBelow) {
+                    stretchWaits = true;
+                }
+                if (!seeThrough) continue;
+                View under = blurs ? underNow(bar, rows) : null;
+                seen.setEmpty();
+                float shown = keep(bar, bar, row, under != null, 1f, 0);
+                if (under != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    keepInside(seen, rows, height);
+                    float corner = keepInPill(seen, bar, pill);
+                    if (shown > 0f && !seen.isEmpty()) {
+                        frost(bar, under, seen, shown, corner);
+                    } else {
+                        // Slid or faded out of sight: its frost waits, empty, for it to come back.
+                        Frost waiting = (Frost) frosts.get(bar);
+                        if (waiting != null) waiting.empty(frame);
+                    }
+                }
+            }
+            controls.place(cover);
+            if (stretchWaits && !stretchLooked) wakeAfter(window, nextStretch - now);
+            if (!seeThrough) return;
+            forgetUnseen();
+            dropStaleFrost();
+        }
+
+        /**
+         * Books one frame [delay] ms from now, when the stretch may look again, after a frame came
+         * too soon for it (#412). Marketplace can finish laying out its gap inside that wait and then
+         * draw nothing more, which left the black strip around the pill until the next touch, five
+         * seconds or more. The booked frame looks, so it books none of its own.
+         */
+        private void wakeAfter(View window, long delay) {
+            if (wakeBooked) return;
+            wakeBooked = true;
+            window.postDelayed(wake, Math.max(0, delay));
+        }
+
+        private void wake() {
+            wakeBooked = false;
+            View window = this.window.get();
+            if (window != null && !stopped) window.invalidate();
+        }
+
+        /**
+         * Books one frame [delay] ms from now, when a page left alone is tried again (#468). A
+         * still Marketplace draws nothing more, so without it the next try waited for a touch.
+         * Kept apart from {@link #wakeAfter}, whose short wait it would otherwise hold up.
+         */
+        private void retryAfter(long delay) {
+            View window = this.window.get();
+            if (retryBooked || window == null) return;
+            retryBooked = true;
+            window.postDelayed(retry, Math.max(0, delay));
+        }
+
+        private void retry() {
+            retryBooked = false;
+            View window = this.window.get();
+            if (window != null && !stopped) window.invalidate();
+        }
+
+        /**
+         * Stretches the page under the tab bar [bar] when it stops at [edge], the top of the bar's
+         * rows, with a gap of at least [rows] pixels, in a window [height] tall (#250). A page
+         * Facebook puts the gap back on {@link #MAX_PUT_BACKS} times in a row, each within {@link
+         * #PUT_BACK_MS}, is left as Facebook has it for {@link #LEFT_ALONE_MS}, then tried again
+         * (#468). Every page found counts, and one left alone
+         * doesn't stop the rest. A list that pages keeps its gap with black under it ({@link #back}).
+         */
+        private void reachUnder(View bar, int edge, int rows, int height, long now) {
+            unstretchPaging();
+            View page = under(bar);
+            if (page == null) return;
+            found.clear();
+            stopsAt(page, edge, height / 2, rows, origin, 0, found);
+            for (int i = 0; i < found.size(); i++) reach(found.get(i), now);
+            found.clear();
+            backPagingInside(edge);
+        }
+
+        /**
+         * Black under each list that pages inside a stretched page, over the part its reels don't
+         * fill (#412): from [edge], the tab bar's top, down. That's measured from the bar, not from
+         * the gap taken, since the Reels viewer sizes its reels to stop at the bar and the bar can
+         * grow after the stretch: where the bar stays put, Facebook pads the tabs' pager before the
+         * gesture bar's space is added under the tabs (#471). A tab opened after the stretch, Reels
+         * most of all, is found on the next look.
+         */
+        private void backPagingInside(int edge) {
+            for (Map.Entry<View, Stretch> entry : stretched.entrySet()) {
+                View page = entry.getKey();
+                Stretch stretch = entry.getValue();
+                if (stretch.leftAlone || stretch.padding + stretch.margin <= 0 || isList(page)) continue;
+                page.getLocationInWindow(origin);
+                int bottom = origin[1] + page.getHeight();
+                int taken = bottom - edge;
+                // Not laid out under the bar yet: the next look finds it.
+                if (taken <= 1) continue;
+                pagingInside(page, bottom, taken, origin, 0, found);
+                for (int i = 0; i < found.size(); i++) {
+                    View list = found.get(i);
+                    Backdrop backdrop = backdrops.get(list);
+                    if (backdrop != null) {
+                        backdrop.take(taken);
+                        backdrop.fit();
+                    } else if (list.getParent() instanceof ViewGroup) {
+                        addBackdrop(list, (ViewGroup) list.getParent(), taken);
+                        Logger.printDebug(() -> "See-through bars: a paging list inside a stretched page, black over its last " + taken + " px");
+                    }
+                }
+                found.clear();
+            }
+        }
+
+        /** Stretches [content], one page that stops at the tab bar, unless it pages or is left alone. */
+        private void reach(View content, long now) {
+            Backdrop backdrop = backdrops.get(content);
+            if (backdrop != null) {
+                backdrop.fit();
+                return;
+            }
+            // A list with no rows yet can't say whether it pages, so it waits for them.
+            if (isList(content) && ((ViewGroup) content).getChildCount() == 0) return;
+            if (pages(content, 0)) {
+                back(content);
+                return;
+            }
+            Stretch stretch = stretched.get(content);
+            if (stretch == null) {
+                stretch = new Stretch();
+                stretched.put(content, stretch);
+            } else if (stretch.leftAlone) {
+                long waited = now - stretch.leftAt;
+                if (waited < LEFT_ALONE_MS) {
+                    retryAfter(LEFT_ALONE_MS - waited);
+                    return;
+                }
+                stretch.leftAlone = false;
+                stretch.putBacks = 0;
+                Logger.printDebug(() -> "See-through bars: a page left alone is tried again");
+            } else if (now - stretch.takenAt >= PUT_BACK_MS) {
+                stretch.putBacks = 0;
+            } else if (++stretch.putBacks >= MAX_PUT_BACKS) {
+                stretch.leftAlone = true;
+                stretch.leftAt = now;
+                retryAfter(LEFT_ALONE_MS);
+                HookStatus.counted(FAMILY, LEFT_SHORT);
+                Logger.printDebug(() -> "See-through bars: Facebook keeps a page's gap, left alone for now");
+                return;
+            }
+            stretch.take(content, now);
+            int gap = stretch.padding + stretch.margin;
+            HookStatus.counted(FAMILY, STRETCHED);
+            Logger.printDebug(() -> "See-through bars: stretched a page " + gap + " px under the tab bar");
+        }
+
+        /**
+         * Leaves [list], a list that pages, stopping at the tab bar, and paints its gap black, so the
+         * pill and the see-through bar show the viewer's black instead of the next reel or the
+         * window's grey (#412).
+         */
+        private void back(View list) {
+            ViewParent parent = list.getParent();
+            if (!(parent instanceof ViewGroup)) return;
+            addBackdrop(list, (ViewGroup) parent, 0);
+            int gap = gapBelow(list);
+            Logger.printDebug(() -> "See-through bars: a paging list keeps its " + gap + " px gap, black under the tab bar");
+        }
+
+        /** [list]'s black, in [holder]'s overlay, over its last [taken] pixels and down ({@link Backdrop}). */
+        private void addBackdrop(View list, ViewGroup holder, int taken) {
+            Backdrop backdrop = new Backdrop(list, holder, taken);
+            backdrops.put(list, backdrop);
+            backdrop.fit();
+            holder.getOverlay().add(backdrop);
+            HookStatus.counted(FAMILY, BACKED);
+        }
+
+        /**
+         * A list stretched before its rows showed it pages gets its gap back, and the next look
+         * paints it black instead.
+         */
+        private void unstretchPaging() {
+            if (stretched.isEmpty()) return;
+            found.clear();
+            for (Map.Entry<View, Stretch> entry : stretched.entrySet()) {
+                Stretch stretch = entry.getValue();
+                if (!stretch.leftAlone && pages(entry.getKey(), stretch.padding + stretch.margin)) found.add(entry.getKey());
+            }
+            for (int i = 0; i < found.size(); i++) {
+                View list = found.get(i);
+                Stretch stretch = stretched.remove(list);
+                if (stretch != null) stretch.giveBack(list);
+                Logger.printDebug(() -> "See-through bars: a stretched list pages, its gap given back");
+            }
+            found.clear();
+        }
+
+        /** Every stretched page gets Facebook's gap back, and every paging list loses its black. */
+        private void unstretch() {
+            for (Backdrop backdrop : backdrops.values()) backdrop.remove();
+            backdrops.clear();
+            if (stretched.isEmpty()) return;
+            for (Map.Entry<View, Stretch> entry : stretched.entrySet()) entry.getValue().giveBack(entry.getKey());
+            stretched.clear();
+        }
+
+        /**
+         * The view under [bar] this frame, with [rows] its rows on screen. The report counts each
+         * change to a view that only holds the rows or to none, and once says what the layout was,
+         * so a dark strip on a phone nobody here has can be read from its diagnostic report.
+         */
+        @Nullable
+        View underNow(View bar, Rect rows) {
+            View holdingBox = under(bar);
+            if (holdingBox != null) {
+                shortOfBox.remove(bar);
+                return holdingBox;
+            }
+            View holdingRows = reachingUnder(bar, rows, origin);
+            Boolean found = holdingRows != null;
+            if (!found.equals(shortOfBox.put(bar, found))) {
+                HookStatus.counted(FAMILY, found ? UNDER_ITS_ROWS : NOTHING_UNDER);
+                Logger.printDebug(() -> "See-through bars: " + (found ? "a view holds only the rows of bar " : "nothing under bar ")
+                        + box(bar) + " rows " + rows.toShortString());
+                if (!found && !describedNothingUnder && !rows.isEmpty()) {
+                    describedNothingUnder = true;
+                    HookStatus.counted(FAMILY, describe(bar, rows));
+                }
+            }
+            return holdingRows;
+        }
+
+        /** A bar's box, its rows and the boxes of what its parent draws before it, for the report. */
+        private static String describe(View bar, Rect rows) {
+            StringBuilder text = new StringBuilder("No view under bar ").append(box(bar))
+                    .append(" rows ").append(rows.toShortString());
+            ViewParent parent = bar.getParent();
+            if (parent instanceof ViewGroup) {
+                ViewGroup group = (ViewGroup) parent;
+                for (int i = Math.min(group.indexOfChild(bar), 4) - 1; i >= 0; i--) {
+                    text.append(" before ").append(box(group.getChildAt(i)));
+                }
+            }
+            return text.toString();
+        }
+
+        private static String box(View view) {
+            return view.getLeft() + "," + view.getTop() + "-" + view.getRight() + "," + view.getBottom();
+        }
+
+        /** Anchor [index], or null when it's gone or not on screen. */
+        @Nullable
+        private View shown(int index) {
+            View anchor = anchors.get(index).get();
+            return anchor == null || !anchor.isShown() ? null : anchor;
+        }
+
+        /** Whether an anchor before [index] has [bar] as its bar, so this frame already did it. */
+        private boolean barBefore(View bar, int index, int windowHeight) {
+            for (int j = 0; j < index; j++) {
+                View earlier = shown(j);
+                if (earlier != null && barOf(earlier, windowHeight) == bar) return true;
+            }
+            return false;
+        }
+
+        /**
+         * Whether to look for the bars again: none found yet, one Facebook took out of the window,
+         * as a page that rebuilds its top bar does, or none on screen.
+         */
+        private boolean lookAgain() {
+            boolean shown = false;
+            for (WeakReference<View> reference : anchors) {
+                View anchor = reference.get();
+                if (anchor == null || !anchor.isAttachedToWindow()) return true;
+                shown |= anchor.isShown();
+            }
+            return !shown;
+        }
+
+        /** Finds every top bar and tab bar view in [window]. */
+        private void look(View window) {
+            HookStatus.invoked(FAMILY);
+            anchors.clear();
+            boolean[] found = new boolean[2];
+            collect(window, found);
+            if (found[0]) HookStatus.bound(FAMILY, "see-through top bar");
+            if (found[1]) {
+                HookStatus.bound(FAMILY, "see-through tab bar");
+                HookStatus.recoveredViewId(FAMILY, tabBar);
+            } else if (window.getHeight() > 0) {
+                // A main screen always has its tab bar, at the top or the bottom.
+                HookStatus.missingViewId(FAMILY, tabBar);
+            }
+            Logger.printDebug(() -> "See-through bars: found " + anchors.size() + " bar views");
+        }
+
+        private void collect(View view, boolean[] found) {
+            String name = view.getClass().getName();
+            if (name.equals(topBar)) {
+                anchors.add(new WeakReference<>(view));
+                found[0] = true;
+                return;
+            }
+            if (name.equals(tabBar)) {
+                anchors.add(new WeakReference<>(view));
+                found[1] = true;
+                return;
+            }
+            if (!(view instanceof ViewGroup)) return;
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) collect(group.getChildAt(i), found);
+        }
+
+        /**
+         * Makes each fill in [view] and under it, down to {@link #MAX_DEPTH}, see-through, and adds
+         * the part of each fill on screen to {@link #seen}. [row] is the height of the bar's rows,
+         * and [alpha] is how drawn [view]'s parents in the bar are. Answers how drawn the most drawn
+         * fill on screen is, 0 for none, which the frost takes. A bar Facebook slides or fades away
+         * moves a view inside it, so the frost follows the fills rather than the bar's top view.
+         */
+        private float keep(View view, View bar, int row, boolean frosted, float alpha, int depth) {
+            if (view.getVisibility() != View.VISIBLE) return 0f;
+            float drawn = alpha * view.getAlpha();
+            float most = 0f;
+            Drawable background = view.getBackground();
+            if (fills(view, background, bar, row)) {
+                makeSeeThrough(background, frosted);
+                if (frosted && drawn > 0f && view.getGlobalVisibleRect(visible)) {
+                    seen.union(visible);
+                    most = drawn;
+                }
+            }
+            if (depth < MAX_DEPTH && view instanceof ViewGroup) {
+                ViewGroup group = (ViewGroup) view;
+                for (int i = 0; i < group.getChildCount(); i++) {
+                    most = Math.max(most, keep(group.getChildAt(i), bar, row, frosted, drawn, depth + 1));
+                }
+            }
+            return most;
+        }
+
+        /** Scales [drawn]'s alpha, unless it still shows what this left on it. */
+        void makeSeeThrough(Drawable drawn, boolean frosted) {
+            Fill fill = fills.get(drawn);
+            int now = reading(drawn);
+            int kept = keptAlpha(frosted);
+            if (fill != null && fill.left == now && fill.kept == kept) {
+                fill.frame = frame;
+                return;
+            }
+            if (fill == null) {
+                fill = new Fill();
+                fills.put(drawn, fill);
+                HookStatus.counted(FAMILY, MADE_SEE_THROUGH);
+                // Its own state, so a colour Facebook shares between views changes only here.
+                drawn.mutate();
+                fill.facebooks = drawn.getAlpha();
+            } else if (fill.left != now) {
+                // Facebook set it again since: what it shows now is Facebook's.
+                fill.facebooks = drawn.getAlpha();
+            }
+            fill.kept = kept;
+            drawn.setAlpha(seeThrough(fill.facebooks, kept));
+            fill.left = reading(drawn);
+            fill.frame = frame;
+        }
+
+        /** Gives back the alpha of each fill no bar showed this frame, which Facebook took out or hid. */
+        private void forgetUnseen() {
+            Iterator<Map.Entry<Drawable, Fill>> each = fills.entrySet().iterator();
+            while (each.hasNext()) {
+                Map.Entry<Drawable, Fill> entry = each.next();
+                if (entry.getValue().frame == frame) continue;
+                giveBack(entry.getKey(), entry.getValue());
+                each.remove();
+            }
+        }
+
+        /**
+         * Every fill gets Facebook's alpha back, the frost goes, each stretched page gets its gap
+         * back and each video controls host its place.
+         */
+        void giveBack() {
+            unstretch();
+            controls.giveBack();
+            giveBackFills();
+        }
+
+        /** Every fill gets Facebook's alpha back and the frost goes. Stretched pages stay stretched. */
+        private void giveBackFills() {
+            if (fills.isEmpty() && frosts.isEmpty()) return;
+            for (Map.Entry<Drawable, Fill> entry : fills.entrySet()) giveBack(entry.getKey(), entry.getValue());
+            if (!fills.isEmpty()) HookStatus.counted(FAMILY, GIVEN_BACK);
+            fills.clear();
+            for (Object frost : frosts.values()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) ((Frost) frost).remove();
+            }
+            frosts.clear();
+            Logger.printDebug(() -> "See-through bars: gave the bars back");
+        }
+
+        /** Facebook's alpha back on [drawn], unless Facebook changed it since. */
+        private static void giveBack(Drawable drawn, Fill fill) {
+            if (reading(drawn) == fill.left) drawn.setAlpha(fill.facebooks);
+        }
+
+        /** Stops this window's bars for good after a failure, giving everything back first. */
+        void stop() {
+            try {
+                giveBack();
+            } catch (Throwable ignored) {
+                // Already failing; the window stays as it is.
+            }
+            stopped = true;
+            View window = this.window.get();
+            if (window == null) return;
+            window.removeCallbacks(wake);
+            window.removeCallbacks(retry);
+            ViewTreeObserver observer = window.getViewTreeObserver();
+            if (!observer.isAlive()) return;
+            observer.removeOnPreDrawListener(this);
+            observer.removeOnWindowFocusChangeListener(this);
+        }
+
+        @RequiresApi(Build.VERSION_CODES.S)
+        private void frost(View bar, View under, Rect area, float shown, float corner) {
+            Frost frost = (Frost) frosts.get(bar);
+            if (frost != null && frost.host != under) {
+                frost.remove();
+                frost = null;
+            }
+            if (frost == null) {
+                float radius = FROST_RADIUS_DP * bar.getResources().getDisplayMetrics().density;
+                frost = new Frost(under, radius);
+                frosts.put(bar, frost);
+                HookStatus.counted(FAMILY, FROSTED);
+            }
+            frost.update(area, shown, frame, corner);
+        }
+
+        /** Takes away the frost of each bar that wasn't drawn this frame. */
+        private void dropStaleFrost() {
+            if (frosts.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
+            Iterator<Object> each = frosts.values().iterator();
+            while (each.hasNext()) {
+                Frost frost = (Frost) each.next();
+                if (frost.frame == frame) continue;
+                frost.remove();
+                each.remove();
+            }
+        }
+    }
+
+    /**
+     * A bar's frost, in the overlay of the view under it: the part of that view the bar covers,
+     * recorded before each frame and drawn blurred, so it lands over the feed and under the bar.
+     * The recording draws the view, overlay included, and the frost skips itself while it does.
+     * The blur sits inside [node], which clips it and fades it: a blurred node drawn at less than
+     * full alpha spreads its clamped edge a blur's reach past its own box, the strip left above a
+     * tab bar sliding away (#250).
+     */
+    @RequiresApi(Build.VERSION_CODES.S)
+    static final class Frost extends Drawable {
+        final View host;
+        final RenderNode node = new RenderNode("Hushfacebook frost");
+        final RenderNode blur = new RenderNode("Hushfacebook frost blur");
+        private final int[] origin = new int[2];
+        /** The recorded part of the host, in its coordinates, and record's scratch box. */
+        private final Rect inside = new Rect();
+        private final Rect box = new Rect();
+        /** The pill's corners, for a rounded tab bar (#344). */
+        private final Outline outline = new Outline();
+        private boolean recording;
+        /** Whether it was drawn yet, for the debug log. */
+        private boolean drawn;
+        int frame;
+
+        Frost(View host, float radius) {
+            this.host = host;
+            float small = radius / FROST_SCALE;
+            blur.setRenderEffect(RenderEffect.createBlurEffect(small, small, Shader.TileMode.CLAMP));
+            blur.setClipToBounds(true);
+            node.setClipToBounds(true);
+            setBounds(0, 0, host.getWidth(), host.getHeight());
+            host.getOverlay().add(this);
+        }
+
+        /**
+         * Records what's under [area], the bar's fills on screen in the window, drawn as much as
+         * [shown], with [corner] the radius of its corners for a rounded tab bar's pill (0 is square).
+         */
+        void update(Rect area, float shown, int frame, float corner) {
+            this.frame = frame;
+            if (getBounds().width() != host.getWidth() || getBounds().height() != host.getHeight()) {
+                setBounds(0, 0, host.getWidth(), host.getHeight());
+            }
+            host.getLocationInWindow(origin);
+            int left = area.left - origin[0];
+            int top = area.top - origin[1];
+            int width = area.width();
+            int height = area.height();
+            node.setPosition(left, top, left + width, top + height);
+            node.setAlpha(shown);
+            if (corner > 0f) {
+                outline.setRoundRect(0, 0, width, height, corner);
+                node.setOutline(outline);
+            } else {
+                node.setOutline(null);
+            }
+            node.setClipToOutline(corner > 0f);
+            // Drawn FROST_SCALE times smaller and blurred there, then drawn back at full size.
+            int smallWidth = small(width);
+            int smallHeight = small(height);
+            blur.setPosition(0, 0, smallWidth, smallHeight);
+            RecordingCanvas canvas = blur.beginRecording(smallWidth, smallHeight);
+            recording = true;
+            try {
+                canvas.scale(1f / FROST_SCALE, 1f / FROST_SCALE);
+                canvas.translate(-left, -top);
+                inside.set(left, top, left + width, top + height);
+                record(host, canvas, inside, box);
+            } finally {
+                recording = false;
+                blur.endRecording();
+            }
+            RecordingCanvas whole = node.beginRecording(width, height);
+            whole.scale(FROST_SCALE, FROST_SCALE);
+            whole.drawRenderNode(blur);
+            node.endRecording();
+        }
+
+        /** [size] pixels drawn {@link #FROST_SCALE} times smaller, rounded up so the copy covers it all. */
+        static int small(int size) {
+            return Math.max(1, (size + FROST_SCALE - 1) / FROST_SCALE);
+        }
+
+        /** Draws nothing this frame, for a bar out of sight. */
+        void empty(int frame) {
+            this.frame = frame;
+            node.setPosition(0, 0, 0, 0);
+            node.beginRecording(0, 0);
+            node.endRecording();
+            blur.discardDisplayList();
+        }
+
+        void remove() {
+            host.getOverlay().remove(this);
+            node.discardDisplayList();
+            blur.discardDisplayList();
+        }
+
+        @Override
+        public void draw(Canvas canvas) {
+            if (recording || !canvas.isHardwareAccelerated()) return;
+            // An overlay draws in its host's scrolled content (View translates by -scroll first), so
+            // a scrolled host would put the frost off by its scroll. [node] sits where the host
+            // shows, the way record() copies it.
+            int saved = canvas.save();
+            canvas.translate(host.getScrollX(), host.getScrollY());
+            canvas.drawRenderNode(node);
+            canvas.restoreToCount(saved);
+            if (!drawn) {
+                drawn = true;
+                Logger.printDebug(() -> "See-through bars: frost drawn in " + host.getClass().getSimpleName()
+                        + " scrolled " + host.getScrollX() + "," + host.getScrollY());
+            }
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+        }
+
+        @Override
+        public void setColorFilter(@Nullable ColorFilter filter) {
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
+    }
+}
