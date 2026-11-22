@@ -81,6 +81,15 @@
       "menu": "Home screen shortcut",
       "highlights": "🚫 🛡️ 🎨",
       "blurb": "Price history, ad-free pages, dark mode"
+    },
+    "kr.co.smartstudy.bebefinnparty_android_googlemarket": {
+      "name": "Bebefinn Party",
+      "slug": "bebefinn-party",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "blurb": "No ads in the game"
     }
   }
 }

@@ -188,6 +188,7 @@ final class UpdateChecker {
         if (pkg.contains("apps.photos")) names.add("Google Photos");
         if (pkg.contains("mxtech")) names.add("MX Player");
         if (pkg.contains("amazon")) names.add("Amazon Shopping");
+        if (pkg.contains("bebefinnparty")) names.add("Bebefinn Party");
         return names;
     }
 

@@ -76,6 +76,8 @@ public final class MenuInfo {
             rows.add(new String[]{"Open links in browser", flag(flags, "app.loki.menu.amazonlinks")});
             rows.add(new String[]{"Hide Alexa for Shopping tab", flag(flags, "app.loki.menu.amazonalexa")});
             rows.add(new String[]{"Fix Amazon manifest conflicts", flag(flags, "app.loki.menu.amazonmanifest")});
+        } else if (pkg.startsWith("kr.co.smartstudy.bebefinnparty")) {
+            rows.add(new String[]{"Hide ads (Bebefinn Party)", flag(flags, "app.loki.menu.pinkfongads")});
         } else if (pkg.startsWith("com.mxtech.videoplayer")) {
             rows.add(new String[]{"All codecs", flag(flags, "app.loki.menu.codec")});
             rows.add(new String[]{"Skip license check", flag(flags, "app.loki.menu.license")});
