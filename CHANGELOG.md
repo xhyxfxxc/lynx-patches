@@ -1,3 +1,10 @@
+## 3.7.0 (2026-11-22)
+
+### New Features
+- **Bebefinn Party:** Bebefinn Party joins the bundle - its banner, full-screen and app-open ads never load.
+
+**56 patches for 8 apps.** Full list in the [README](https://github.com/[secure]/lynx-patches#apps).
+
 ## 3.6.1 (2026-11-21)
 
 ### Fixes

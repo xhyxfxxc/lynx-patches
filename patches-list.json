@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "3.6.1",
+  "version": "3.7.0",
   "patches": [
     {
       "name": "AMOLED black (Splitwise)",
@@ -1323,6 +1323,43 @@
             },
             {
               "version": "4.1.1275",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Hide ads (Bebefinn Party)",
+      "description": "Removes Bebefinn Party's ads (Google AdMob with Unity Ads and Liftoff): banners, full-screen ads and app-open ads never load.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch",
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "kr.co.smartstudy.bebefinnparty_android_googlemarket",
+          "name": "Bebefinn Party",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#FA3E76",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "1.8",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
