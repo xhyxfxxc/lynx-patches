@@ -193,12 +193,12 @@ val generateGboardVersionBindings = tasks.register<GenerateTargetBindingsTask>(
 
 patches {
     about {
-        name = "Gboard Patches"
+        name = "Gboard patches (Lynx build)"
         description = "Morphe patches for Gboard."
-        source = "https://github.com/jasonwu1994/gboard-patches"
-        author = "Jason Wu"
-        contact = "https://github.com/jasonwu1994/gboard-patches/issues"
-        website = "https://github.com/jasonwu1994/gboard-patches"
+        source = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/gboard"
+        author = "Jason Wu, modified by xhyxfxxc"
+        contact = "https://github.com/xhyxfxxc/lynx-patches/issues"
+        website = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/gboard"
         license = "GPLv3"
     }
 }
