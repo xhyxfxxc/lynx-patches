@@ -23,6 +23,8 @@ private object HideFABFingerprint : Fingerprint(
         listOf(
             string("android_compose_fab_menu_enabled"),
         ),
+    // Lynx: the pack's own extension class FeatureSwitchPatch holds the same string. Match X's own code only.
+    custom = { _, classDef -> classDef.type.startsWith("Lcom/twitter/") },
 )
 
 @Suppress("unused")
