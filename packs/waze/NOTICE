@@ -1,3 +1,12 @@
+bearinmind Waze patches (Lynx build) NOTICE
+===========================================
+
+This is a modified version of bearinmind patches 2.10.0 by bearinmindcat
+(https://github.com/bearinmindcat/morphe-patches), built and published by xhyxfxxc as part of Lynx Patches
+(https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/waze). It is not the original
+and its author has not endorsed it. What was changed is listed in LYNX.md in that folder.
+The notices of the original follow unchanged.
+
 Morphe NOTICE
 =============
 

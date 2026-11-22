@@ -2,12 +2,12 @@ group = "org.ungoogled"
 
 patches {
     about {
-        name = "bearinmind patches"
+        name = "bearinmind Waze patches (Lynx build)"
         description = "Waze: true black, no ads, speed camera and alert settings."
-        source = "git@github.com:bearinmindcat/morphe-patches.git"
-        author = "bearinmindcat"
+        source = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/waze"
+        author = "bearinmindcat, modified by xhyxfxxc"
         contact = "https://github.com/bearinmindcat"
-        website = "https://github.com/bearinmindcat/morphe-patches"
+        website = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/waze"
         license = "GPLv3"
     }
 }
