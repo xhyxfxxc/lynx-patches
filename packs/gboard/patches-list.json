@@ -1,5 +1,5 @@
 {
-  "version": "4.4.0",
+  "version": "4.4.0-lynx.1",
   "patches": [
     {
       "name": "AI Writing Tools",
@@ -27,7 +27,7 @@
     },
     {
       "name": "Add Gboard Signature Bypass",
-      "description": "攔截 Gboard 的簽章白名單檢查並強制通過\nBypass Gboard signature whitelist checks and force them to pass.",
+      "description": "攔截 Gboard 的簽章白名單檢查並強制通過\nBypass Gboard signature whitelist checks and force them to pass. Lynx: only Gboard's check of its own package is bypassed.",
       "use": true,
       "dependencies": [],
       "compatiblePackages": {
@@ -243,8 +243,8 @@
     },
     {
       "name": "FTP Server",
-      "description": "新增區域網路 FTP 伺服器，支援檔案瀏覽、傳輸與下載續傳\nAdd a LAN FTP server with file browsing, transfers, and download resume.",
-      "use": true,
+      "description": "新增區域網路 FTP 伺服器，支援檔案瀏覽、傳輸與下載續傳\nLynx: off by default. When switched on it lets other devices on the network read and write the phone's shared storage over plain FTP. Add a LAN FTP server with file browsing, transfers, and download resume.",
+      "use": false,
       "dependencies": [],
       "compatiblePackages": {
         "com.google.android.inputmethod.latin": [
@@ -535,8 +535,8 @@
     },
     {
       "name": "Web Clipboard",
-      "description": "新增手機自架的 Web Clipboard，支援瀏覽器同步、配對碼與快速設定開關\nAdd the phone-hosted Web Clipboard with browser sync, pairing, and a Quick Settings Tile.",
-      "use": true,
+      "description": "新增手機自架的 Web Clipboard，支援瀏覽器同步、配對碼與快速設定開關\nLynx: off by default. It runs a web server inside the keyboard that other devices on the network can reach. Add the phone-hosted Web Clipboard with browser sync, pairing, and a Quick Settings Tile.",
+      "use": false,
       "dependencies": [],
       "compatiblePackages": {
         "com.google.android.inputmethod.latin": [
