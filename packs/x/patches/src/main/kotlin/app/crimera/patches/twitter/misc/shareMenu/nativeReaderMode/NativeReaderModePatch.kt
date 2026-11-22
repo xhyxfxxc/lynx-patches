@@ -18,7 +18,9 @@ import app.morphe.patcher.patch.patch
 val nativeReaderModePatch =
     patch(
         name = "Native reader mode",
-        description = "Requires X 11.0.0-release.0 or higher.",
+        description = "Requires X 11.0.0-release.0 or higher. Lynx: off by default, because it loads posts " +
+            "from the third-party site twitter-thread.com into a web view.",
+        default = false,
     ) {
         compatibleWith(COMPATIBILITY_X)
         dependsOn(
