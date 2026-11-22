@@ -25,7 +25,7 @@ class GboardWebClipboardPatchRegistrySourceTest {
         val patch = gboardWebClipboardPatch
         assertEquals("Web Clipboard", patch.name)
         assertEquals(WEB_CLIPBOARD_DESCRIPTION, patch.description)
-        assertTrue(patch.default)
+        assertFalse(patch.default)
         assertTrue(patch.options.isEmpty())
 
         val expectedDependencies = listOf(
@@ -60,7 +60,7 @@ class GboardWebClipboardPatchRegistrySourceTest {
         val rows = patches.filter { it.get("name").asString == "Web Clipboard" }
         assertEquals(1, rows.size)
         val row = rows.single()
-        assertTrue(row.get("use").asBoolean)
+        assertFalse(row.get("use").asBoolean)
         assertEquals(WEB_CLIPBOARD_DESCRIPTION, row.get("description").asString)
         val compatiblePackages = row.getAsJsonObject("compatiblePackages")
         assertEquals(setOf(GBOARD_PACKAGE), compatiblePackages.keySet())
@@ -109,6 +109,8 @@ class GboardWebClipboardPatchRegistrySourceTest {
         const val TARGET_VERSION = "18.5.4.993608717-release-arm64-v8a"
         const val WEB_CLIPBOARD_DESCRIPTION =
             "新增手機自架的 Web Clipboard，支援瀏覽器同步、配對碼與快速設定開關\n" +
+                "Lynx: off by default. It runs a web server inside the keyboard that other " +
+                "devices on the network can reach. " +
                 "Add the phone-hosted Web Clipboard with browser sync, pairing, and a " +
                 "Quick Settings Tile."
         const val BINDINGS_JSON_PATH =

@@ -667,8 +667,10 @@ val gboardClipboardContentLimitPatch = gboardPublicResourcePatch(
 val gboardWebClipboardPatch = gboardPublicResourcePatch(
     featureId = "web_clipboard",
     name = "Web Clipboard",
-    description = "新增手機自架的 Web Clipboard，支援瀏覽器同步、配對碼與快速設定開關\nAdd the phone-hosted Web Clipboard with browser sync, pairing, and a Quick Settings Tile.",
-    default = true
+    description = "新增手機自架的 Web Clipboard，支援瀏覽器同步、配對碼與快速設定開關\n" +
+        "Lynx: off by default. It runs a web server inside the keyboard that other devices on the network can reach. " +
+        "Add the phone-hosted Web Clipboard with browser sync, pairing, and a Quick Settings Tile.",
+    default = false
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
