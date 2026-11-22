@@ -70,7 +70,8 @@
         "tasks": ":patches:buildAndroid",
         "output": "patches/build/libs/patches-*.mpp",
         "args": ""
-      }
+      },
+      "commit": "0e76cab3bb37b7034bab6ef7a08aef399f346287"
     },
     "waze": {
       "title": "bearinmind Waze patches (Lynx build)",
