@@ -540,11 +540,6 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
                         L10n.t("Threads doesn't show up when you share from other apps. Sharing from Threads to other "
                                 + "apps still works.")), SettingsIcons.SHARE));
             }
-            if (build.contains(PatchFamily.TRUST_USER_CERTIFICATES)) {
-                patched.addPreference(mark(info(context, L10n.t("User certificates trusted"),
-                        L10n.t("Threads accepts security certificates you added to your phone. Its own checks on "
-                            + "Meta's certificates are unchanged, so a proxy still can't read most of its traffic.")), SettingsIcons.PATCHED));
-            }
             patched.addPreference(info(context, L10n.t("Changing these"),
                     L10n.t("They're chosen in Morphe Manager when you patch, and Pause doesn't turn them off. "
                             + "Patch again to change them.")));

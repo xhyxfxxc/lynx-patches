@@ -82,7 +82,7 @@ On a new phone, import the key before you patch anything. Reinstalling Manager o
 
 ## Patches
 
-HushThreads has 26 patches. Morphe Manager's default selection has all but five: `Change app name`, `Change package name`, `Change version code`, `Remove share targets` and `Trust user-added certificates`. Those five change Threads when you patch and have no switch to undo them. The first two make a second app you install beside Threads, with its own sign-in. Most of the others have a switch in HushThreads settings, and each row below says where it is and how it starts.
+HushThreads has 25 patches. Morphe Manager's default selection has all but four: `Change app name`, `Change package name`, `Change version code` and `Remove share targets`. Those four change Threads when you patch and have no switch to undo them. The first two make a second app you install beside Threads, with its own sign-in. Most of the others have a switch in HushThreads settings, and each row below says where it is and how it starts.
 
 | Patch | What it does |
 |---|---|
@@ -111,7 +111,6 @@ HushThreads has 26 patches. Morphe Manager's default selection has all but five:
 | `Spoof SIM region` | Threads sees a SIM and network from a country you pick, with one of that country's real carriers, instead of your own. Meta can still go by your connection and your account. Starts off. Turn it on in HushThreads settings > Privacy. |
 | `Save photos and videos` | Adds Save to a post's menu, below Copy link. It saves the photo or video to your gallery, every page of a carousel too, and on a text post it saves the video that post links or quotes. Good for keeping posts you like. On by default. Turn it off in HushThreads settings > Downloads. |
 | `Show exact post times` | Posts and replies show the date and time they went up instead of 3h or 2d, in your phone's 12 or 24-hour format. Good if you want to know exactly when something was posted. Starts off. Turn it on in HushThreads settings > Posts. |
-| `Trust user-added certificates` | Lets Threads accept security certificates you installed yourself, such as for a work network or a debugging proxy. Meta's own checks stay, so a proxy can't read most traffic. It isn't selected by default. Works as soon as you patch it in, with no switch. |
 
 The switches in the Appearance section take effect after you restart Threads. A Restart row shows at the top of HushThreads settings when you flip one. Tap it and Threads reopens in HushThreads settings.
 

@@ -103,7 +103,6 @@ public class HushThreadsPreferenceFragmentTest {
         ROW_TITLES.put(PatchFamily.RESTORE_TRUST, "Re-signed build fix");
         ROW_TITLES.put(PatchFamily.VERSION_CODE, "Version code raised");
         ROW_TITLES.put(PatchFamily.REMOVE_SHARE_TARGETS, "Share sheet entry removed");
-        ROW_TITLES.put(PatchFamily.TRUST_USER_CERTIFICATES, "User certificates trusted");
         ROW_TITLES.put(PatchFamily.CHANGE_PACKAGE_NAME, "Own package name");
         ROW_TITLES.put(PatchFamily.CHANGE_APP_NAME, "Own app name");
     }

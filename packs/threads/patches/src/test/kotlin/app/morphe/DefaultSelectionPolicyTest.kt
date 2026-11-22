@@ -24,8 +24,6 @@ class DefaultSelectionPolicyTest {
             "means uninstalling, and every later build has to carry it too or it won't install over this one.",
         "Remove share targets" to "It takes Threads' share entries out of the manifest when you patch, with no " +
             "switch, so getting them back means patching again.",
-        "Trust user-added certificates" to "It lets certificates you installed yourself past Android's checks in " +
-            "Threads, with no switch, which weakens what protects Threads' traffic.",
         "Change package name" to "It makes a second app beside Threads, with its own data and sign-in, instead " +
             "of an update to the Threads you have, so it's only for people who want both.",
         "Change app name" to "It renames the app under its icon, which only helps tell a copy made with Change " +

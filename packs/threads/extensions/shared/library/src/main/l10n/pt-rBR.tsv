@@ -268,9 +268,6 @@ the raised version code	o código de versão aumentado
 Share sheet entry removed	Entrada do menu de compartilhamento removida
 Threads doesn't show up when you share from other apps. Sharing from Threads to other apps still works.	O Threads não aparece quando você compartilha de outros apps. Compartilhar do Threads para outros apps continua funcionando.
 the removed share sheet entry	a entrada removida do menu de compartilhamento
-User certificates trusted	Certificados do usuário confiáveis
-Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.	O Threads aceita certificados de segurança que você adicionou ao celular. As verificações próprias dos certificados da Meta não mudam, então um proxy ainda não consegue ler a maior parte do tráfego.
-the user certificate trust	a confiança nos certificados do usuário
 Own package name	Nome de pacote próprio
 This copy installs beside Threads as an app of its own, with its own sign-in.	Esta cópia é instalada ao lado do Threads como um app à parte, com login próprio.
 the new package name	o novo nome de pacote

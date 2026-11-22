@@ -110,10 +110,6 @@ public final class SettingsStatus {
         return false;
     }
 
-    public static boolean trustUserCertificates() {
-        return false;
-    }
-
     public static boolean filterComments() {
         return false;
     }

@@ -271,9 +271,6 @@ the raised version code	yükseltilmiş sürüm kodu
 Share sheet entry removed	Paylaşım menüsü girişi kaldırıldı
 Threads doesn't show up when you share from other apps. Sharing from Threads to other apps still works.	Diğer uygulamalardan paylaşırken Threads görünmez. Threads'ten diğer uygulamalara paylaşım çalışmaya devam eder.
 the removed share sheet entry	kaldırılan paylaşım menüsü girişi
-User certificates trusted	Kullanıcı sertifikalarına güveniliyor
-Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.	Threads, telefonuna eklediğin güvenlik sertifikalarını kabul eder. Meta sertifikalarına yaptığı kendi kontroller değişmez, bu yüzden bir proxy trafiğinin çoğunu yine okuyamaz.
-the user certificate trust	kullanıcı sertifikalarına duyulan güven
 Own package name	Kendi paket adı
 This copy installs beside Threads as an app of its own, with its own sign-in.	Bu kopya, Threads'in yanına kendi oturum açma bilgisiyle ayrı bir uygulama olarak kurulur.
 the new package name	yeni paket adı

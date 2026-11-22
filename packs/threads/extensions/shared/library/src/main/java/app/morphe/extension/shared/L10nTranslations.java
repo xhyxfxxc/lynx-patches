@@ -53,7 +53,7 @@ public final class L10nTranslations {
     }
 
     private static Map<String, String> buildDe() {
-        Map<String, String> table = new HashMap<>(694);
+        Map<String, String> table = new HashMap<>(688);
         fillDe0(table);
         fillDe1(table);
         fillDe2(table);
@@ -687,8 +687,6 @@ public final class L10nTranslations {
                 "Diese Kopie wird neben Threads als eigene App installiert, mit eigener Anmeldung.");
         table.put("This phone has no file picker, so there's no way to choose a file here.",
                 "Dieses Handy hat keine Dateiauswahl, hier l\u00e4sst sich also keine Datei w\u00e4hlen.");
-        table.put("Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.",
-                "Threads akzeptiert Sicherheitszertifikate, die du auf deinem Handy hinzugef\u00fcgt hast. Die eigenen Pr\u00fcfungen der Meta-Zertifikate bleiben unver\u00e4ndert, deshalb kann ein Proxy den Gro\u00dfteil des Datenverkehrs weiterhin nicht lesen.");
         table.put("Threads can't read your phone's advertising ID. The permission for it is gone from this build.",
                 "Threads kann die Werbe-ID deines Telefons nicht lesen. Die Berechtigung daf\u00fcr fehlt in diesem Build.");
         table.put("Threads closes and reopens on this page.",
@@ -723,8 +721,6 @@ public final class L10nTranslations {
                 "Bis zum Fortsetzen verh\u00e4lt sich jeder Schalter au\u00dfer der Debug-Protokollierung, als w\u00e4re er aus. Was beim Patchen festgelegt wurde, bleibt aktiv.");
         table.put("Updates",
                 "Updates");
-        table.put("User certificates trusted",
-                "Eigenen Zertifikaten wird vertraut");
         table.put("Version",
                 "Version");
         table.put("Version %1$s",
@@ -771,12 +767,10 @@ public final class L10nTranslations {
                 "die entfernte Berechtigung f\u00fcr die Werbe-ID");
         table.put("the removed share sheet entry",
                 "der entfernte Eintrag im Teilen-Men\u00fc");
-        table.put("the user certificate trust",
-                "das Vertrauen in eigene Zertifikate");
     }
 
     private static Map<String, String> buildEs() {
-        Map<String, String> table = new HashMap<>(694);
+        Map<String, String> table = new HashMap<>(688);
         fillEs0(table);
         fillEs1(table);
         fillEs2(table);
@@ -1410,8 +1404,6 @@ public final class L10nTranslations {
                 "Esta copia se instala junto a Threads como una app aparte, con su propio inicio de sesi\u00f3n.");
         table.put("This phone has no file picker, so there's no way to choose a file here.",
                 "Este tel\u00e9fono no tiene selector de archivos, as\u00ed que aqu\u00ed no hay forma de elegir un archivo.");
-        table.put("Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.",
-                "Threads acepta los certificados de seguridad que a\u00f1adiste a tu tel\u00e9fono. Sus propias comprobaciones de los certificados de Meta no cambian, as\u00ed que un proxy sigue sin poder leer la mayor parte de su tr\u00e1fico.");
         table.put("Threads can't read your phone's advertising ID. The permission for it is gone from this build.",
                 "Threads no puede leer el ID de publicidad de tu tel\u00e9fono. El permiso para ello ya no est\u00e1 en esta versi\u00f3n.");
         table.put("Threads closes and reopens on this page.",
@@ -1446,8 +1438,6 @@ public final class L10nTranslations {
                 "Hasta que reanudes, todos los interruptores, salvo el Registro de depuraci\u00f3n, funcionan como si estuvieran desactivados. Lo que se aplic\u00f3 al parchear se mantiene.");
         table.put("Updates",
                 "Actualizaciones");
-        table.put("User certificates trusted",
-                "Certificados del usuario de confianza");
         table.put("Version",
                 "Versi\u00f3n");
         table.put("Version %1$s",
@@ -1494,12 +1484,10 @@ public final class L10nTranslations {
                 "el permiso del ID de publicidad eliminado");
         table.put("the removed share sheet entry",
                 "la entrada eliminada del men\u00fa para compartir");
-        table.put("the user certificate trust",
-                "la confianza en los certificados del usuario");
     }
 
     private static Map<String, String> buildIn() {
-        Map<String, String> table = new HashMap<>(694);
+        Map<String, String> table = new HashMap<>(688);
         fillIn0(table);
         fillIn1(table);
         fillIn2(table);
@@ -2133,8 +2121,6 @@ public final class L10nTranslations {
                 "Salinan ini terpasang di samping Threads sebagai aplikasi tersendiri, dengan login sendiri.");
         table.put("This phone has no file picker, so there's no way to choose a file here.",
                 "Ponsel ini tidak memiliki pemilih file, jadi file tidak dapat dipilih di sini.");
-        table.put("Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.",
-                "Threads menerima sertifikat keamanan yang Anda tambahkan ke ponsel. Pemeriksaan sendiri atas sertifikat Meta tidak berubah, jadi proxy tetap tidak bisa membaca sebagian besar lalu lintasnya.");
         table.put("Threads can't read your phone's advertising ID. The permission for it is gone from this build.",
                 "Threads tidak dapat membaca ID iklan ponsel Anda. Izin untuk itu sudah dihapus dari build ini.");
         table.put("Threads closes and reopens on this page.",
@@ -2169,8 +2155,6 @@ public final class L10nTranslations {
                 "Sampai Anda melanjutkan, semua sakelar kecuali Pencatatan debug dianggap nonaktif. Yang diatur saat Anda menambal tetap aktif.");
         table.put("Updates",
                 "Pembaruan");
-        table.put("User certificates trusted",
-                "Sertifikat pengguna dipercaya");
         table.put("Version",
                 "Versi");
         table.put("Version %1$s",
@@ -2217,12 +2201,10 @@ public final class L10nTranslations {
                 "izin ID iklan yang dihapus");
         table.put("the removed share sheet entry",
                 "entri lembar bagikan yang dihapus");
-        table.put("the user certificate trust",
-                "kepercayaan pada sertifikat pengguna");
     }
 
     private static Map<String, String> buildIt() {
-        Map<String, String> table = new HashMap<>(694);
+        Map<String, String> table = new HashMap<>(688);
         fillIt0(table);
         fillIt1(table);
         fillIt2(table);
@@ -2856,8 +2838,6 @@ public final class L10nTranslations {
                 "Questa copia si installa accanto a Threads come app a s\u00e9, con un accesso tutto suo.");
         table.put("This phone has no file picker, so there's no way to choose a file here.",
                 "Questo telefono non ha un selettore di file, quindi qui non \u00e8 possibile scegliere un file.");
-        table.put("Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.",
-                "Threads accetta i certificati di sicurezza che hai aggiunto al telefono. I suoi controlli sui certificati di Meta restano invariati, quindi un proxy non pu\u00f2 comunque leggere gran parte del suo traffico.");
         table.put("Threads can't read your phone's advertising ID. The permission for it is gone from this build.",
                 "Threads non pu\u00f2 leggere l'ID pubblicitario del telefono. Il relativo permesso \u00e8 stato rimosso da questa build.");
         table.put("Threads closes and reopens on this page.",
@@ -2892,8 +2872,6 @@ public final class L10nTranslations {
                 "Finch\u00e9 non riprendi, ogni interruttore tranne Log di debug agisce come se fosse disattivato. Le modifiche fatte durante la patch restano attive.");
         table.put("Updates",
                 "Aggiornamenti");
-        table.put("User certificates trusted",
-                "Certificati utente considerati attendibili");
         table.put("Version",
                 "Versione");
         table.put("Version %1$s",
@@ -2940,12 +2918,10 @@ public final class L10nTranslations {
                 "il permesso dell'ID pubblicitario rimosso");
         table.put("the removed share sheet entry",
                 "la voce del menu di condivisione rimossa");
-        table.put("the user certificate trust",
-                "l'attendibilit\u00e0 dei certificati utente");
     }
 
     private static Map<String, String> buildKo() {
-        Map<String, String> table = new HashMap<>(694);
+        Map<String, String> table = new HashMap<>(688);
         fillKo0(table);
         fillKo1(table);
         fillKo2(table);
@@ -3579,8 +3555,6 @@ public final class L10nTranslations {
                 "\uc774 \uc0ac\ubcf8\uc740 Threads \uc606\uc5d0 \ubcc4\ub3c4 \uc571\uc73c\ub85c \uc124\uce58\ub418\uba70 \ub85c\uadf8\uc778\ub3c4 \ub530\ub85c \ud569\ub2c8\ub2e4.");
         table.put("This phone has no file picker, so there's no way to choose a file here.",
                 "\uc774 \ud734\ub300\uc804\ud654\uc5d0\ub294 \ud30c\uc77c \uc120\ud0dd\uae30\uac00 \uc5c6\uc5b4\uc11c \uc5ec\uae30\uc11c \ud30c\uc77c\uc744 \uc120\ud0dd\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.");
-        table.put("Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.",
-                "Threads\uac00 \ud734\ub300\uc804\ud654\uc5d0 \ucd94\uac00\ud55c \ubcf4\uc548 \uc778\uc99d\uc11c\ub97c \ud5c8\uc6a9\ud569\ub2c8\ub2e4. Meta \uc778\uc99d\uc11c\uc5d0 \ub300\ud55c \uc790\uccb4 \uac80\uc0ac\ub294 \uadf8\ub300\ub85c\uc774\ubbc0\ub85c \ud504\ub85d\uc2dc\ub294 \uc5ec\uc804\ud788 \ub300\ubd80\ubd84\uc758 \ud2b8\ub798\ud53d\uc744 \uc77d\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.");
         table.put("Threads can't read your phone's advertising ID. The permission for it is gone from this build.",
                 "Threads\uac00 \ud734\ub300\uc804\ud654\uc758 \uad11\uace0 ID\ub97c \uc77d\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \uc774 \ube4c\ub4dc\uc5d0\uc11c \ud574\ub2f9 \uad8c\ud55c\uc774 \uc81c\uac70\ub418\uc5c8\uc2b5\ub2c8\ub2e4.");
         table.put("Threads closes and reopens on this page.",
@@ -3615,8 +3589,6 @@ public final class L10nTranslations {
                 "\uc7ac\uac1c\ud560 \ub54c\uae4c\uc9c0 \ub514\ubc84\uadf8 \ub85c\uadf8\ub97c \uc81c\uc678\ud55c \ubaa8\ub4e0 \uc2a4\uc704\uce58\uac00 \uaebc\uc9c4 \uac83\ucc98\ub7fc \uc791\ub3d9\ud569\ub2c8\ub2e4. \ud328\uce58\ud560 \ub54c \uc801\uc6a9\ub41c \ubcc0\uacbd \uc0ac\ud56d\uc740 \uc720\uc9c0\ub429\ub2c8\ub2e4.");
         table.put("Updates",
                 "\uc5c5\ub370\uc774\ud2b8");
-        table.put("User certificates trusted",
-                "\uc0ac\uc6a9\uc790 \uc778\uc99d\uc11c \uc2e0\ub8b0\ub428");
         table.put("Version",
                 "\ubc84\uc804");
         table.put("Version %1$s",
@@ -3663,12 +3635,10 @@ public final class L10nTranslations {
                 "\uc81c\uac70\ub41c \uad11\uace0 ID \uad8c\ud55c");
         table.put("the removed share sheet entry",
                 "\uc81c\uac70\ub41c \uacf5\uc720 \uc2dc\ud2b8 \ud56d\ubaa9");
-        table.put("the user certificate trust",
-                "\uc0ac\uc6a9\uc790 \uc778\uc99d\uc11c \uc2e0\ub8b0");
     }
 
     private static Map<String, String> buildPt_rBR() {
-        Map<String, String> table = new HashMap<>(694);
+        Map<String, String> table = new HashMap<>(688);
         fillPt_rBR0(table);
         fillPt_rBR1(table);
         fillPt_rBR2(table);
@@ -4302,8 +4272,6 @@ public final class L10nTranslations {
                 "Esta c\u00f3pia \u00e9 instalada ao lado do Threads como um app \u00e0 parte, com login pr\u00f3prio.");
         table.put("This phone has no file picker, so there's no way to choose a file here.",
                 "Este dispositivo n\u00e3o tem seletor de arquivos, ent\u00e3o n\u00e3o \u00e9 poss\u00edvel escolher um arquivo aqui.");
-        table.put("Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.",
-                "O Threads aceita certificados de seguran\u00e7a que voc\u00ea adicionou ao celular. As verifica\u00e7\u00f5es pr\u00f3prias dos certificados da Meta n\u00e3o mudam, ent\u00e3o um proxy ainda n\u00e3o consegue ler a maior parte do tr\u00e1fego.");
         table.put("Threads can't read your phone's advertising ID. The permission for it is gone from this build.",
                 "O Threads n\u00e3o consegue ler o ID de publicidade do seu celular. A permiss\u00e3o para isso foi removida desta vers\u00e3o.");
         table.put("Threads closes and reopens on this page.",
@@ -4338,8 +4306,6 @@ public final class L10nTranslations {
                 "At\u00e9 voc\u00ea retomar, todas as op\u00e7\u00f5es, menos o Registro de depura\u00e7\u00e3o, funcionam como se estivessem desligadas. O que foi definido ao aplicar os patches continua ativo.");
         table.put("Updates",
                 "Atualiza\u00e7\u00f5es");
-        table.put("User certificates trusted",
-                "Certificados do usu\u00e1rio confi\u00e1veis");
         table.put("Version",
                 "Vers\u00e3o");
         table.put("Version %1$s",
@@ -4386,12 +4352,10 @@ public final class L10nTranslations {
                 "a permiss\u00e3o do ID de publicidade removida");
         table.put("the removed share sheet entry",
                 "a entrada removida do menu de compartilhamento");
-        table.put("the user certificate trust",
-                "a confian\u00e7a nos certificados do usu\u00e1rio");
     }
 
     private static Map<String, String> buildTr() {
-        Map<String, String> table = new HashMap<>(694);
+        Map<String, String> table = new HashMap<>(688);
         fillTr0(table);
         fillTr1(table);
         fillTr2(table);
@@ -5025,8 +4989,6 @@ public final class L10nTranslations {
                 "Bu kopya, Threads'in yan\u0131na kendi oturum a\u00e7ma bilgisiyle ayr\u0131 bir uygulama olarak kurulur.");
         table.put("This phone has no file picker, so there's no way to choose a file here.",
                 "Bu telefonda dosya se\u00e7ici yok, bu y\u00fczden burada dosya se\u00e7menin bir yolu yok.");
-        table.put("Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.",
-                "Threads, telefonuna ekledi\u011fin g\u00fcvenlik sertifikalar\u0131n\u0131 kabul eder. Meta sertifikalar\u0131na yapt\u0131\u011f\u0131 kendi kontroller de\u011fi\u015fmez, bu y\u00fczden bir proxy trafi\u011finin \u00e7o\u011funu yine okuyamaz.");
         table.put("Threads can't read your phone's advertising ID. The permission for it is gone from this build.",
                 "Threads telefonunuzun reklam kimli\u011fini okuyamaz. Bunun i\u00e7in gereken izin bu s\u00fcr\u00fcmden kald\u0131r\u0131ld\u0131.");
         table.put("Threads closes and reopens on this page.",
@@ -5061,8 +5023,6 @@ public final class L10nTranslations {
                 "Devam ettirene kadar Hata ay\u0131klama g\u00fcnl\u00fc\u011f\u00fc d\u0131\u015f\u0131ndaki her anahtar kapal\u0131ym\u0131\u015f gibi davran\u0131r. Yamalad\u0131\u011f\u0131nda ayarlananlar devrede kal\u0131r.");
         table.put("Updates",
                 "G\u00fcncellemeler");
-        table.put("User certificates trusted",
-                "Kullan\u0131c\u0131 sertifikalar\u0131na g\u00fcveniliyor");
         table.put("Version",
                 "S\u00fcr\u00fcm");
         table.put("Version %1$s",
@@ -5109,12 +5069,10 @@ public final class L10nTranslations {
                 "kald\u0131r\u0131lan reklam kimli\u011fi izni");
         table.put("the removed share sheet entry",
                 "kald\u0131r\u0131lan payla\u015f\u0131m men\u00fcs\u00fc giri\u015fi");
-        table.put("the user certificate trust",
-                "kullan\u0131c\u0131 sertifikalar\u0131na duyulan g\u00fcven");
     }
 
     private static Map<String, String> buildZh_rTW() {
-        Map<String, String> table = new HashMap<>(694);
+        Map<String, String> table = new HashMap<>(688);
         fillZh_rTW0(table);
         fillZh_rTW1(table);
         fillZh_rTW2(table);
@@ -5748,8 +5706,6 @@ public final class L10nTranslations {
                 "\u9019\u500b\u526f\u672c\u6703\u4ee5\u7368\u7acb\u61c9\u7528\u7a0b\u5f0f\u7684\u5f62\u5f0f\u5b89\u88dd\u5728 Threads \u65c1\u908a\uff0c\u4e26\u4f7f\u7528\u81ea\u5df1\u7684\u767b\u5165\u3002");
         table.put("This phone has no file picker, so there's no way to choose a file here.",
                 "\u6b64\u624b\u6a5f\u6c92\u6709\u6a94\u6848\u9078\u64c7\u5668\uff0c\u56e0\u6b64\u7121\u6cd5\u5728\u6b64\u9078\u64c7\u6a94\u6848\u3002");
-        table.put("Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.",
-                "Threads \u63a5\u53d7\u4f60\u65b0\u589e\u81f3\u624b\u6a5f\u7684\u5b89\u5168\u6191\u8b49\u3002\u5b83\u5c0d Meta \u6191\u8b49\u7684\u6aa2\u67e5\u4e0d\u8b8a\uff0c\u56e0\u6b64\u4ee3\u7406\u4f3a\u670d\u5668\u4ecd\u7121\u6cd5\u8b80\u53d6\u5927\u90e8\u5206\u6d41\u91cf\u3002");
         table.put("Threads can't read your phone's advertising ID. The permission for it is gone from this build.",
                 "Threads \u7121\u6cd5\u8b80\u53d6\u4f60\u7684\u624b\u6a5f\u5ee3\u544a ID\u3002\u6b64\u7248\u672c\u5df2\u79fb\u9664\u76f8\u95dc\u6b0a\u9650\u3002");
         table.put("Threads closes and reopens on this page.",
@@ -5784,8 +5740,6 @@ public final class L10nTranslations {
                 "\u5728\u4f60\u7e7c\u7e8c\u524d\uff0c\u9664\u4e86\u300c\u5075\u932f\u8a18\u9304\u300d\u5916\uff0c\u6240\u6709\u958b\u95dc\u90fd\u6703\u5982\u540c\u95dc\u9589\u822c\u904b\u4f5c\u3002\u4fee\u88dc\u6642\u7684\u8b8a\u66f4\u4ecd\u6703\u4fdd\u7559\u3002");
         table.put("Updates",
                 "\u66f4\u65b0");
-        table.put("User certificates trusted",
-                "\u4fe1\u4efb\u4f7f\u7528\u8005\u6191\u8b49");
         table.put("Version",
                 "\u7248\u672c");
         table.put("Version %1$s",
@@ -5832,7 +5786,5 @@ public final class L10nTranslations {
                 "\u5df2\u79fb\u9664\u7684\u5ee3\u544a ID \u6b0a\u9650");
         table.put("the removed share sheet entry",
                 "\u5df2\u79fb\u9664\u7684\u5206\u4eab\u9762\u677f\u9805\u76ee");
-        table.put("the user certificate trust",
-                "\u4f7f\u7528\u8005\u6191\u8b49\u4fe1\u4efb");
     }
 }

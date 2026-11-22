@@ -271,9 +271,6 @@ the raised version code	kode versi yang dinaikkan
 Share sheet entry removed	Entri lembar bagikan dihapus
 Threads doesn't show up when you share from other apps. Sharing from Threads to other apps still works.	Threads tidak muncul saat kamu berbagi dari aplikasi lain. Berbagi dari Threads ke aplikasi lain tetap berfungsi.
 the removed share sheet entry	entri lembar bagikan yang dihapus
-User certificates trusted	Sertifikat pengguna dipercaya
-Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.	Threads menerima sertifikat keamanan yang Anda tambahkan ke ponsel. Pemeriksaan sendiri atas sertifikat Meta tidak berubah, jadi proxy tetap tidak bisa membaca sebagian besar lalu lintasnya.
-the user certificate trust	kepercayaan pada sertifikat pengguna
 Own package name	Nama paket sendiri
 This copy installs beside Threads as an app of its own, with its own sign-in.	Salinan ini terpasang di samping Threads sebagai aplikasi tersendiri, dengan login sendiri.
 the new package name	nama paket baru

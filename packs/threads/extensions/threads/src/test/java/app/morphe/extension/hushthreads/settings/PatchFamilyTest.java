@@ -174,7 +174,6 @@ public class PatchFamilyTest {
         assertEquals(Collections.emptyList(), PatchFamily.missingDefaults(build));
         build.remove(PatchFamily.VERSION_CODE);
         build.remove(PatchFamily.REMOVE_SHARE_TARGETS);
-        build.remove(PatchFamily.TRUST_USER_CERTIFICATES);
         build.remove(PatchFamily.CHANGE_PACKAGE_NAME);
         build.remove(PatchFamily.CHANGE_APP_NAME);
         assertEquals(Collections.emptyList(), PatchFamily.missingDefaults(build));
@@ -189,7 +188,7 @@ public class PatchFamilyTest {
         assertEquals("left out of Manager's default selection: Hide ads, Hide suggested users",
                 lines.get(lines.size() - 1));
         assertEquals("not in this build: Hide ads, Hide suggested users, Change version code, Remove share targets, "
-                + "Trust user-added certificates, Change package name, Change app name", lines.get(lines.size() - 2));
+                + "Change package name, Change app name", lines.get(lines.size() - 2));
     }
 
     /** The new line goes through the redactor like the rest of the section and comes out whole. */
@@ -255,7 +254,7 @@ public class PatchFamilyTest {
                 "Sanitize sharing links: disabled by its switch (hushthreads_sanitize_sharing_links=off)",
                 "Remove the advertising ID: no switch, stays in while paused: the removed advertising ID permission",
                 "not in this build: Hide suggested users, Block background-return feed refresh, Disable video autoplay, Max image quality, Disable swipe to Search, Open links in browser, "
-                        + "Disable analytics, Disable screenshot detection, Spoof SIM region, Save photos and videos, Pure black dark mode, Hide the Instagram button, Hide ghost post bubbles, Full size profile pictures, Show exact post times, Filter comments, Restore screens on re-signed builds, Change version code, Remove share targets, Trust user-added certificates, "
+                        + "Disable analytics, Disable screenshot detection, Spoof SIM region, Save photos and videos, Pure black dark mode, Hide the Instagram button, Hide ghost post bubbles, Full size profile pictures, Show exact post times, Filter comments, Restore screens on re-signed builds, Change version code, Remove share targets, "
                         + "Change package name, Change app name",
                 "left out of Manager's default selection: Hide suggested users, Block background-return feed refresh, "
                         + "Disable video autoplay, Max image quality, Disable swipe to Search, Open links in browser, Disable analytics, Disable "
