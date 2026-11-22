@@ -18,7 +18,7 @@ make everyday apps work the way you want.
 [![Latest release](https://img.shields.io/github/v/release/xhyxfxxc/lynx-patches?sort=semver&style=for-the-badge&label=release&labelColor=0d1117&color=22d3ee)](https://github.com/xhyxfxxc/lynx-patches/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/xhyxfxxc/lynx-patches/total?style=for-the-badge&labelColor=0d1117&color=0ea5e9)](https://github.com/xhyxfxxc/lynx-patches/releases)
 <!-- BADGES_START -->
-[![apps](https://img.shields.io/badge/apps-8-2563eb?style=for-the-badge&labelColor=0d1117)](#apps) [![patches](https://img.shields.io/badge/patches-56-14b8a6?style=for-the-badge&labelColor=0d1117)](#apps)
+[![apps](https://img.shields.io/badge/apps-24-2563eb?style=for-the-badge&labelColor=0d1117)](#apps) [![patches](https://img.shields.io/badge/patches-80-14b8a6?style=for-the-badge&labelColor=0d1117)](#apps)
 <!-- BADGES_END -->
 [![Morphe](https://img.shields.io/badge/patches%20for-Morphe-06b6d4?style=for-the-badge&labelColor=0d1117)](https://morphe.software)
 [![License](https://img.shields.io/github/license/xhyxfxxc/lynx-patches?style=for-the-badge&labelColor=0d1117&color=6e7681)](LICENSE)
@@ -47,7 +47,7 @@ Every app with its highlights, the version it is built for, and which file to do
 for its features, patches and FAQ.
 
 <!-- APPS_START -->
-> **[v3.7.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.7.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**8** apps&nbsp;&nbsp;•&nbsp;&nbsp;**56** patches
+> **[v3.8.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.8.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**24** apps&nbsp;&nbsp;•&nbsp;&nbsp;**80** patches
 
 ### Featured
 
@@ -68,12 +68,28 @@ for its features, patches and FAQ.
 | App | Highlights | Patches | Version | File | Lynx Patches menu |
 |---|---|:---:|---|---|---|
 | <img src="assets/icons/com.amazon.mShop.android.shopping.png" width="20" height="20" align="top" alt=""> [**Amazon Shopping**](docs/apps/amazon-shopping.md) | 🚫 🛡️ 🎨 | 9 | `32.20.2.100` | **APKM (Android 12+)** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.bbschefgame_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Baby Shark Chef Cooking Game**](docs/apps/baby-shark-chef-cooking-game.md) | 🚫 | 2 | `4.04` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.babysharkcoloring_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Baby Shark Coloring Book**](docs/apps/baby-shark-coloring-book.md) | 🚫 | 2 | `36.20` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.bbsenglish_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Baby Shark English**](docs/apps/baby-shark-english.md) | 🚫 | 2 | `2.48` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.bbshospitalgame_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Baby Shark Hospital Play**](docs/apps/baby-shark-hospital-play.md) | 🚫 | 2 | `2.1` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.singingphone_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Baby Shark Phone**](docs/apps/baby-shark-phone.md) | 🚫 | 2 | `30.28` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.bbsdessert_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Baby Shark's Dessert**](docs/apps/baby-sharks-dessert.md) | 🚫 | 2 | `2.23` | **XAPK** | Home screen shortcut |
 | <img src="assets/icons/kr.co.smartstudy.bebefinnparty_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Bebefinn Party**](docs/apps/bebefinn-party.md) | 🚫 | 1 | `1.8` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.birthdayparty_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Birthday Party**](docs/apps/birthday-party.md) | 🚫 | 1 | `24.23` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.cartown_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Car Town**](docs/apps/car-town.md) | 🚫 | 1 | `32.53` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.dinoworld_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Dino World**](docs/apps/dino-world.md) | 🚫 | 1 | `36.05` | **XAPK** | Home screen shortcut |
 | <img src="assets/icons/com.cv.docscanner.png" width="20" height="20" align="top" alt=""> [**Doc Scanner**](docs/apps/doc-scanner.md) | 💎 🧹 👯 🔑 | 5 | `6.9.14` | **APKM** | Side menu |
 | <img src="assets/icons/com.google.android.apps.photos.png" width="20" height="20" align="top" alt=""> [**Google Photos**](docs/apps/google-photos.md) | 💾 🔑 👯 | 4 | `8.1.0.1023737660` | **APKM (Android 8+)** | Account menu |
+| <img src="assets/icons/kr.co.smartstudy.hogistaradventure_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Hogi Star Adventure**](docs/apps/hogi-star-adventure.md) | 🚫 | 1 | `3.2` | **XAPK** | Home screen shortcut |
 | <img src="assets/icons/com.linkedin.android.svg" width="20" height="20" align="top" alt=""> [**LinkedIn**](docs/apps/linkedin.md) | 🚫 🛡️ 🎨 ⬇️ 🔑 | 24 | `4.1.1275` | **APK (Android 10+)** | Me panel |
 | <img src="assets/icons/com.mxtech.videoplayer.pro.png" width="20" height="20" align="top" alt=""> [**MX Player Pro**](docs/apps/mx-player-pro.md) | 💎 🎞️ | 3 | `1.93.4` | **APK** | Settings |
+| <img src="assets/icons/kr.co.smartstudy.mybody_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**My Body**](docs/apps/my-body.md) | 🚫 | 1 | `21.11` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.bbsninimomartgame_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Ninimo Cat Supermarket**](docs/apps/ninimo-cat-supermarket.md) | 🚫 | 2 | `3.0` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.kidscoloringfun_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Pinkfong Coloring Fun**](docs/apps/pinkfong-coloring-fun.md) | 🚫 | 1 | `38.07` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.shapescolors_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Pinkfong Shapes & Colors**](docs/apps/pinkfong-shapes-colors.md) | 🚫 | 1 | `18.30` | **XAPK** | Home screen shortcut |
+| <img src="assets/icons/kr.co.smartstudy.thepolice_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Police Heroes Game**](docs/apps/police-heroes-game.md) | 🚫 | 2 | `1.5` | **XAPK** | Home screen shortcut |
 | <img src="assets/icons/com.Splitwise.SplitwiseMobile.png" width="20" height="20" align="top" alt=""> [**Splitwise**](docs/apps/splitwise.md) | 💎 🚫 🛡️ 🎨 🔑 | 5 | `26.11.1` | **APK** | Account tab |
+| <img src="assets/icons/kr.co.smartstudy.tracingworld_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Tracing World**](docs/apps/tracing-world.md) | 🚫 | 1 | `33.21` | **XAPK** | Home screen shortcut |
 | <img src="assets/icons/com.truecaller.png" width="20" height="20" align="top" alt=""> [**Truecaller**](docs/apps/truecaller.md) | 💎 📵 🔑 | 3 | `26.44.6` | **APKM** | Profile menu · Settings |
 
 ### For any app

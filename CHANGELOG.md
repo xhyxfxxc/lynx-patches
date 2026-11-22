@@ -1,3 +1,14 @@
+## 3.8.0 (2026-11-22)
+
+### New Features
+- 16 more Pinkfong and Baby Shark games join the bundle, their ads never load and rewarded videos give the reward at once.
+
+### Fixes
+- Stop banners in games with the older Google Unity bridge.
+- Answer repeated blocked ad loads after a minute, so games that retry at once no longer crash.
+
+**57 patches for 24 apps.** Full list in the [README](https://github.com/[secure]/lynx-patches#apps).
+
 ## 3.7.0 (2026-11-22)
 
 ### New Features

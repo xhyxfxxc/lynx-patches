@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "patches": [
     {
       "name": "AMOLED black (Splitwise)",
@@ -1341,8 +1341,52 @@
       "options": []
     },
     {
-      "name": "Hide ads (Bebefinn Party)",
-      "description": "Removes Bebefinn Party's ads (Google AdMob with Unity Ads and Liftoff): banners, full-screen ads and app-open ads never load.",
+      "name": "Hide ads (Doc Scanner)",
+      "description": "Removes Doc Scanner's ads (Google AdMob and ironSource): banners, full-screen ads and rewarded ads. Works on its own, with or without premium.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch",
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.cv.docscanner",
+          "name": "Doc Scanner",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#2196F3",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "6.9.9",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": "6.9.14",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Hide ads (Pinkfong)",
+      "description": "Removes the ads of Pinkfong and Baby Shark kids games (Google AdMob with Unity Ads and Liftoff): banners, full-screen ads and app-open ads never load.",
       "default": true,
       "category": null,
       "dependencies": [
@@ -1373,37 +1417,377 @@
               "description": null
             }
           ]
-        }
-      ],
-      "options": []
-    },
-    {
-      "name": "Hide ads (Doc Scanner)",
-      "description": "Removes Doc Scanner's ads (Google AdMob and ironSource): banners, full-screen ads and rewarded ads. Works on its own, with or without premium.",
-      "default": true,
-      "category": null,
-      "dependencies": [
-        "BytecodePatch",
-        "ResourcePatch"
-      ],
-      "compatiblePackages": [
+        },
         {
-          "packageName": "com.cv.docscanner",
-          "name": "Doc Scanner",
+          "packageName": "kr.co.smartstudy.bbschefgame_android_googlemarket",
+          "name": "Baby Shark Chef Cooking Game",
           "description": null,
-          "apkFileType": "APKM",
-          "appIconColor": "#2196F3",
+          "apkFileType": "XAPK",
+          "appIconColor": "#70DCF9",
           "signatures": null,
           "targets": [
             {
-              "version": "6.9.9",
+              "version": "4.04",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
             },
             {
-              "version": "6.9.14",
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.bbsdessert_android_googlemarket",
+          "name": "Baby Shark's Dessert",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#4CD5F8",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.23",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.bbsninimomartgame_android_googlemarket",
+          "name": "Ninimo Cat Supermarket",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#FBC360",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "3.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.cartown_android_googlemarket",
+          "name": "Car Town",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#1B59C3",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "32.53",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.hogistaradventure_android_googlemarket",
+          "name": "Hogi Star Adventure",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#1F3577",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "3.2",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.mybody_android_googlemarket",
+          "name": "My Body",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#0E4595",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "21.11",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.shapescolors_android_googlemarket",
+          "name": "Pinkfong Shapes & Colors",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#41DFFB",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "18.30",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.thepolice_android_googlemarket",
+          "name": "Police Heroes Game",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#1D95D3",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "1.5",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.babysharkcoloring_android_googlemarket",
+          "name": "Baby Shark Coloring Book",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#10C8FB",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "36.20",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.bbsenglish_android_googlemarket",
+          "name": "Baby Shark English",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#DEAD27",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.48",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.bbshospitalgame_android_googlemarket",
+          "name": "Baby Shark Hospital Play",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#27D5F7",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.1",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.dinoworld_android_googlemarket",
+          "name": "Dino World",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#E32F14",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "36.05",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.singingphone_android_googlemarket",
+          "name": "Baby Shark Phone",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#FA64A6",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "30.28",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.kidscoloringfun_android_googlemarket",
+          "name": "Pinkfong Coloring Fun",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#F7279B",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "38.07",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.tracingworld_android_googlemarket",
+          "name": "Tracing World",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#F15C8C",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "33.21",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.birthdayparty_android_googlemarket",
+          "name": "Birthday Party",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#F12F98",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "24.23",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -2207,6 +2591,211 @@
               "version": "1.93.4",
               "versionCodes": null,
               "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Skip rewarded ads (Pinkfong)",
+      "description": "Gives the reward of a \"watch a video\" button straight away, without playing an ad: the game is told the ad was watched to the end.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch",
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "kr.co.smartstudy.bbschefgame_android_googlemarket",
+          "name": "Baby Shark Chef Cooking Game",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#70DCF9",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "4.04",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.bbsdessert_android_googlemarket",
+          "name": "Baby Shark's Dessert",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#4CD5F8",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.23",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.bbsninimomartgame_android_googlemarket",
+          "name": "Ninimo Cat Supermarket",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#FBC360",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "3.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.thepolice_android_googlemarket",
+          "name": "Police Heroes Game",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#1D95D3",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "1.5",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.babysharkcoloring_android_googlemarket",
+          "name": "Baby Shark Coloring Book",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#10C8FB",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "36.20",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.bbsenglish_android_googlemarket",
+          "name": "Baby Shark English",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#DEAD27",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.48",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.bbshospitalgame_android_googlemarket",
+          "name": "Baby Shark Hospital Play",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#27D5F7",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.1",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "packageName": "kr.co.smartstudy.singingphone_android_googlemarket",
+          "name": "Baby Shark Phone",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#FA64A6",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "30.28",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
               "minSdk": null,
               "description": null
             }
