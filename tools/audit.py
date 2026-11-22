@@ -32,7 +32,9 @@ def read(path):
 
 
 def walk(base, suffix):
-    for folder, _, names in os.walk(base):
+    for folder, dirs, names in os.walk(base):
+        if base == ROOT and folder == base:
+            dirs[:] = [d for d in dirs if d != "packs"]   # imported third-party packs have their own build files
         for name in names:
             if name.endswith(suffix):
                 yield os.path.join(folder, name)
