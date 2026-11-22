@@ -243,11 +243,6 @@
     <string name="piko_pref_delete_font_fail">フォントを削除できませんでした</string>
     <string name="piko_pref_delete_font_warn">削除するカスタムフォントが見つかりません</string>
     <!-- Logging Settings -->
-    <string name="piko_title_logging">ログ</string>
-    <string name="piko_pref_server_response_logging">サーバーの応答をログに記録</string>
-    <string name="piko_pref_server_response_logging_desc">サーバーから受信したJSON応答を「Download/Piko」に記録します</string>
-    <string name="piko_pref_server_response_logging_file_overwrite">応答ログファイルを上書き</string>
-    <string name="piko_pref_server_response_logging_file_overwrite_desc">起動時に既存の応答ログデータを消去します</string>
     <!-- Backup and Restore -->
     <string name="piko_title_backup">バックアップと復元</string>
     <string name="piko_pref_import_settings">Piko設定をインポート</string>

@@ -243,11 +243,6 @@
     <string name="piko_pref_delete_font_fail">Не удалось удалить шрифт</string>
     <string name="piko_pref_delete_font_warn">Пользовательский шрифт для удаления не найден</string>
     <!-- Logging Settings -->
-    <string name="piko_title_logging">Логирование</string>
-    <string name="piko_pref_server_response_logging">Логировать ответы сервера</string>
-    <string name="piko_pref_server_response_logging_desc">Сохранять json-ответы сервера в папку \'Download/Piko\'</string>
-    <string name="piko_pref_server_response_logging_file_overwrite">Перезаписывать файл логов ответов</string>
-    <string name="piko_pref_server_response_logging_file_overwrite_desc">Очищать существующие логи ответов при запуске</string>
     <!-- Backup and Restore -->
     <string name="piko_title_backup">Бэкап и восстановление</string>
     <string name="piko_pref_import_settings">Импорт настроек Piko</string>

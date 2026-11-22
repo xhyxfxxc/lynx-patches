@@ -243,11 +243,6 @@
     <string name="piko_pref_delete_font_fail">Eliminazione del Font fallito</string>
     <string name="piko_pref_delete_font_warn">Nessun font personalizzato trovato da essere eliminato</string>
     <!-- Logging Settings -->
-    <string name="piko_title_logging">Registro</string>
-    <string name="piko_pref_server_response_logging">Risposta del server di registro</string>
-    <string name="piko_pref_server_response_logging_desc">Registra le risposte json ricevute dal server in \'Download/Piko\'</string>
-    <string name="piko_pref_server_response_logging_file_overwrite">Sovrascrivi il file di registro delle risposte</string>
-    <string name="piko_pref_server_response_logging_file_overwrite_desc">Cancella i dati del registro delle risposte esistenti all\'avvio</string>
     <!-- Backup and Restore -->
     <string name="piko_title_backup">Backup e ripristino</string>
     <string name="piko_pref_import_settings">Importa impostazioni Piko</string>

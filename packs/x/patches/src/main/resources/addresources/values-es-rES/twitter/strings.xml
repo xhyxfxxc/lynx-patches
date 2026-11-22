@@ -243,11 +243,6 @@
     <string name="piko_pref_delete_font_fail">Error al eliminar la fuente</string>
     <string name="piko_pref_delete_font_warn">No se encontró ninguna fuente personalizada para eliminar</string>
     <!-- Logging Settings -->
-    <string name="piko_title_logging">Registros</string>
-    <string name="piko_pref_server_response_logging">Registrar respuesta del servidor</string>
-    <string name="piko_pref_server_response_logging_desc">Registrar respuestas JSON recibidas del servidor en \'Download/Piko\'</string>
-    <string name="piko_pref_server_response_logging_file_overwrite">Sobrescribir archivo de registro de respuestas</string>
-    <string name="piko_pref_server_response_logging_file_overwrite_desc">Borrar los registros existentes al iniciar</string>
     <!-- Backup and Restore -->
     <string name="piko_title_backup">Respaldo y restauración</string>
     <string name="piko_pref_import_settings">Importar preferencias de Piko</string>

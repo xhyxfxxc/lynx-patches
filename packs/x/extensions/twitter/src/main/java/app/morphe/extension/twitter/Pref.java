@@ -59,12 +59,6 @@ public class Pref {
         }
         return fontSize;
     }
-    public static boolean serverResponseLogging() {
-        return Utils.getBooleanPref(Settings.LOG_RES);
-    }
-    public static boolean serverResponseLoggingOverwriteFile() {
-        return Utils.getBooleanPref(Settings.LOG_RES_OVRD);
-    }
 
     public static boolean showSourceLabel() {
         return Utils.getBooleanPref(Settings.TIMELINE_SHOW_SOURCE_LABEL);

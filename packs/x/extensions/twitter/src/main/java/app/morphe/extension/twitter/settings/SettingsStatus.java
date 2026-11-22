@@ -80,8 +80,6 @@ public class SettingsStatus {
     public static boolean hideSocialProof = false;
     public static boolean customPostFontSize = false;
     public static boolean hideCommBadge = false;
-    public static boolean serverResponseLogging = false;
-    public static boolean serverResponseLoggingOverwriteFile = false;
 
     public static boolean customFont = false;
     public static boolean customEmojiFont = false;
@@ -98,12 +96,6 @@ public class SettingsStatus {
     }
     public static void showChangelogsPatchEnabled() {
         showChangelogsPatchEnabled = true;
-    }
-    public static void serverResponseLogging() {
-        serverResponseLogging = true;
-    }
-    public static void serverResponseLoggingOverwriteFile() {
-        serverResponseLoggingOverwriteFile = true;
     }
     public static void hideCommBadge() {
         hideCommBadge = true;
@@ -435,9 +427,6 @@ public class SettingsStatus {
 
     public static boolean enableCustomisationSection() {
         return (moreInfoOnProfile || appIconCustomisation || notificationTabCustomisation || searchTabCustomisation || typeaheadCustomisation || exploreTabCustomisation || customPostFontSize || inlineBarCustomisation || navBarCustomisation || sideBarCustomisation || profileTabCustomisation || timelineTabCustomisation || defaultReplySortFilter);
-    }
-    public static boolean loggingSection() {
-        return (serverResponseLogging || serverResponseLoggingOverwriteFile);
     }
 
     public static boolean fontSection() {

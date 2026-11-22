@@ -243,11 +243,6 @@
     <string name="piko_pref_delete_font_fail">Yazı tipi silme başarısız</string>
     <string name="piko_pref_delete_font_warn">Silinecek özel yazı tipi bulunamadı</string>
     <!-- Logging Settings -->
-    <string name="piko_title_logging">Günlük kaydı</string>
-    <string name="piko_pref_server_response_logging">Sunucu yanıtını kaydet</string>
-    <string name="piko_pref_server_response_logging_desc">Sunucudan alınan JSON yanıtlarını \'Download/Piko\' içine kaydeder</string>
-    <string name="piko_pref_server_response_logging_file_overwrite">Yanıt kayıt dosyasını üzerine yaz</string>
-    <string name="piko_pref_server_response_logging_file_overwrite_desc">Başlangıçta mevcut yanıt kayıt verilerini temizle</string>
     <!-- Backup and Restore -->
     <string name="piko_title_backup">Yedekle ve geri yükle</string>
     <string name="piko_pref_import_settings">Piko ayarlarını içe aktar</string>

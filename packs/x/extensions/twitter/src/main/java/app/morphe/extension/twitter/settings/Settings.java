@@ -115,9 +115,6 @@ public class Settings {
     public static final StringSetting LAST_CHANGELOG_VERSION = new StringSetting("last_changelog_version", "0");
     public static final StringSetting LAST_CHANGELOG = new StringSetting("last_changelog", "0");
 
-    public static final BooleanSetting LOG_RES = new BooleanSetting("logging_response", false);
-    public static final BooleanSetting LOG_RES_OVRD = new BooleanSetting("logging_response_overwrite_file", false);
-
     public static final String EXPORT_PREF = "export_pref";
     public static final String EXPORT_FLAGS = "export_flags";
     public static final String IMPORT_PREF = "import_pref";
@@ -147,7 +144,6 @@ public class Settings {
     public static final String CUSTOMISE_SECTION = "custommise_section";
     public static final String FONT_SECTION = "font_section";
     public static final String TIMELINE_SECTION = "timeline_section";
-    public static final String LOGGING_SECTION = "logging_section";
     public static final String BACKUP_SECTION = "backup_section";
     public static final String NATIVE_SECTION = "native_section";
     public static final String READER_MODE_KEY = "readerMode";

@@ -157,7 +157,6 @@ public class SettingsAboutFragment extends PreferenceFragment {
         flags.put(str("piko_pref_top_people_search"),SettingsStatus.hideTopPeopleSearch);
         flags.put(str("piko_pref_customisation_searchtabs"),SettingsStatus.searchTabCustomisation);
         flags.put(str("piko_pref_hide_todays_news"),SettingsStatus.hideTodaysNews);
-        flags.put(str("piko_pref_server_response_logging"),SettingsStatus.serverResponseLogging);
         flags.put(str("piko_pref_show_post_source"),SettingsStatus.showSourceLabel);
         flags.put(str("piko_changelogs_title"),SettingsStatus.showChangelogsPatchEnabled);
         flags.put(str("piko_pref_pause_search_suggestion"),SettingsStatus.pauseSearchSuggestions);

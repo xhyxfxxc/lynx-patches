@@ -112,11 +112,6 @@
     <string name="piko_pref_customisation_search_type_ahead">Ẩn trong phần gợi ý tìm kiếm</string>
     <!-- Font Settings -->
     <!-- Logging Settings -->
-    <string name="piko_title_logging">Gỡ lỗi</string>
-    <string name="piko_pref_server_response_logging">Xuất tệp tin gỡ lỗi</string>
-    <string name="piko_pref_server_response_logging_desc">Tệp tin gỡ lỗi sẽ được xả ra tại \'Download/Piko\'</string>
-    <string name="piko_pref_server_response_logging_file_overwrite">Ghi đè tệp tin gỡ lỗi</string>
-    <string name="piko_pref_server_response_logging_file_overwrite_desc">Xóa những dữ liệu trong file gỡ lỗi trong mỗi lần khởi động ứng dụng</string>
     <!-- Backup and Restore -->
     <string name="piko_title_backup">Sao lưu và khôi phục</string>
     <string name="piko_pref_export_failed">Sao lưu các tuỳ chọn mod lỗi</string>

@@ -243,11 +243,6 @@
     <string name="piko_pref_delete_font_fail">Font gagal dihapus</string>
     <string name="piko_pref_delete_font_warn">Tidak ditemukan font khusus untuk dihapus</string>
     <!-- Logging Settings -->
-    <string name="piko_title_logging">Pencatatan</string>
-    <string name="piko_pref_server_response_logging">Catat respon server</string>
-    <string name="piko_pref_server_response_logging_desc">Catat respon json yang diterima dari server di \'Download/Piko\'</string>
-    <string name="piko_pref_server_response_logging_file_overwrite">Timpa berkas catatan respon</string>
-    <string name="piko_pref_server_response_logging_file_overwrite_desc">Bersihkan data catatan respons yang ada saat peluncuran</string>
     <!-- Backup and Restore -->
     <string name="piko_title_backup">Cadangkan dan pulihkan</string>
     <string name="piko_pref_import_settings">Impor pengaturan Piko</string>

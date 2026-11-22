@@ -100,14 +100,6 @@ public class ScreenBuilder {
                     ScreenBuilder::buildTimelineSection
             ),
             new SettingsSection(
-                    "piko_title_logging",
-                    null,
-                    Settings.LOGGING_SECTION,
-                    "ic_vector_bug_stroke",
-                    SettingsStatus::loggingSection,
-                    ScreenBuilder::buildLoggingSection
-            ),
-            new SettingsSection(
                     "piko_title_backup",
                     null,
                     Settings.BACKUP_SECTION,
@@ -1127,33 +1119,6 @@ public class ScreenBuilder {
                             str("piko_pref_hide_post_detailed_metrics"),
                             str("piko_pref_hide_post_detailed_metrics_desc"),
                             Settings.TIMELINE_HIDE_POST_DETAILED_METRICS
-                    )
-            );
-        }
-
-    }
-
-    public void buildLoggingSection(boolean buildCategory) {
-        LegacyTwitterPreferenceCategory category = null;
-        if (buildCategory)
-            category = preferenceCategory(str("piko_title_logging"));
-
-        if (SettingsStatus.serverResponseLogging) {
-            addPreference(category,
-                    helper.switchPreference(
-                            str("piko_pref_server_response_logging"),
-                            str("piko_pref_server_response_logging_desc"),
-                            Settings.LOG_RES
-                    )
-            );
-        }
-
-        if (SettingsStatus.serverResponseLoggingOverwriteFile) {
-            addPreference(category,
-                    helper.switchPreference(
-                            str("piko_pref_server_response_logging_file_overwrite"),
-                            str("piko_pref_server_response_logging_file_overwrite_desc"),
-                            Settings.LOG_RES_OVRD
                     )
             );
         }
