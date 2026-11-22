@@ -59,7 +59,7 @@ public final class SeekSprites {
         File into = new File(context.getCacheDir(), "hushgram-seek-sprite-" + Integer.toHexString(url.hashCode()));
         LOADER.execute(() -> {
             try {
-                Downloader.Result result = Downloader.fetch(url, Downloader.Kind.IMAGE, into, MediaUrlPolicy.META, MAX_BYTES, Downloader.SILENT);
+                Downloader.Result result = Downloader.fetch(url, Downloader.Kind.IMAGE, into, MediaSave.policyFor(context), MAX_BYTES, Downloader.SILENT);
                 if (result.status != Downloader.Status.OK) {
                     Logger.printDebug(() -> "Seek preview: no picture strip: " + result.reason);
                     return;
