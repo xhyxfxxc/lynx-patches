@@ -36,12 +36,20 @@ val tweetEntityPatch =
 
             val tweetObjectMethods = TweetObjectFingerprint.classDef.methods
 
+            // Lynx: on X 12.19.1 the fingerprint matches more than one class (g1 and p). Take all
+            // of them and require that exactly one tweet object method returns one of them.
+            val textObjectTypes =
+                GetTextFromTextObjectFingerprint
+                    .matchAll()
+                    .map { it.originalClassDef.type }
+                    .toSet()
+            val textObjectMethods = tweetObjectMethods.filter { it.returnType in textObjectTypes }
             val getTextObjectFromTweetObjectMethodName =
-                tweetObjectMethods
-                    .first {
-                        it.returnType ==
-                            GetTextFromTextObjectFingerprint.classDef.type
-                    }.name
+                textObjectMethods.singleOrNull()?.name
+                    ?: throw PatchException(
+                        "Expected exactly one tweet object method returning a text object, found " +
+                            "${textObjectMethods.size} (text object classes: $textObjectTypes)",
+                    )
             TweetShortTextFingerprint.changeFirstString(getTextObjectFromTweetObjectMethodName)
 
             val getTweetUserIdMethod =
