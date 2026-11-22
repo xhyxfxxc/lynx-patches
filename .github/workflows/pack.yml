@@ -10,6 +10,14 @@
 # release is tagged pack-<name>-v<version> and is never marked "latest", so the Lynx Patches releases that
 # release.yml makes stay the latest one. Morphe Manager reads packs/<name>/patches-bundle.json, which this
 # workflow writes after the release exists. Pack commits are chore(pack-<name>): ..., so release.yml ignores them.
+#
+# Two jobs, so that pack code never runs next to a write token:
+#   build    runs the pack's own Gradle build (third-party scripts and plugins) with a read-only token, and
+#            uploads the bundle as a workflow artifact.
+#   publish  holds the write, attestation and OIDC permissions. It never runs Gradle and never executes anything
+#            from packs/: it downloads the artifact, checks its sha256 against what the build job reported,
+#            creates the release, pushes the bundle JSON and attests the file. Its token reaches only the
+#            "gh release create" step and the git push step.
 # Every value that comes from an input or from packs/packs.json reaches the scripts through env: and is quoted.
 
 name: Pack
@@ -37,18 +45,27 @@ defaults:
     shell: bash
 
 jobs:
-  pack:
-    name: Build and publish a pack
+  build:
+    name: Build the pack
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      contents: write
+      contents: read
       packages: read
-      id-token: write
-      attestations: write
+    # The publish job re-checks all of these against packs/packs.json and the sha256 against the downloaded file.
+    outputs:
+      pack: ${{ steps.entry.outputs.pack }}
+      version: ${{ steps.entry.outputs.version }}
+      title: ${{ steps.entry.outputs.title }}
+      bundle: ${{ steps.bundle.outputs.name }}
+      artifact: ${{ steps.bundle.outputs.artifact }}
+      sha256: ${{ steps.bundle.outputs.sha256 }}
     steps:
+      # No stored credentials: the pack's build scripts run in this job and must not find a token in .git/config.
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Read the pack entry
         id: entry
@@ -58,6 +75,9 @@ jobs:
         run: |
           set -euo pipefail
           fail() { echo "::error::$1"; exit 1; }
+          if [ "$PUBLISH" = "true" ] && [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            fail 'publishing is only allowed from main (run with publish=false from other branches)'
+          fi
           [[ "$PACK" =~ ^[a-z0-9-]+$ ]] || fail 'the pack input must match ^[a-z0-9-]+$'
           packs=packs/packs.json
           field() { jq -r --arg p "$PACK" "$1" "$packs"; }
@@ -84,9 +104,6 @@ jobs:
           for value in "$title" "$tasks" "$args"; do
             case "$value" in *$'\n'*|*$'\r'*) fail 'title, build.tasks and build.args must be single lines' ;; esac
           done
-          if [ "$PUBLISH" = "true" ] && [ "$GITHUB_REF" != "refs/heads/main" ]; then
-            fail 'publishing is only allowed from main (run with publish=false from other branches)'
-          fi
           {
             echo "pack=$PACK"
             echo "version=$version"
@@ -97,7 +114,8 @@ jobs:
             echo "args=$args"
           } >> "$GITHUB_OUTPUT"
 
-      # A release needs a new version: bump "version" in packs/packs.json first.
+      # A release needs a new version: bump "version" in packs/packs.json first. The repo is public, so the
+      # tag list can be read without a token.
       - name: Check the release tag is new
         if: ${{ inputs.publish }}
         env:
@@ -127,7 +145,8 @@ jobs:
         with:
           min-wrapper-count: 2
 
-      # The pack resolves the Morphe Gradle plugin from GitHub Packages, exactly like the root build.
+      # The pack resolves the Morphe Gradle plugin from GitHub Packages, exactly like the root build. The token of
+      # this job can only read (contents: read, packages: read), which is all that needs.
       - name: Build the pack
         env:
           PACK: ${{ steps.entry.outputs.pack }}
@@ -176,45 +195,124 @@ jobs:
           echo "sha256: $sha"
           echo "size:   $size bytes"
           echo "Built \`$name\`: $size bytes, sha256 \`$sha\`" >> "$GITHUB_STEP_SUMMARY"
-          { echo "path=$out_dir/$name"; echo "name=$name"; } >> "$GITHUB_OUTPUT"
+          {
+            echo "path=$out_dir/$name"
+            echo "name=$name"
+            echo "artifact=lynx-${PACK}-${VERSION}"
+            echo "sha256=$sha"
+          } >> "$GITHUB_OUTPUT"
 
       # Always uploaded, so a publish=false run can be downloaded and tried on a phone before anything is released.
       - name: Upload the bundle as a workflow artifact
         uses: actions/upload-artifact@v7
         with:
-          name: lynx-${{ steps.entry.outputs.pack }}-${{ steps.entry.outputs.version }}
+          name: ${{ steps.bundle.outputs.artifact }}
           path: ${{ steps.bundle.outputs.path }}
           if-no-files-found: error
 
-      - name: Create the GitHub release
-        if: ${{ inputs.publish }}
+  publish:
+    name: Release and publish the source
+    needs: build
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      # Needed for packs/packs.json, packs/<name>/LYNX.md and to commit the bundle JSON. No stored credentials:
+      # the token is handed only to the two steps that need it (the release and the push).
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The build job's outputs are only trusted after they match packs/packs.json at this same commit.
+      - name: Check the build outputs
         env:
-          PACK: ${{ steps.entry.outputs.pack }}
-          VERSION: ${{ steps.entry.outputs.version }}
-          TITLE: ${{ steps.entry.outputs.title }}
-          BUNDLE: ${{ steps.bundle.outputs.path }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACK: ${{ needs.build.outputs.pack }}
+          VERSION: ${{ needs.build.outputs.version }}
+          TITLE: ${{ needs.build.outputs.title }}
+          BUNDLE: ${{ needs.build.outputs.bundle }}
+          ARTIFACT: ${{ needs.build.outputs.artifact }}
+          SHA256: ${{ needs.build.outputs.sha256 }}
         run: |
           set -euo pipefail
-          tag="pack-${PACK}-v${VERSION}"
+          fail() { echo "::error::$1"; exit 1; }
+          [[ "$PACK" =~ ^[a-z0-9-]+$ ]] || fail 'the build job reported a pack name that is not allowed'
+          [[ "$VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]*$ ]] || fail 'the build job reported a version that is not allowed'
+          [[ "$SHA256" =~ ^[0-9a-f]{64}$ ]] || fail 'the build job reported no sha256'
+          [ "$BUNDLE" = "lynx-${PACK}-${VERSION}.mpp" ] || fail 'the bundle name does not match the pack and version'
+          [ "$ARTIFACT" = "lynx-${PACK}-${VERSION}" ] || fail 'the artifact name does not match the pack and version'
+          packs=packs/packs.json
+          jq -e --arg p "$PACK" '.packs[$p] | type == "object"' "$packs" > /dev/null \
+            || fail "this pack is not listed in $packs"
+          want_version=$(jq -r --arg p "$PACK" '.packs[$p].version // ""' "$packs")
+          want_title=$(jq -r --arg p "$PACK" '.packs[$p].title // ""' "$packs")
+          [ "$VERSION" = "$want_version" ] || fail "the built version differs from $packs"
+          [ "$TITLE" = "${want_title:-$PACK}" ] || fail "the reported title differs from $packs"
+
+      - name: Download the bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build.outputs.artifact }}
+          path: ${{ runner.temp }}/pack-dl
+
+      - name: Verify the downloaded bundle
+        id: verify
+        env:
+          BUNDLE: ${{ needs.build.outputs.bundle }}
+          SHA256: ${{ needs.build.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          dir="$RUNNER_TEMP/pack-dl"
+          file="$dir/$BUNDLE"
+          [ -f "$file" ] || fail 'the downloaded artifact does not hold the bundle'
+          [ "$(find "$dir" -type f | wc -l)" -eq 1 ] || fail 'the downloaded artifact holds more than the bundle'
+          actual=$(sha256sum "$file" | cut -d' ' -f1)
+          [ "$actual" = "$SHA256" ] || fail "sha256 of the downloaded bundle is ${actual}, the build job reported ${SHA256}"
+          echo "sha256 matches: $actual"
+          echo "path=$file" >> "$GITHUB_OUTPUT"
+
+      # Only reads LYNX.md as text, never runs anything from packs/.
+      - name: Prepare the release notes
+        env:
+          PACK: ${{ needs.build.outputs.pack }}
+          VERSION: ${{ needs.build.outputs.version }}
+          TITLE: ${{ needs.build.outputs.title }}
+        run: |
+          set -euo pipefail
           notes="$RUNNER_TEMP/pack-notes.md"
-          if [ -f "packs/$PACK/LYNX.md" ]; then
+          if [ -f "packs/$PACK/LYNX.md" ] && [ ! -L "packs/$PACK/LYNX.md" ]; then
             cp "packs/$PACK/LYNX.md" "$notes"
           else
             echo "Lynx build of ${TITLE} ${VERSION}. Source and changes: https://github.com/${GITHUB_REPOSITORY}/tree/main/packs/${PACK}" > "$notes"
           fi
+
+      - name: Create the GitHub release
+        env:
+          PACK: ${{ needs.build.outputs.pack }}
+          VERSION: ${{ needs.build.outputs.version }}
+          TITLE: ${{ needs.build.outputs.title }}
+          BUNDLE_PATH: ${{ steps.verify.outputs.path }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="pack-${PACK}-v${VERSION}"
           # The tag points at the commit that was built, not at whatever main has moved to since.
-          gh release create "$tag" "$BUNDLE" \
+          gh release create "$tag" "$BUNDLE_PATH" \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --latest=false --title "${TITLE} ${VERSION}" --notes-file "$notes"
+            --latest=false --title "${TITLE} ${VERSION}" --notes-file "$RUNNER_TEMP/pack-notes.md"
 
       # The file Morphe Manager reads. Only this workflow writes it: the import filter keeps upstream's own
       # patches-bundle.json out of packs/<name>/, so Manager can never serve someone else's binary from our URL.
-      - name: Write the bundle JSON and push it
-        if: ${{ inputs.publish }}
+      - name: Write the bundle JSON and commit it
+        id: commit
         env:
-          PACK: ${{ steps.entry.outputs.pack }}
-          VERSION: ${{ steps.entry.outputs.version }}
+          PACK: ${{ needs.build.outputs.pack }}
+          VERSION: ${{ needs.build.outputs.version }}
           GIT_AUTHOR_NAME: xhyxfxxc
           GIT_AUTHOR_EMAIL: 338141297+xhyxfxxc@users.noreply.github.com
           GIT_COMMITTER_NAME: xhyxfxxc
@@ -234,9 +332,30 @@ jobs:
           git add "packs/$PACK/patches-bundle.json"
           if git diff --cached --quiet; then
             echo "the bundle JSON did not change, nothing to commit"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git commit -m "chore(pack-${PACK}): release ${VERSION} [skip ci]"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # The token goes to git as an HTTP header for this step only, so it is never written to .git/config.
+      - name: Push the bundle JSON to main
+        if: ${{ steps.commit.outputs.changed == 'true' }}
+        env:
+          PACK: ${{ needs.build.outputs.pack }}
+          VERSION: ${{ needs.build.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_AUTHOR_NAME: xhyxfxxc
+          GIT_AUTHOR_EMAIL: 338141297+xhyxfxxc@users.noreply.github.com
+          GIT_COMMITTER_NAME: xhyxfxxc
+          GIT_COMMITTER_EMAIL: 338141297+xhyxfxxc@users.noreply.github.com
+        run: |
+          set -euo pipefail
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0="http.https://github.com/.extraheader"
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${auth}"
           pushed=false
           for attempt in 1 2 3; do
             if git push origin HEAD:main; then
@@ -247,13 +366,12 @@ jobs:
             git pull --rebase origin main
           done
           if [ "$pushed" != true ]; then
-            echo "::error::the release ${tag} exists but packs/${PACK}/patches-bundle.json could not be pushed; commit it by hand"
+            echo "::error::the release pack-${PACK}-v${VERSION} exists but packs/${PACK}/patches-bundle.json could not be pushed; commit it by hand"
             exit 1
           fi
 
       - name: Attach build provenance
-        if: ${{ inputs.publish }}
         uses: actions/attest-build-provenance@v4
         with:
-          subject-name: 'Lynx pack ${{ steps.entry.outputs.pack }} ${{ steps.entry.outputs.version }}'
-          subject-path: ${{ steps.bundle.outputs.path }}
+          subject-name: 'Lynx pack ${{ needs.build.outputs.pack }} ${{ needs.build.outputs.version }}'
+          subject-path: ${{ steps.verify.outputs.path }}
