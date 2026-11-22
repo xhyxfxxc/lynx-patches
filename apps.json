@@ -1,5 +1,5 @@
 {
-  "_about": "One entry per app. The release builds the README app index and docs/apps/<slug>.md from this file and the bundle. A release fails when an app in the bundle has no entry or no icon in assets/icons. \"featured\" is the position in the Featured row (omit to leave an app out).",
+  "_about": "One entry per app. The release builds the README app index and docs/apps/<slug>.md from this file and the bundle. A release fails when an app in the bundle has no entry or no icon in assets/icons. \"featured\" is the position in the Featured row (omit to leave an app out). \"family\" (optional) is a group name that the bundle description may use instead of the app's own name.",
   "legend": {
     "💎": "premium",
     "🚫": "ads",
@@ -89,6 +89,167 @@
       "file": "XAPK",
       "menu": "Home screen shortcut",
       "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads in the game"
+    },
+    "kr.co.smartstudy.bbschefgame_android_googlemarket": {
+      "name": "Baby Shark Chef Cooking Game",
+      "slug": "baby-shark-chef-cooking-game",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads, instant rewards"
+    },
+    "kr.co.smartstudy.bbsdessert_android_googlemarket": {
+      "name": "Baby Shark's Dessert",
+      "slug": "baby-sharks-dessert",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads, instant rewards"
+    },
+    "kr.co.smartstudy.bbsninimomartgame_android_googlemarket": {
+      "name": "Ninimo Cat Supermarket",
+      "slug": "ninimo-cat-supermarket",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads, instant rewards"
+    },
+    "kr.co.smartstudy.cartown_android_googlemarket": {
+      "name": "Car Town",
+      "slug": "car-town",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads in the game"
+    },
+    "kr.co.smartstudy.hogistaradventure_android_googlemarket": {
+      "name": "Hogi Star Adventure",
+      "slug": "hogi-star-adventure",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads in the game"
+    },
+    "kr.co.smartstudy.mybody_android_googlemarket": {
+      "name": "My Body",
+      "slug": "my-body",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads in the game"
+    },
+    "kr.co.smartstudy.shapescolors_android_googlemarket": {
+      "name": "Pinkfong Shapes & Colors",
+      "slug": "pinkfong-shapes-colors",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads in the game"
+    },
+    "kr.co.smartstudy.thepolice_android_googlemarket": {
+      "name": "Police Heroes Game",
+      "slug": "police-heroes-game",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads, instant rewards"
+    },
+    "kr.co.smartstudy.babysharkcoloring_android_googlemarket": {
+      "name": "Baby Shark Coloring Book",
+      "slug": "baby-shark-coloring-book",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads, instant rewards"
+    },
+    "kr.co.smartstudy.bbsenglish_android_googlemarket": {
+      "name": "Baby Shark English",
+      "slug": "baby-shark-english",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads, instant rewards"
+    },
+    "kr.co.smartstudy.bbshospitalgame_android_googlemarket": {
+      "name": "Baby Shark Hospital Play",
+      "slug": "baby-shark-hospital-play",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads, instant rewards"
+    },
+    "kr.co.smartstudy.dinoworld_android_googlemarket": {
+      "name": "Dino World",
+      "slug": "dino-world",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads in the game"
+    },
+    "kr.co.smartstudy.singingphone_android_googlemarket": {
+      "name": "Baby Shark Phone",
+      "slug": "baby-shark-phone",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads, instant rewards"
+    },
+    "kr.co.smartstudy.kidscoloringfun_android_googlemarket": {
+      "name": "Pinkfong Coloring Fun",
+      "slug": "pinkfong-coloring-fun",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads in the game"
+    },
+    "kr.co.smartstudy.tracingworld_android_googlemarket": {
+      "name": "Tracing World",
+      "slug": "tracing-world",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
+      "blurb": "No ads in the game"
+    },
+    "kr.co.smartstudy.birthdayparty_android_googlemarket": {
+      "name": "Birthday Party",
+      "slug": "birthday-party",
+      "category": "Kids & games",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "family": "Pinkfong",
       "blurb": "No ads in the game"
     }
   }

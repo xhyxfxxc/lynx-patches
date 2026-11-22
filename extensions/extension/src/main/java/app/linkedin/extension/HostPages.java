@@ -225,7 +225,7 @@ final class HostPages {
             profileRows(context, page);
         }
         if (on(context, "app.loki.menu.proads")) page.info("Pro ads and upsells", () -> "Hidden");
-        // An app's own Hide ads patch (Truecaller, Doc Scanner, Bebefinn Party) or the universal one: either removes them.
+        // An app's own Hide ads patch (Truecaller, Doc Scanner, the Pinkfong games) or the universal one: either removes them.
         page.info("Ads", () -> on(context, "app.loki.menu.hideads") || on(context, "app.loki.menu.pinkfongads")
                 || on(context, "app.loki.menu.ads") ? "Removed" : "Left as they were");
         page.info("Analytics and crash reporting", () -> on(context, "app.loki.menu.analytics")

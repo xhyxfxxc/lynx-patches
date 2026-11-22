@@ -189,6 +189,8 @@ final class UpdateChecker {
         if (pkg.contains("mxtech")) names.add("MX Player");
         if (pkg.contains("amazon")) names.add("Amazon Shopping");
         if (pkg.contains("bebefinnparty")) names.add("Bebefinn Party");
+        // The Pinkfong games share one set of patches, which the changelog scopes as "pinkfong".
+        if (pkg.startsWith("kr.co.smartstudy.")) names.add("Pinkfong");
         return names;
     }
 

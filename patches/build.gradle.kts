@@ -10,7 +10,7 @@ private val REPO = "https://github.com/xhyxfxxc/lynx-patches"
 patches {
     about {
         name = "Lynx Patches"
-        description = "LinkedIn, Splitwise, Truecaller, Doc Scanner, MX Player Pro, Google Photos, Amazon Shopping and Bebefinn Party patches, plus patches that work on any app, for use with Morphe. Based on Loki Patches by Lokesh Sparrow."
+        description = "LinkedIn, Splitwise, Truecaller, Doc Scanner, MX Player Pro, Google Photos and Amazon Shopping patches, patches for Pinkfong and Baby Shark kids games (Bebefinn Party and more), plus patches that work on any app, for use with Morphe. Based on Loki Patches by Lokesh Sparrow."
         source = REPO
         author = "xhyxfxxc"
         contact = "na"

@@ -42,7 +42,7 @@ public final class NextGenAds {
             if (!resolve(callback.getClass().getClassLoader())) return;
             Object error = errorConstructor.newInstance(noFill, MESSAGE, null);
             onAdFailedToLoad.invoke(callback, error);
-            LokiLog.debug("Bebefinn Party: an ad load was answered with no fill");
+            LokiLog.debug("Pinkfong: an ad load was answered with no fill");
         } catch (Throwable t) {
             note("could not answer an ad load", t);
         }
@@ -81,6 +81,6 @@ public final class NextGenAds {
     private static synchronized void note(String what, Throwable t) {
         if (logged) return;
         logged = true;
-        LokiLog.note("Bebefinn Party ads failed: " + what + ": " + t);
+        LokiLog.note("Pinkfong ads failed: " + what + ": " + t);
     }
 }

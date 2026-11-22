@@ -85,9 +85,12 @@ def check_apps():
         icons = os.path.join(ROOT, "assets", "icons")
         if not any(os.path.exists(os.path.join(icons, f"{package}{ext}")) for ext in (".svg", ".png")):
             fail("apps.json", "apps.json", f"{package} has no icon in assets/icons")
-        if description and app["name"].lower() not in description.lower():
+        # An app is named by its own name or, for a family of games with one set of patches, by the family's name.
+        names = [n for n in (app["name"], app.get("family")) if n]
+        if description and not any(n.lower() in description.lower() for n in names):
             fail("bundle description", "patches/build.gradle.kts",
-                 f"the description Manager shows does not name {app['name']}")
+                 f"the description Manager shows does not name {app['name']}" +
+                 (f" or its family {app['family']}" if app.get("family") else ""))
 
 
 def check_bundle_apps():
@@ -174,13 +177,17 @@ def check_versions():
     """Every app carries the newest two releases, never more: an old entry is carried work nobody tests."""
     for constants in walk(PATCHES, "Constants.kt"):
         text = read(constants)
-        versions = re.findall(r'AppTarget\(version = "([^"]+)"\)', text)
+        target = r'AppTarget\(version = "([^"]+)"\)'
+        # A file with several Compatibility blocks holds several apps (the Pinkfong games): the rule applies to each.
+        blocks = text.split("Compatibility(")[1:]
+        lists = [re.findall(target, block) for block in blocks] if len(blocks) > 1 else [re.findall(target, text)]
         # LinkedIn keeps its versions in a list that is mapped to targets.
         for listed in re.findall(r'_BUILDS\s*=\s*listOf\(([^)]*)\)', text):
-            versions += re.findall(r'"([^"]+)"', listed)
-        if len(versions) > 2:
-            fail("versions", os.path.relpath(constants, ROOT),
-                 f"{len(versions)} versions listed ({', '.join(versions)}); the rule is the newest two")
+            lists[0] += re.findall(r'"([^"]+)"', listed)
+        for versions in lists:
+            if len(versions) > 2:
+                fail("versions", os.path.relpath(constants, ROOT),
+                     f"{len(versions)} versions listed ({', '.join(versions)}); the rule is the newest two")
 
 
 def check_docs_claims():

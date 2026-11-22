@@ -23,7 +23,7 @@ Bebefinn Party is called **Birthday Party** in English on Google Play. The patch
 ### Patch the game
 
 1. Download the **XAPK** of version 1.8 (the Google Play release: the base APK plus the `arm64-v8a` split).
-2. Patch it with Morphe and keep **Hide ads (Bebefinn Party)** ticked (it is on by default).
+2. Patch it with Morphe and keep **Hide ads (Pinkfong)** ticked (it is on by default).
 3. Install the result.
 
 ## What to expect
@@ -45,5 +45,5 @@ The **XAPK** for version 1.8.
 <!-- PATCHES_START -->
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |---|---|---|
-| **Hide ads (Bebefinn Party)** | Removes Bebefinn Party's ads (Google AdMob with Unity Ads and Liftoff): banners, full-screen ads and app-open ads never load. |  |
+| **Hide ads (Pinkfong)** | Removes the ads of Pinkfong and Baby Shark kids games (Google AdMob with Unity Ads and Liftoff): banners, full-screen ads and app-open ads never load. |  |
 <!-- PATCHES_END -->
