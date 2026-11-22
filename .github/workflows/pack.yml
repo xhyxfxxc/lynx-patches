@@ -1,0 +1,259 @@
+# Copyright (C) 2026 xhyxfxxc
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Builds ONE third-party pack from packs/<name>/ and publishes it as its own Morphe source. Started by hand:
+#
+#   gh workflow run Pack -R xhyxfxxc/lynx-patches -f pack=<name>                 build, release, publish the source
+#   gh workflow run Pack -R xhyxfxxc/lynx-patches -f pack=<name> -f publish=false  build and verify only
+#
+# Each pack has its own Gradle build (its own wrapper and toolchain), so it cannot share the root build. The
+# release is tagged pack-<name>-v<version> and is never marked "latest", so the Lynx Patches releases that
+# release.yml makes stay the latest one. Morphe Manager reads packs/<name>/patches-bundle.json, which this
+# workflow writes after the release exists. Pack commits are chore(pack-<name>): ..., so release.yml ignores them.
+# Every value that comes from an input or from packs/packs.json reaches the scripts through env: and is quoted.
+
+name: Pack
+
+on:
+  workflow_dispatch:
+    inputs:
+      pack:
+        description: 'Pack name, the folder under packs/ (lowercase letters, digits and dashes)'
+        required: true
+        type: string
+      publish:
+        description: 'Publish a release and the Morphe source (false: build and verify only)'
+        required: false
+        type: boolean
+        default: true
+
+# Two pack runs never overlap: they would race on the bundle commit pushed to main.
+concurrency:
+  group: pack-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  pack:
+    name: Build and publish a pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Read the pack entry
+        id: entry
+        env:
+          PACK: ${{ inputs.pack }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          [[ "$PACK" =~ ^[a-z0-9-]+$ ]] || fail 'the pack input must match ^[a-z0-9-]+$'
+          packs=packs/packs.json
+          field() { jq -r --arg p "$PACK" "$1" "$packs"; }
+          jq -e --arg p "$PACK" '.packs[$p] | type == "object"' "$packs" > /dev/null \
+            || fail "this pack is not listed in $packs"
+          [ -f "packs/$PACK/gradlew" ] || fail "packs/$PACK/gradlew is missing: the pack is not imported yet"
+          [ -f "packs/$PACK/gradle/wrapper/gradle-wrapper.jar" ] \
+            || fail "packs/$PACK/gradle/wrapper/gradle-wrapper.jar is missing, so the wrapper cannot be validated"
+          version=$(field '.packs[$p].version // ""')
+          title=$(field '.packs[$p].title // ""')
+          java=$(field '.packs[$p].build.java // ""')
+          tasks=$(field '.packs[$p].build.tasks // ""')
+          output=$(field '.packs[$p].build.output // ""')
+          args=$(field '.packs[$p].build.args // ""')
+          [ -n "$version" ] || fail "version is empty for this pack in $packs"
+          [[ "$version" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]*$ ]] \
+            || fail 'version may only hold letters, digits and . _ + - (it becomes a tag and a file name)'
+          [[ "$java" =~ ^[0-9]+$ ]] || fail 'build.java must be a number such as 21'
+          [ -n "$tasks" ] || fail 'build.tasks is empty'
+          [ -n "$output" ] || fail 'build.output is empty'
+          glob_re='^[][A-Za-z0-9._/*?-]+$'
+          [[ "$output" =~ $glob_re && "$output" != /* && "$output" != *..* ]] \
+            || fail 'build.output must be a relative glob without spaces or ..'
+          for value in "$title" "$tasks" "$args"; do
+            case "$value" in *$'\n'*|*$'\r'*) fail 'title, build.tasks and build.args must be single lines' ;; esac
+          done
+          if [ "$PUBLISH" = "true" ] && [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            fail 'publishing is only allowed from main (run with publish=false from other branches)'
+          fi
+          {
+            echo "pack=$PACK"
+            echo "version=$version"
+            echo "title=${title:-$PACK}"
+            echo "java=$java"
+            echo "tasks=$tasks"
+            echo "output=$output"
+            echo "args=$args"
+          } >> "$GITHUB_OUTPUT"
+
+      # A release needs a new version: bump "version" in packs/packs.json first.
+      - name: Check the release tag is new
+        if: ${{ inputs.publish }}
+        env:
+          PACK: ${{ steps.entry.outputs.pack }}
+          VERSION: ${{ steps.entry.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="pack-${PACK}-v${VERSION}"
+          rc=0
+          git ls-remote --exit-code --tags origin "refs/tags/${tag}" > /dev/null || rc=$?
+          case "$rc" in
+            0) echo "::error::the tag ${tag} already exists: raise the version of this pack in packs/packs.json"; exit 1 ;;
+            2) echo "tag ${tag} is free" ;;
+            *) echo "::error::could not check the tags of this repository (git exit code ${rc})"; exit 1 ;;
+          esac
+
+      - name: Java ${{ steps.entry.outputs.java }}
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ steps.entry.outputs.java }}
+
+      # The action looks at every gradle-wrapper.jar in the checkout, so it covers packs/<name>/gradle/wrapper as
+      # well as the root one. Two jars are expected: the root wrapper and the pack's own.
+      - name: Validate the Gradle wrapper jars
+        uses: gradle/actions/wrapper-validation@v6
+        with:
+          min-wrapper-count: 2
+
+      # The pack resolves the Morphe Gradle plugin from GitHub Packages, exactly like the root build.
+      - name: Build the pack
+        env:
+          PACK: ${{ steps.entry.outputs.pack }}
+          VERSION: ${{ steps.entry.outputs.version }}
+          TASKS: ${{ steps.entry.outputs.tasks }}
+          ARGS: ${{ steps.entry.outputs.args }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd "packs/$PACK"
+          chmod +x gradlew
+          read -r -a task_list <<< "$TASKS"
+          read -r -a extra_args <<< "$ARGS"
+          ./gradlew "${task_list[@]}" "-Pversion=$VERSION" "${extra_args[@]}" --no-daemon
+
+      - name: Locate and verify the bundle
+        id: bundle
+        env:
+          PACK: ${{ steps.entry.outputs.pack }}
+          VERSION: ${{ steps.entry.outputs.version }}
+          OUTPUT: ${{ steps.entry.outputs.output }}
+        run: |
+          set -euo pipefail
+          mapfile -t found < <(cd "packs/$PACK" && python3 -c 'import glob, sys; print("\n".join(sorted(glob.glob(sys.argv[1]))))' "$OUTPUT" | sed '/^$/d')
+          if [ "${#found[@]}" -ne 1 ]; then
+            echo "::error::build.output must match exactly one file in packs/${PACK}, it matched ${#found[@]}"
+            for f in "${found[@]}"; do echo "  matched: $f"; done
+            echo "  every .mpp under the pack folder:"
+            (cd "packs/$PACK" && find . -name '*.mpp' -not -path './.git/*' | sed 's/^/    /') || true
+            exit 1
+          fi
+          bundle="packs/$PACK/${found[0]}"
+          listing=$(unzip -Z1 "$bundle")
+          grep -qx 'classes.dex' <<< "$listing" \
+            || { echo "::error::the bundle has no classes.dex, so it holds no Android code"; exit 1; }
+          grep -Eq '^extensions/.*[^/]$' <<< "$listing" \
+            || { echo "::error::the bundle has no file under extensions/"; exit 1; }
+          out_dir="$RUNNER_TEMP/pack-out"
+          mkdir -p "$out_dir"
+          name="lynx-${PACK}-${VERSION}.mpp"
+          cp "$bundle" "$out_dir/$name"
+          sha=$(sha256sum "$out_dir/$name" | cut -d' ' -f1)
+          size=$(stat -c %s "$out_dir/$name")
+          echo "bundle: ${found[0]}"
+          echo "sha256: $sha"
+          echo "size:   $size bytes"
+          echo "Built \`$name\`: $size bytes, sha256 \`$sha\`" >> "$GITHUB_STEP_SUMMARY"
+          { echo "path=$out_dir/$name"; echo "name=$name"; } >> "$GITHUB_OUTPUT"
+
+      # Always uploaded, so a publish=false run can be downloaded and tried on a phone before anything is released.
+      - name: Upload the bundle as a workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: lynx-${{ steps.entry.outputs.pack }}-${{ steps.entry.outputs.version }}
+          path: ${{ steps.bundle.outputs.path }}
+          if-no-files-found: error
+
+      - name: Create the GitHub release
+        if: ${{ inputs.publish }}
+        env:
+          PACK: ${{ steps.entry.outputs.pack }}
+          VERSION: ${{ steps.entry.outputs.version }}
+          TITLE: ${{ steps.entry.outputs.title }}
+          BUNDLE: ${{ steps.bundle.outputs.path }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="pack-${PACK}-v${VERSION}"
+          notes="$RUNNER_TEMP/pack-notes.md"
+          if [ -f "packs/$PACK/LYNX.md" ]; then
+            cp "packs/$PACK/LYNX.md" "$notes"
+          else
+            echo "Lynx build of ${TITLE} ${VERSION}. Source and changes: https://github.com/${GITHUB_REPOSITORY}/tree/main/packs/${PACK}" > "$notes"
+          fi
+          # The tag points at the commit that was built, not at whatever main has moved to since.
+          gh release create "$tag" "$BUNDLE" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --latest=false --title "${TITLE} ${VERSION}" --notes-file "$notes"
+
+      # The file Morphe Manager reads. Only this workflow writes it: the import filter keeps upstream's own
+      # patches-bundle.json out of packs/<name>/, so Manager can never serve someone else's binary from our URL.
+      - name: Write the bundle JSON and push it
+        if: ${{ inputs.publish }}
+        env:
+          PACK: ${{ steps.entry.outputs.pack }}
+          VERSION: ${{ steps.entry.outputs.version }}
+          GIT_AUTHOR_NAME: xhyxfxxc
+          GIT_AUTHOR_EMAIL: 338141297+xhyxfxxc@users.noreply.github.com
+          GIT_COMMITTER_NAME: xhyxfxxc
+          GIT_COMMITTER_EMAIL: 338141297+xhyxfxxc@users.noreply.github.com
+        run: |
+          set -euo pipefail
+          tag="pack-${PACK}-v${VERSION}"
+          description=$(cat "$RUNNER_TEMP/pack-notes.md")
+          jq -n \
+            --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%S)" \
+            --arg description "$description" \
+            --arg download_url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/lynx-${PACK}-${VERSION}.mpp" \
+            --arg version "$VERSION" \
+            '{created_at: $created_at, description: $description, download_url: $download_url, signature_download_url: "", version: $version}' \
+            > "packs/$PACK/patches-bundle.json"
+          cat "packs/$PACK/patches-bundle.json"
+          git add "packs/$PACK/patches-bundle.json"
+          if git diff --cached --quiet; then
+            echo "the bundle JSON did not change, nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore(pack-${PACK}): release ${VERSION} [skip ci]"
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              pushed=true
+              break
+            fi
+            echo "push rejected (attempt ${attempt} of 3): rebasing on main and trying again"
+            git pull --rebase origin main
+          done
+          if [ "$pushed" != true ]; then
+            echo "::error::the release ${tag} exists but packs/${PACK}/patches-bundle.json could not be pushed; commit it by hand"
+            exit 1
+          fi
+
+      - name: Attach build provenance
+        if: ${{ inputs.publish }}
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: 'Lynx pack ${{ steps.entry.outputs.pack }} ${{ steps.entry.outputs.version }}'
+          subject-path: ${{ steps.bundle.outputs.path }}
