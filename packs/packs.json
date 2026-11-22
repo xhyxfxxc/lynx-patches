@@ -108,7 +108,8 @@
         "tasks": ":patches:buildAndroid",
         "output": "patches/build/libs/patches-*.mpp",
         "args": ""
-      }
+      },
+      "commit": "1df254204b2ce5c1ac1c6ac73ee94c5ed5defb44"
     },
     "x": {
       "title": "Piko for X (Lynx build)",
