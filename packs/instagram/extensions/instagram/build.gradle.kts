@@ -1482,8 +1482,10 @@ android {
                 .withPropertyName("licenseNotice")
                 .withPathSensitivity(PathSensitivity.RELATIVE)
             // ReportProblemFormTest holds Report a problem's field ids to the bug form, which is
-            // outside this module too, so a renamed field there has to rerun it.
-            it.inputs.file(rootProject.layout.projectDirectory.file(".github/ISSUE_TEMPLATE/bug_report.yml"))
+            // outside this module too, so a renamed field there has to rerun it. Lynx build: the form
+            // is the Lynx Patches repository's (packs/<name>/../..), and `files` does not fail when a
+            // copy of the pack on its own has no form.
+            it.inputs.files(rootProject.layout.projectDirectory.file("../../.github/ISSUE_TEMPLATE/bug_report.yml"))
                 .withPropertyName("bugReportForm")
                 .withPathSensitivity(PathSensitivity.RELATIVE)
             // PatchStatusWiringTest reads each patch's enableStatus call from the patch sources, so
