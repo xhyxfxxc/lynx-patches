@@ -2,12 +2,12 @@ group = "crimera"
 
 patches {
     about {
-        name = "Piko"
+        name = "Piko for X (Lynx build)"
         description = "Morphe patches focused on Twitter/X"
-        source = "git@github.com:crimera/piko.git"
-        author = "crimera"
+        source = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/x"
+        author = "crimera, modified by xhyxfxxc"
         contact = "na"
-        website = "https://github.com/crimera/piko"
+        website = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/x"
         license = "GNU General Public License v3.0"
     }
 }

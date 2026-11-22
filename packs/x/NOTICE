@@ -1,3 +1,12 @@
+Piko for X (Lynx build) NOTICE
+==============================
+
+This is a modified version of Piko 3.11.1 by crimera
+(https://github.com/crimera/piko), built and published by xhyxfxxc as part of Lynx Patches
+(https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/x). It is not the original
+and its author has not endorsed it. What was changed is listed in LYNX.md in that folder.
+The notices of the original follow unchanged.
+
 Piko NOTICE
 
 https://github.com/crimera/piko
