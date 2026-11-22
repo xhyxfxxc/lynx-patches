@@ -3,7 +3,7 @@
 ## What this is
 
 A set of patches for the Instagram app (com.instagram.android), for use with Morphe. It is HushGram 0.0.21
-by SysAdminDoc (https://github.com/SysAdminDoc/HushGram, commit 78f7deb), with three small changes by Lynx.
+by SysAdminDoc (https://github.com/SysAdminDoc/HushGram, commit 78f7deb), with small changes by Lynx (listed below).
 It was written for Instagram 456.0.0.53.78 and only that version. Lynx version: 0.0.21-lynx.1.
 
 Terms: a "patch" runs on your PC when you patch the app and rewrites it. The "extension" is the Java code
@@ -28,7 +28,10 @@ original and its author has not endorsed it. The licence is GPL-3.0 (see LICENSE
 3. The pack says it is a modified version, as the licence asks: the bundle is named "HushGram (Lynx build)",
    its source, website and contact point at Lynx, the author reads "SysAdminDoc, modified by xhyxfxxc", and
    NOTICE starts with a Lynx section above the unchanged original text. Files: patches/build.gradle.kts, NOTICE.
-4. This file (LYNX.md).
+4. Build only: the extension tests wanted a file .github/ISSUE_TEMPLATE/bug_report.yml inside this folder, which
+   the import leaves out. The test input now points at the Lynx repository's own form two folders up (and does
+   not fail when it is missing). Nothing that goes into the bundle changes. File: extensions/instagram/build.gradle.kts.
+5. This file (LYNX.md). Our test ReportProblemFormTest now checks the field names against the Lynx form.
 
 ## What was reviewed and what was not
 
@@ -64,7 +67,10 @@ In Git Bash from this folder (needs JDK 21, the Android SDK and a GitHub token w
     cd packs/instagram
     ./gradlew :patches:generatePatchesList :patches:buildAndroid -Pversion=0.0.21-lynx.1 --no-daemon
 
-The bundle is written to patches/build/release/patches-<version>.mpp. It is unsigned.
+The bundle is written to patches/build/release/patches-<version>.mpp. It is unsigned. Notes: the library needs
+Android platform 35 (Gradle installs it by itself; several builds at once can leave it half installed). The
+build rewrites the version line of patches-list.json: do not commit that change. Tests, if wanted:
+./gradlew :extensions:instagram:testDebugUnitTest :patches:test --no-daemon (long).
 
 ## How to add it to Morphe Manager
 
