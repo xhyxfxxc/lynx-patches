@@ -28,6 +28,8 @@ public class HandleCustomDeepLinksPatch {
             customLinkHosts = ResourceUtils.getStringArray("piko_custom_deeplink_hosts");
 
         String host = uri.getHost();
+        // Lynx: a link without a host would throw below.
+        if (host == null) return;
 
         for (String customHost : customLinkHosts) {
             if (host.endsWith(customHost)) {
