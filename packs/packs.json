@@ -1,4 +1,136 @@
 {
   "_about": "Third-party Morphe patch packs kept as source snapshots under packs/<name>/, one entry per pack. tools/pack_sync.py imports and syncs them and writes the commit field; .github/workflows/pack.yml builds and releases one pack as its own Morphe source. Schema and filter rules: packs/README.md.",
-  "packs": {}
+  "packs": {
+    "facebook": {
+      "title": "Hushfacebook (Lynx build)",
+      "app": "com.facebook.katana",
+      "upstream": "https://github.com/SysAdminDoc/HushFacebook",
+      "ref": "v0.23.0",
+      "exclude": [
+        "patches-bundle.json",
+        ".github/**"
+      ],
+      "version": "0.23.0-lynx.1",
+      "build": {
+        "java": "21",
+        "tasks": ":patches:generatePatchesList :patches:buildAndroid",
+        "output": "patches/build/libs/patches-*.mpp",
+        "args": ""
+      }
+    },
+    "instagram": {
+      "title": "HushGram (Lynx build)",
+      "app": "com.instagram.android",
+      "upstream": "https://github.com/SysAdminDoc/HushGram",
+      "ref": "v0.0.21",
+      "exclude": [
+        "patches-bundle.json",
+        ".github/**",
+        "concepts/**"
+      ],
+      "version": "0.0.21-lynx.1",
+      "build": {
+        "java": "21",
+        "tasks": ":patches:generatePatchesList :patches:buildAndroid",
+        "output": "patches/build/release/patches-*.mpp",
+        "args": ""
+      }
+    },
+    "threads": {
+      "title": "HushThreads (Lynx build)",
+      "app": "com.instagram.barcelona",
+      "upstream": "https://github.com/SysAdminDoc/HushThreads",
+      "ref": "v0.0.18",
+      "exclude": [
+        "patches-bundle.json",
+        ".github/**",
+        "concepts/**"
+      ],
+      "version": "0.0.18-lynx.1",
+      "build": {
+        "java": "21",
+        "tasks": ":patches:generatePatchesList :patches:buildAndroid",
+        "output": "patches/build/libs/patches-*.mpp",
+        "args": ""
+      }
+    },
+    "gboard": {
+      "title": "Gboard patches (Lynx build)",
+      "app": "com.google.android.inputmethod.latin",
+      "upstream": "https://github.com/jasonwu1994/Gboard-patches",
+      "ref": "v4.4.0",
+      "exclude": [
+        "patches-bundle.json",
+        ".github/**"
+      ],
+      "version": "4.4.0-lynx.1",
+      "build": {
+        "java": "21",
+        "tasks": ":patches:buildAndroid",
+        "output": "patches/build/libs/patches-*.mpp",
+        "args": ""
+      }
+    },
+    "waze": {
+      "title": "bearinmind Waze patches (Lynx build)",
+      "app": "com.waze",
+      "upstream": "https://github.com/bearinmindcat/morphe-patches",
+      "ref": "v2.10.0",
+      "_include_note": "Waze only. The upstream repo patches 87 apps; everything else stays out.",
+      "include": [
+        ".editorconfig",
+        ".gitattributes",
+        ".gitignore",
+        "CHANGELOG.md",
+        "LICENSE",
+        "NOTICE",
+        "README.md",
+        "build.gradle.kts",
+        "gradle.properties",
+        "gradlew",
+        "gradlew.bat",
+        "settings.gradle.kts",
+        "gradle/**",
+        "patches/build.gradle.kts",
+        "patches/src/main/kotlin/org/ungoogled/patches/waze/**",
+        "patches/src/main/kotlin/org/ungoogled/patches/shared/Instructions.kt",
+        "patches/src/main/kotlin/util/**",
+        "extensions/waze/**"
+      ],
+      "exclude": [
+        "patches-bundle.json",
+        ".github/**"
+      ],
+      "version": "2.10.0-lynx.1",
+      "build": {
+        "java": "21",
+        "tasks": ":patches:buildAndroid",
+        "output": "patches/build/libs/patches-*.mpp",
+        "args": ""
+      }
+    },
+    "x": {
+      "title": "Piko for X (Lynx build)",
+      "app": "com.twitter.android",
+      "upstream": "https://github.com/crimera/piko",
+      "ref": "v3.11.1",
+      "_exclude_note": "X only. Piko's Instagram half (not audited) and its docs folder stay out.",
+      "exclude": [
+        "patches-bundle.json",
+        ".github/**",
+        "docs/**",
+        "extensions/instagram/**",
+        "patches/src/main/kotlin/app/crimera/patches/instagram/**",
+        "patches/src/main/resources/instagram/**",
+        "patches/src/main/resources/addresources/*/instagram/**"
+      ],
+      "version": "3.11.1-lynx.1",
+      "build": {
+        "java": "21",
+        "tasks": ":patches:buildAndroid",
+        "output": "patches/build/libs/patches-*.mpp",
+        "args": ""
+      }
+    }
+  }
 }
