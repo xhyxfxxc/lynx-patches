@@ -10,40 +10,29 @@
 package app.morphe.extension.hushthreads.settings;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.regex.Pattern;
+
+import app.morphe.extension.shared.settings.preference.ReportProblem;
 
 /**
- * Report a problem fills GitHub's bug form by field id, and GitHub drops a value whose id the form
- * doesn't have without a word. Each id the link uses is held to the form in the repository.
+ * Lynx build: Report a problem opens a new issue on Lynx Patches, not on the upstream repository.
+ * Lynx Patches has no HushThreads issue form, so the text goes in as the issue's body.
  */
 public class ReportProblemFormTest {
     @Test
-    public void theLinkPointsAtThisRepositorysBugFormAndItsFields() throws IOException {
-        assertEquals("SysAdminDoc/HushThreads", ReportProblemForm.REPOSITORY);
-        assertEquals("github.com/SysAdminDoc/HushThreads/issues", ReportProblemForm.ISSUES_ADDRESS);
-        File form = new File(root(), ".github/ISSUE_TEMPLATE/bug_report.yml");
-        assertTrue("no bug form at " + form, form.isFile());
-        String yaml = new String(Files.readAllBytes(form.toPath()), StandardCharsets.UTF_8);
-        for (String id : Arrays.asList("versions", "device", "bug_description", "additional_context")) {
-            assertTrue("bug_report.yml has no field " + id,
-                    Pattern.compile("(?m)^\\s*id:\\s*" + Pattern.quote(id) + "\\s*$").matcher(yaml).find());
-        }
-    }
-
-    /** The repository root, found from wherever Gradle runs the test. */
-    private static File root() {
-        for (File dir = new File("").getAbsoluteFile(); dir != null; dir = dir.getParentFile()) {
-            if (new File(dir, "settings.gradle.kts").isFile() && new File(dir, "gradlew").isFile()) return dir;
-        }
-        throw new AssertionError("no repository root above " + new File("").getAbsolutePath());
+    public void theLinkPointsAtLynxPatchesAndFillsTheBody() {
+        assertEquals("https://github.com/xhyxfxxc/lynx-patches/issues/new", ReportProblemForm.NEW_ISSUE_URL);
+        assertEquals("xhyxfxxc/lynx-patches", ReportProblemForm.REPOSITORY);
+        assertEquals("github.com/xhyxfxxc/lynx-patches/issues", ReportProblemForm.ISSUES_ADDRESS);
+        String url = ReportProblem.issueUrl(ReportProblemForm.FORM, new ReportProblem.Facts("HushThreads", "0.0.18",
+                "Threads", "455.0.0.55.72", 1L, "Acme", "Phone", "16", 36, Arrays.asList("Hide ads")));
+        assertTrue(url, url.startsWith(ReportProblemForm.NEW_ISSUE_URL + "?body="));
+        assertFalse(url, url.contains("SysAdminDoc"));
+        assertFalse(url, url.contains("template="));
     }
 }

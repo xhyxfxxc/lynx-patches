@@ -27,22 +27,26 @@ import app.morphe.extension.shared.settings.Setting;
 import app.morphe.extension.shared.settings.preference.ReportProblem;
 
 /**
- * HushThreads' half of Report a problem: the repository, its bug form's field ids
- * (.github/ISSUE_TEMPLATE/bug_report.yml) and the names that go in the versions line.
- * {@link ReportProblem} builds the address.
+ * HushThreads' half of Report a problem: the repository and the names that go in the versions
+ * line. {@link ReportProblem} builds the address.
+ *
+ * <p>Lynx build: a report goes to Lynx Patches, not to the upstream author, and Lynx Patches has
+ * no HushThreads issue form, so the whole text goes in as the issue's body.
  */
 @SuppressWarnings("deprecation")
 final class ReportProblemForm {
-    /** owner/name, read off the Source code link so the two can't drift apart. */
-    static final String REPOSITORY = HushThreadsPreferenceFragment.SOURCE_URL
-            .substring(HushThreadsPreferenceFragment.SOURCE_URL.indexOf("github.com/") + "github.com/".length());
+    /** Where a new report is started: Lynx Patches' issue tracker. */
+    static final String NEW_ISSUE_URL = "https://github.com/xhyxfxxc/lynx-patches/issues/new";
+
+    /** owner/name, read off the new-issue address so the two can't drift apart. */
+    static final String REPOSITORY = NEW_ISSUE_URL.substring("https://github.com/".length(),
+            NEW_ISSUE_URL.length() - "/issues/new".length());
 
     /** Where the reports live, for the message when no app opens the link. */
-    static final String ISSUES_ADDRESS = HushThreadsPreferenceFragment.SOURCE_ADDRESS + "/issues";
+    static final String ISSUES_ADDRESS = "github.com/xhyxfxxc/lynx-patches/issues";
 
-    /** The bug form and the ids of the fields filled in. A renamed id in the form has to change here too. */
-    static final ReportProblem.Form FORM = new ReportProblem.Form(REPOSITORY, "bug_report.yml",
-            "versions", "device", "bug_description", "additional_context");
+    /** No issue form (null template), so the versions, phone, switches and questions all go in the body. */
+    static final ReportProblem.Form FORM = new ReportProblem.Form(REPOSITORY, null, null, null, null, null);
 
     private ReportProblemForm() {
     }

@@ -752,7 +752,7 @@ patches {
         description = "HushThreads patches for Threads, built for Morphe. Ads out of your feed, share links without tracking, and less data sent back to Meta."
         source = "https://github.com/SysAdminDoc/HushThreads"
         author = "SysAdminDoc"
-        contact = "https://github.com/SysAdminDoc/HushThreads/issues"
+        contact = "https://github.com/xhyxfxxc/lynx-patches/issues"
         website = "https://github.com/SysAdminDoc/HushThreads"
         license = "GNU General Public License v3.0, with additional GPL section 7 requirements"
     }

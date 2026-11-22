@@ -302,7 +302,7 @@ public class SettingsNavigationTest {
         }
     }
 
-    /** Report a problem, in Support, opens GitHub's bug form with the versions and switches filled in. */
+    /** Report a problem, in Support, opens a new Lynx Patches issue with the versions and switches filled in. */
     @Test public void reportAProblemOpensAFilledInGitHubForm() throws Exception {
         Map<String, Object> before = savedValues();
         page.navigation.navigate(SettingsNavigation.SUPPORT);
@@ -315,16 +315,16 @@ public class SettingsNavigationTest {
         assertTrue(started.hasCategory(android.content.Intent.CATEGORY_BROWSABLE));
         assertTrue((started.getFlags() & android.content.Intent.FLAG_ACTIVITY_NEW_TASK) != 0);
         String url = started.getDataString();
-        assertTrue(url, url.startsWith("https://github.com/SysAdminDoc/HushThreads/issues/new?template=bug_report.yml&"));
+        assertTrue(url, url.startsWith("https://github.com/xhyxfxxc/lynx-patches/issues/new?body="));
         assertTrue(url, url.length() <= app.morphe.extension.shared.settings.preference.ReportProblem.MAX_LENGTH);
         String decoded = java.net.URLDecoder.decode(url, "UTF-8");
-        assertTrue(decoded, decoded.contains("&versions=HushThreads "));
+        assertTrue(decoded, decoded.contains("Versions: HushThreads "));
         assertTrue(decoded, decoded.contains(" on Threads "));
-        assertTrue(decoded, decoded.contains("&device="));
+        assertTrue(decoded, decoded.contains("Phone: "));
         assertTrue(decoded, decoded.contains("What happened:"));
         assertTrue(decoded, decoded.contains("What I expected:"));
         // Hide ads starts on, Hide screenshots from Threads starts off.
-        assertTrue(decoded, decoded.contains("&additional_context=Switches on: "));
+        assertTrue(decoded, decoded.contains("Switches on: "));
         assertTrue(decoded, decoded.contains("Hide ads"));
         assertFalse(decoded, decoded.contains("Hide screenshots from Threads"));
         assertEquals(before, savedValues());
@@ -332,7 +332,7 @@ public class SettingsNavigationTest {
         org.robolectric.Shadows.shadowOf(org.robolectric.RuntimeEnvironment.getApplication()).checkActivities(true);
         tap(SettingsNavigation.REPORT);
         assertEquals("No app on this phone can open the link. The address is "
-                + L10n.isolate("github.com/SysAdminDoc/HushThreads/issues") + ".", ShadowToast.getTextOfLatestToast());
+                + L10n.isolate("github.com/xhyxfxxc/lynx-patches/issues") + ".", ShadowToast.getTextOfLatestToast());
         assertFalse(controller.get().isFinishing());
     }
 
