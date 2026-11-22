@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "app.morphe.extension"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         // Facebook's Android 9+ build declares minSdk 28 (#102), and this library only runs inside Facebook.
