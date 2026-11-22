@@ -49,7 +49,7 @@ internal fun main(args: Array<String>) {
     val exceptions = mutableListOf<Exception>()
 
     arrayOf(
-        "instagram",
+        // Lynx: "instagram" removed, that half of Piko is not part of this pack.
         "shared",
         "twitter",
         "twitter-bring-back",
