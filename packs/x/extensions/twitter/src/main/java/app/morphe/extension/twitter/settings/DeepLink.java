@@ -63,6 +63,11 @@ public class DeepLink {
                     return true;
                 }
             } else if (mainPath.equals("status") && "r".equals(firstSegment)) {
+                // Lynx: open reader mode only when its patch is applied and the switch is on
+                // (Pref.enableNativeReaderMode checks both); otherwise X handles the link itself.
+                if (!app.morphe.extension.twitter.Pref.enableNativeReaderMode() || segmentSize < 3) {
+                    return false;
+                }
                 String tweetId = deeplinkSegments.get(2);
                 ActivityHook.startReaderMode(tweetId);
                 return true;
