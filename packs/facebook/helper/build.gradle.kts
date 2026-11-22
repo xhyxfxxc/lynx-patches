@@ -52,7 +52,8 @@ configurations.configureEach {
 
 // The repository's version, so the app and the patches always say the same number.
 val repoVersion = rootProject.version.toString()
-val versionParts = repoVersion.split('.').map { it.toInt() }
+// Lynx build: a version such as 0.23.0-lynx.1 has a suffix, so only the part before the dash gives the code.
+val versionParts = repoVersion.substringBefore('-').split('.').map { it.toInt() }
 
 // The release key stays out of git: helper/keystore.properties (gitignored) names it. Without that
 // file the release APK comes out unsigned, and release.ps1 won't ship it.
