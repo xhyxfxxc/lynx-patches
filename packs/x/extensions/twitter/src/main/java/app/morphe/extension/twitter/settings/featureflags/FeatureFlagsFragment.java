@@ -52,6 +52,8 @@ public class FeatureFlagsFragment extends Fragment {
         if (!flagsPref.isEmpty()) {
             for (String flag : flagsPref.split(",")) {
                 String[] item = flag.split(":");
+                // Lynx: skip a malformed entry (see FeatureSwitchPatch.load).
+                if (item.length < 2) continue;
                 flags.add(new FeatureFlag(item[0], Boolean.valueOf(item[1])));
             }
         }

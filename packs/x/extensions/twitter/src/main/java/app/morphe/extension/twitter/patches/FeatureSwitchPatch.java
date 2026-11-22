@@ -138,6 +138,9 @@ public class FeatureSwitchPatch {
         if (!flags.isEmpty()) {
             for (String flag : flags.split(",")) {
                 String[] item = flag.split(":");
+                // Lynx: skip a malformed entry (for example after a settings restore)
+                // instead of crashing the app at every start.
+                if (item.length < 2) continue;
                 addFlag(item[0], Boolean.valueOf(item[1]));
             }
         }

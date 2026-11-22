@@ -47,12 +47,28 @@ public class RestorePrefFragment extends Fragment {
         return "";
     }
 
+    private static String keepValidFlags(String raw) {
+        StringBuilder out = new StringBuilder();
+        for (String flag : raw.split(",")) {
+            String[] item = flag.split(":");
+            if (item.length == 2 && !item[0].isEmpty()
+                    && (item[1].equals("true") || item[1].equals("false"))) {
+                out.append(item[0]).append(":").append(item[1]).append(",");
+            }
+        }
+        return out.toString();
+    }
+
     public static void receiveFileForRestore(Uri uri, Context context) {
         String jsonString = readFileContent(uri);
         boolean sts = false;
         String prefTag = str("notification_settings_preferences_category");
         if(featureFlag){
-            sts = Utils.setStringPref(Settings.MISC_FEATURE_FLAGS.key,jsonString);
+            // Lynx: store only well-formed "name:true,name:false," entries, so a wrong file
+            // cannot break the next start of the app. A non-empty file with none counts as failed.
+            String flags = keepValidFlags(jsonString);
+            sts = !(flags.isEmpty() && !jsonString.isEmpty())
+                    && Utils.setStringPref(Settings.MISC_FEATURE_FLAGS.key,flags);
             prefTag = str("piko_title_feature_flags");
         }else{
             sts = Utils.setAll(jsonString);
