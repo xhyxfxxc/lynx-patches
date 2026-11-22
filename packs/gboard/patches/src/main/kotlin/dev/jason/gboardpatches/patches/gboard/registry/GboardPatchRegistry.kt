@@ -688,8 +688,9 @@ val gboardLanFtpServerPatch = gboardPublicResourcePatch(
     featureId = "lan_ftp_server",
     name = "FTP Server",
     description = "新增區域網路 FTP 伺服器，支援檔案瀏覽、傳輸與下載續傳\n" +
+        "Lynx: off by default. When switched on it lets other devices on the network read and write the phone's shared storage over plain FTP. " +
         "Add a LAN FTP server with file browsing, transfers, and download resume.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 

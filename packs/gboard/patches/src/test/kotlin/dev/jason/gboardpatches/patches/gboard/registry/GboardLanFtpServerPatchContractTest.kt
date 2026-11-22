@@ -24,7 +24,7 @@ class GboardLanFtpServerPatchContractTest {
 
         assertEquals("FTP Server", patch.name)
         assertEquals(LAN_FTP_DESCRIPTION, patch.description)
-        assertTrue(patch.default)
+        assertFalse(patch.default)
         assertTrue(patch.options.isEmpty())
         assertEquals(
             setOf(
@@ -84,7 +84,7 @@ class GboardLanFtpServerPatchContractTest {
 
         assertEquals(1, rows.size)
         assertEquals(LAN_FTP_DESCRIPTION, rows.single()["description"].asString)
-        assertTrue(rows.single()["use"].asBoolean)
+        assertFalse(rows.single()["use"].asBoolean)
     }
 
     private fun repositoryRoot(): Path {
@@ -98,6 +98,8 @@ class GboardLanFtpServerPatchContractTest {
     private companion object {
         const val LAN_FTP_DESCRIPTION =
             "新增區域網路 FTP 伺服器，支援檔案瀏覽、傳輸與下載續傳\n" +
+                "Lynx: off by default. When switched on it lets other devices on the network " +
+                "read and write the phone's shared storage over plain FTP. " +
                 "Add a LAN FTP server with file browsing, transfers, and download resume."
         const val CATALOG_PATH =
             "patches/src/main/resources/gboard/gboard-port-product-catalog.json"
