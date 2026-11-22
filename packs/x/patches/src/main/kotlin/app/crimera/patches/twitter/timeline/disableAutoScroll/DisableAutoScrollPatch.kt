@@ -6,7 +6,7 @@
 
 package app.crimera.patches.twitter.timeline.disableAutoScroll
 
-import app.crimera.patches.instagram.utils.typeReference
+import app.crimera.patches.twitter.utils.typeReference
 import app.crimera.patches.twitter.misc.settings.settingsPatch
 import app.crimera.patches.twitter.utils.Constants.COMPATIBILITY_X
 import app.crimera.patches.twitter.utils.Constants.PATCHES_DESCRIPTOR
