@@ -38,6 +38,8 @@ not from the upstream author's released file.
 5. Hush Unpacker (the `helper/` app, only needed to patch the Android 9 and 10 build of Facebook) is not
    published by Lynx. Its source is left where it is. Its APK is not built or shipped, and the bundle build does
    not need it (it only builds it when `helper/keystore.properties` exists, which it does not here).
+6. Build fix: the dependency checksum list now also accepts the Linux build of the Android resource tool aapt2
+   (checksum from Google's own published value), because upstream only builds on Windows and Lynx builds on Linux.
 
 ## What was reviewed and what was not
 
