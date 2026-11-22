@@ -54,6 +54,30 @@ and `extensions/.../AmazonHelper.java` / `AmazonUrls.java` since v1.23.1 and por
 owner picks. Our Amazon code has since diverged (clone support, link policy, dark mode, autoplay,
 manifest permissions, price history card), so never copy their files over ours.
 
+## Packs: other authors' patch packs, published as separate sources (owner decision 2026-11-23)
+
+- `packs/<name>/` is a source snapshot of someone else's Morphe patch pack plus our changes. Each pack keeps
+  its own Gradle build and is released by `.github/workflows/pack.yml` as its own Morphe source
+  (`packs/<name>/patches-bundle.json`, written only by that workflow). Registry: `packs/packs.json`.
+  How-to and filter rules: `packs/README.md`. They are not part of the Lynx bundle and not built by the root build.
+- Packs: facebook (Hushfacebook), instagram (HushGram), threads (HushThreads), gboard (Gboard-patches),
+  waze (bearinmind patches, Waze files only), x (Piko, X half only). All GPL-3.0.
+- Commits that touch packs are `chore(pack-<name>): ...` or `chore(packs): ...`. Never `fix:` or `feat:` there:
+  those would publish a new Lynx bundle.
+- Review gate: `python tools/pack_sync.py sync <name> <tag>` merges a new upstream version but never commits.
+  Read the upstream diff it writes to `build/pack-sync/` for anything that sends data off the phone, loads code,
+  adds permissions or exported components, or changes the build, and only then commit. Never run a pack's build
+  on code that has not been reviewed. The first audits (2026-11-23) are in
+  `C:\Users\thoma\Morpheapp\upstream-src\_audit\` (local, not in git).
+- Everything we changed in a pack is listed in `packs/<name>/LYNX.md`; keep it current.
+  `python tools/pack_sync.py diff <name>` shows the exact difference from upstream.
+- Release a pack: raise `version` in `packs/packs.json` (`<upstream version>-lynx.<n>`), apply the built bundle
+  with Morphe Desktop `--validate` to the original APK in `apks\` (every default patch must apply), test on the
+  phone, ask the owner before a pack's first release, then
+  `gh workflow run Pack -R xhyxfxxc/lynx-patches -f pack=<name>`.
+- License duties: keep each pack's LICENSE and upstream NOTICE text, name it "<Upstream name> (Lynx build)",
+  never publish upstream's own `patches-bundle.json` or signing key from our folders.
+
 ## Branches, commits, releases
 
 - Everything lands on `main` (upstream's design: a push to `main` is a release). Commit and
