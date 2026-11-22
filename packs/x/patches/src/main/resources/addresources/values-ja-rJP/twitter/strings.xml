@@ -68,7 +68,6 @@
     <string name="piko_native_translator_to_lang">翻訳先の言語</string>
     <string name="piko_native_translator_zero_text">翻訳するテキストが見つかりません</string>
     <string name="piko_native_translator_google">Google翻訳</string>
-    <string name="piko_native_translator_google_v2">Google翻訳V2</string>
     <string name="piko_native_translator_fxtwitter">FxTwitter API</string>
     <string name="piko_title_native_reader_mode">リーダーモード</string>
     <string name="piko_native_reader_mode_toggle">リーダーモードを有効化</string>

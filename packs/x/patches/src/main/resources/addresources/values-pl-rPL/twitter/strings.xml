@@ -68,7 +68,6 @@
     <string name="piko_native_translator_to_lang">Język docelowy</string>
     <string name="piko_native_translator_zero_text">Nie znaleziono tekstu do przetłumaczenia</string>
     <string name="piko_native_translator_google">Tłumacz Google</string>
-    <string name="piko_native_translator_google_v2">Tłumacz Google V2</string>
     <string name="piko_native_translator_fxtwitter">FxTwitter API</string>
     <string name="piko_title_native_reader_mode">Tryb czytnika</string>
     <string name="piko_native_reader_mode_toggle">Włącz tryb czytnika</string>

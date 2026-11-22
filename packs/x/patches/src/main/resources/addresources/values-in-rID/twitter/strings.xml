@@ -68,7 +68,6 @@
     <string name="piko_native_translator_to_lang">Terjemahkan ke</string>
     <string name="piko_native_translator_zero_text">Tidak ditemukan teks untuk diterjemahkan</string>
     <string name="piko_native_translator_google">Penerjemah Google</string>
-    <string name="piko_native_translator_google_v2">Penerjemah Google V2</string>
     <string name="piko_native_translator_fxtwitter">API FxTwitter</string>
     <string name="piko_title_native_reader_mode">Mode baca</string>
     <string name="piko_native_reader_mode_toggle">Aktifkan mode pembaca</string>

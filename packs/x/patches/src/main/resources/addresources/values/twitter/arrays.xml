@@ -106,7 +106,6 @@
 
     <string-array name="piko_array_translators">
         <item>@string/piko_native_translator_google</item>
-        <item>@string/piko_native_translator_google_v2</item>
         <item>@string/piko_native_translator_fxtwitter</item>
     </string-array>
 
@@ -188,7 +187,6 @@
 
     <string-array name="piko_array_translators_val">
         <item>0</item>
-        <item>1</item>
         <item>2</item>
     </string-array>
 

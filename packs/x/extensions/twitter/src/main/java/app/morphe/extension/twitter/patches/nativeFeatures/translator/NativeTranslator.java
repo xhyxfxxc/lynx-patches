@@ -13,7 +13,6 @@ import android.content.Context;
 import app.morphe.extension.crimera.PikoUtils;
 import app.morphe.extension.twitter.patches.nativeFeatures.translator.providers.Translate;
 import app.morphe.extension.twitter.patches.nativeFeatures.translator.providers.GTranslate;
-import app.morphe.extension.twitter.patches.nativeFeatures.translator.providers.GTranslateV2;
 import app.morphe.extension.twitter.patches.nativeFeatures.translator.providers.FxTwitterTranslate;
 import app.morphe.extension.twitter.Pref;
 
@@ -44,14 +43,12 @@ public class NativeTranslator {
 
             Translate translator;
             switch (providerCode){
-                case 1: {
-                    translator = new GTranslateV2();
-                    break;
-                }
                 case 2: {
                     translator = new FxTwitterTranslate();
                     break;
                 }
+                // Lynx: provider 1 (GTranslateV2) was removed. A saved setting of 1, or any
+                // other unknown value, uses the default provider.
                 default: {
                     translator = new GTranslate();
                 }

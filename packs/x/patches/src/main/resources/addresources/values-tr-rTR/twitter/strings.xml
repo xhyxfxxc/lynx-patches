@@ -68,7 +68,6 @@
     <string name="piko_native_translator_to_lang">Şuna çevir</string>
     <string name="piko_native_translator_zero_text">Çevrilecek metin bulunamadı</string>
     <string name="piko_native_translator_google">Google çeviri</string>
-    <string name="piko_native_translator_google_v2">Google çeviri V2</string>
     <string name="piko_native_translator_fxtwitter">FxTwitter API</string>
     <string name="piko_title_native_reader_mode">Okuyucu modu</string>
     <string name="piko_native_reader_mode_toggle">Okuma modunu etkinleştir</string>

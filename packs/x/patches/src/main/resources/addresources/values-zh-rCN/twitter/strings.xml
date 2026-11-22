@@ -68,7 +68,6 @@
     <string name="piko_native_translator_to_lang">目标语言</string>
     <string name="piko_native_translator_zero_text">未找到需要翻译的文本</string>
     <string name="piko_native_translator_google">Google 翻译</string>
-    <string name="piko_native_translator_google_v2">Google 翻译 V2</string>
     <string name="piko_native_translator_fxtwitter">FxTwitter API</string>
     <string name="piko_title_native_reader_mode">原生阅读器模式</string>
     <string name="piko_native_reader_mode_toggle">启用原生阅读器模式</string>

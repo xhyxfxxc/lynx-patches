@@ -68,7 +68,6 @@
     <string name="piko_native_translator_to_lang">ترجم إلى</string>
     <string name="piko_native_translator_zero_text">لم يتم العثور على نص للترجمة</string>
     <string name="piko_native_translator_google">Google مترجم</string>
-    <string name="piko_native_translator_google_v2">مترجم Google V2</string>
     <string name="piko_native_translator_fxtwitter">FxTwitter API</string>
     <string name="piko_title_native_reader_mode">وضع القارئ</string>
     <string name="piko_native_reader_mode_toggle">تمكين وضع القارئ</string>

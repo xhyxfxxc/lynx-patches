@@ -68,7 +68,6 @@
     <string name="piko_native_translator_to_lang">번역할 언어</string>
     <string name="piko_native_translator_zero_text">번역할 텍스트를 찾을 수 없습니다</string>
     <string name="piko_native_translator_google">Google 번역기</string>
-    <string name="piko_native_translator_google_v2">Google 번역기 V2</string>
     <string name="piko_native_translator_fxtwitter">FxTwitter API</string>
     <string name="piko_title_native_reader_mode">읽기 모드</string>
     <string name="piko_native_reader_mode_toggle">읽기 모드 활성화하기</string>
