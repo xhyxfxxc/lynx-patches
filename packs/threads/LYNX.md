@@ -35,6 +35,9 @@ separate from the main Lynx Patches bundle.
    `patches/build.gradle.kts`), `NOTICE` has a Lynx section on top of the unchanged original text, and this file
    was added (plus one line in `.gitignore` so git tracks it). Settings titles inside the app still say HushThreads.
 5. Version and patch list: the build version is `0.0.18-lynx.1` and `patches-list.json` was regenerated for it.
+6. Build fix: the dependency checksum list (`gradle/verification-metadata.xml`) now also accepts the Linux build of
+   the Android resource tool aapt2 (checksum taken from Google's own published value), because upstream only builds
+   on Windows and Lynx builds on Linux.
 
 README.md is the upstream text and still describes the upstream project, including its signed releases. A Lynx
 bundle is not signed.
