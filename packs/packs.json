@@ -14,7 +14,7 @@
       "build": {
         "java": "21",
         "tasks": ":patches:generatePatchesList :patches:buildAndroid",
-        "output": "patches/build/libs/patches-*.mpp",
+        "output": "patches/build/release/patches-*.mpp",
         "args": ""
       },
       "commit": "7c0e085e4e8c63c2868c7f6aa89978ee8c43295e"
@@ -52,7 +52,7 @@
       "build": {
         "java": "21",
         "tasks": ":patches:generatePatchesList :patches:buildAndroid",
-        "output": "patches/build/libs/patches-*.mpp",
+        "output": "patches/build/release/patches-*.mpp",
         "args": ""
       },
       "commit": "d50db1f74898db1f593af13ee31b722a23b52689"
