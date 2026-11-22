@@ -748,12 +748,12 @@ group = "app.morphe"
 
 patches {
     about {
-        name = "HushThreads"
+        name = "HushThreads (Lynx build)"
         description = "HushThreads patches for Threads, built for Morphe. Ads out of your feed, share links without tracking, and less data sent back to Meta."
-        source = "https://github.com/SysAdminDoc/HushThreads"
-        author = "SysAdminDoc"
+        source = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/threads"
+        author = "SysAdminDoc, modified by xhyxfxxc"
         contact = "https://github.com/xhyxfxxc/lynx-patches/issues"
-        website = "https://github.com/SysAdminDoc/HushThreads"
+        website = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/threads"
         license = "GNU General Public License v3.0, with additional GPL section 7 requirements"
     }
 }
