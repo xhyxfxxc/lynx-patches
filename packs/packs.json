@@ -1,0 +1,4 @@
+{
+  "_about": "Third-party Morphe patch packs kept as source snapshots under packs/<name>/, one entry per pack. tools/pack_sync.py imports and syncs them and writes the commit field; .github/workflows/pack.yml builds and releases one pack as its own Morphe source. Schema and filter rules: packs/README.md.",
+  "packs": {}
+}
