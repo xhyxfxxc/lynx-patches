@@ -90,7 +90,6 @@ final class OsmCameras {
             "https://overpass-api.de/api/interpreter",
             "https://lz4.overpass-api.de/api/interpreter",
             "https://z.overpass-api.de/api/interpreter",
-            "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
             "https://overpass.private.coffee/api/interpreter",
     };
     private static final long[] SERVER_RESTING = new long[SERVERS.length];
@@ -417,6 +416,7 @@ final class OsmCameras {
     private static String post(String server, String query, int readTimeoutMs, String agent) throws Exception {
         HttpURLConnection http = (HttpURLConnection) new URL(server).openConnection();
         try {
+            http.setInstanceFollowRedirects(false);
             http.setConnectTimeout(15000);
             http.setReadTimeout(readTimeoutMs);
             http.setRequestMethod("POST");
@@ -439,7 +439,12 @@ final class OsmCameras {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buf = new byte[16384];
             int n;
-            while ((n = is.read(buf)) > 0) out.write(buf, 0, n);
+            long total = 0;
+            while ((n = is.read(buf)) > 0) {
+                total += n;
+                if (total > 8L * 1024 * 1024) throw new java.io.IOException("response over 8 MB");
+                out.write(buf, 0, n);
+            }
             return out.toString("UTF-8");
         }
     }
