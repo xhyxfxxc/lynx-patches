@@ -140,8 +140,6 @@ public class PatchFamilyTest {
         // The check can fail: an opt-in patch isn't in either list.
         assertFalse(selected.contains(PatchFamily.VERSION_CODE.patchName));
         assertFalse(PatchFamily.DEFAULT_SELECTION.contains(PatchFamily.VERSION_CODE));
-        assertFalse(selected.contains(PatchFamily.TRUST_USER_CERTIFICATES.patchName));
-        assertFalse(PatchFamily.DEFAULT_SELECTION.contains(PatchFamily.TRUST_USER_CERTIFICATES));
     }
 
     /**

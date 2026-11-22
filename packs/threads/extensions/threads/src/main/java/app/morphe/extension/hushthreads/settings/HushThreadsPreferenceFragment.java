@@ -500,7 +500,6 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
 
         if (build.contains(PatchFamily.REMOVE_AD_ID) || build.contains(PatchFamily.RESTORE_TRUST)
                 || build.contains(PatchFamily.VERSION_CODE) || build.contains(PatchFamily.REMOVE_SHARE_TARGETS)
-                || build.contains(PatchFamily.TRUST_USER_CERTIFICATES)
                 || build.contains(PatchFamily.CHANGE_PACKAGE_NAME) || build.contains(PatchFamily.CHANGE_APP_NAME)) {
             PreferenceCategory patched = category(screen, L10n.t("Set when you patched"));
             // Each shows its value as Android has it, which is what the patch set, isolated so it

@@ -224,7 +224,6 @@ public class HushThreadsPreferenceFragmentTest {
                 expected.addAll(EVERY_BUILD.subList(0, 3));
                 if (build.contains(PatchFamily.REMOVE_AD_ID) || build.contains(PatchFamily.RESTORE_TRUST)
                         || build.contains(PatchFamily.VERSION_CODE) || build.contains(PatchFamily.REMOVE_SHARE_TARGETS)
-                        || build.contains(PatchFamily.TRUST_USER_CERTIFICATES)
                         || build.contains(PatchFamily.CHANGE_PACKAGE_NAME) || build.contains(PatchFamily.CHANGE_APP_NAME)) {
                     expected.add("Set when you patched");
                 }
