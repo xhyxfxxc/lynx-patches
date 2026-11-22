@@ -11,6 +11,7 @@ package app.hushgram.extension.instagram.settings;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import org.junit.Test;
 
@@ -28,17 +29,28 @@ import java.util.regex.Pattern;
 public class ReportProblemFormTest {
     @Test
     public void theLinkPointsAtThisRepositorysBugFormAndItsFields() throws IOException {
-        assertEquals("SysAdminDoc/HushGram", ReportProblemForm.REPOSITORY);
-        File form = new File(root(), ".github/ISSUE_TEMPLATE/bug_report.yml");
-        assertTrue("no bug form at " + form, form.isFile());
+        assertEquals("xhyxfxxc/lynx-patches", ReportProblemForm.REPOSITORY);
+        // Lynx build: the form is the Lynx Patches repository's own, two folders above this pack
+        // (packs/<name>). A copy of the pack on its own has no form to read, so the check is skipped.
+        File form = lynxBugForm();
+        assumeTrue("no Lynx Patches bug form above " + root(), form != null);
         String yaml = new String(Files.readAllBytes(form.toPath()), StandardCharsets.UTF_8);
-        for (String id : Arrays.asList("versions", "device", "bug_description", "additional_context")) {
+        for (String id : Arrays.asList("patches-version", "device", "description", "context")) {
             assertTrue("bug_report.yml has no field " + id,
                     Pattern.compile("(?m)^\\s*id:\\s*" + Pattern.quote(id) + "\\s*$").matcher(yaml).find());
         }
     }
 
-    /** The repository root, found from wherever Gradle runs the test. */
+    /** The bug form of the repository this pack sits in (packs/<name>/../..), or null when there is none. */
+    private static File lynxBugForm() {
+        for (File dir = root().getParentFile(); dir != null; dir = dir.getParentFile()) {
+            File form = new File(dir, ".github/ISSUE_TEMPLATE/bug_report.yml");
+            if (form.isFile()) return form;
+        }
+        return null;
+    }
+
+    /** The pack's root, found from wherever Gradle runs the test. */
     private static File root() {
         for (File dir = new File("").getAbsoluteFile(); dir != null; dir = dir.getParentFile()) {
             if (new File(dir, "settings.gradle.kts").isFile() && new File(dir, "provenance.json").isFile()) return dir;

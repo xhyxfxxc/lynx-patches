@@ -130,7 +130,7 @@ public class SupportRowSettingsTest {
         ShadowLooper.idleMainLooper();
         assertEquals("the sentence, then the address", 2, ShadowToast.shownToastCount());
         assertTrue(ShadowToast.showedToast("No app can open this link."));
-        assertEquals("github.com/SysAdminDoc/HushGram", ShadowToast.getTextOfLatestToast());
+        assertEquals("github.com/xhyxfxxc/lynx-patches/tree/main/packs/instagram", ShadowToast.getTextOfLatestToast());
     }
 
     private static Preference titled(android.preference.PreferenceGroup group, String title) {
@@ -167,11 +167,11 @@ public class SupportRowSettingsTest {
         assertEquals(Intent.ACTION_VIEW, started.getAction());
         assertTrue((started.getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) != 0);
         Uri link = started.getData();
-        assertEquals("/SysAdminDoc/HushGram/issues/new", link.getPath());
+        assertEquals("/xhyxfxxc/lynx-patches/issues/new", link.getPath());
         assertEquals("bug_report.yml", link.getQueryParameter("template"));
-        assertTrue(link.getQueryParameter("versions"), link.getQueryParameter("versions").startsWith("HushGram "));
-        assertTrue(link.getQueryParameter("bug_description").startsWith("What happened:"));
-        String switches = link.getQueryParameter("additional_context");
+        assertTrue(link.getQueryParameter("patches-version"), link.getQueryParameter("patches-version").startsWith("HushGram "));
+        assertTrue(link.getQueryParameter("description").startsWith("What happened:"));
+        String switches = link.getQueryParameter("context");
         assertTrue(switches, switches.startsWith("Switches on: ") && switches.contains("Hide ads"));
         Settings.HIDE_ADS.resetToDefault();
     }
@@ -190,7 +190,7 @@ public class SupportRowSettingsTest {
         ShadowLooper.idleMainLooper();
         assertEquals("the sentence, then the address", 2, ShadowToast.shownToastCount());
         assertTrue(ShadowToast.showedToast("No app can open the bug report."));
-        assertEquals("github.com/SysAdminDoc/HushGram/issues", ShadowToast.getTextOfLatestToast());
+        assertEquals("github.com/xhyxfxxc/lynx-patches/issues", ShadowToast.getTextOfLatestToast());
     }
 
     @Test public void aCategoryPageAndAMissSearchLeaveItOff() throws Exception {

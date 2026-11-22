@@ -28,16 +28,22 @@ import app.hushgram.extension.shared.settings.preference.ReportProblem;
  */
 @SuppressWarnings("deprecation") // Framework preferences, as the settings screen uses.
 final class ReportProblemForm {
-    /** owner/name, read off the Source code link so the two can't drift apart. */
-    static final String REPOSITORY = HushgramPreferenceFragment.SOURCE_URL
-            .substring(HushgramPreferenceFragment.SOURCE_URL.indexOf("github.com/") + "github.com/".length());
+    /**
+     * owner/name. Lynx build: the Source code link now points at a folder of this repository, so
+     * the name is no longer read off it, and reports go to Lynx Patches, not to the original author.
+     */
+    static final String REPOSITORY = "xhyxfxxc/lynx-patches";
 
     /** Where the reports are, for a phone with no app that can open the link. */
-    static final String ISSUES_ADDRESS = HushgramPreferenceFragment.SOURCE_ADDRESS + "/issues";
+    static final String ISSUES_ADDRESS = "github.com/" + REPOSITORY + "/issues";
 
-    /** The bug form and the ids of the fields filled in. A renamed id in the form has to change here too. */
+    /**
+     * The bug form and the ids of the fields filled in. Lynx build: the ids are those of
+     * .github/ISSUE_TEMPLATE/bug_report.yml of the Lynx Patches repository (patches version,
+     * device, what happened, anything else). A renamed id in the form has to change here too.
+     */
     static final ReportProblem.Form FORM = new ReportProblem.Form(REPOSITORY, "bug_report.yml",
-            "versions", "device", "bug_description", "additional_context");
+            "patches-version", "device", "description", "context");
 
     private ReportProblemForm() {
     }

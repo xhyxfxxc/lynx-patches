@@ -51,7 +51,7 @@ public class L10nCatalogTest {
 
     /** Text that goes on screen as it is: the product's name and the address of its source. */
     private static final Set<String> NOT_TRANSLATED = new TreeSet<>(Arrays.asList(
-            "HushGram", "github.com/SysAdminDoc/HushGram"));
+            "HushGram", "github.com/xhyxfxxc/lynx-patches/tree/main/packs/instagram"));
 
     /** The calls that put text on the screen, a toast or a notification. */
     private static final Pattern SHOWS = Pattern.compile("\\b(?:setTitle|setSummary|setText|setContentDescription"
