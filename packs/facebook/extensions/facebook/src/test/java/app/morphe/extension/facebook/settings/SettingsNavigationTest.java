@@ -888,7 +888,7 @@ public class SettingsNavigationTest {
         return off;
     }
 
-    /** Report a problem opens GitHub's bug form in a browser with the versions and switches filled in. */
+    /** Report a problem opens a new Lynx Patches issue in a browser with the versions and switches filled in. */
     @Test public void reportAProblemOpensAFilledInGitHubForm() throws Exception {
         Map<String, Object> before = savedValues();
         page.navigation.navigate(SettingsNavigation.SUPPORT);
@@ -899,15 +899,16 @@ public class SettingsNavigationTest {
         assertTrue(started.hasCategory(Intent.CATEGORY_BROWSABLE));
         assertTrue((started.getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) != 0);
         String url = started.getDataString();
-        assertTrue(url, url.startsWith("https://github.com/SysAdminDoc/Hushfacebook/issues/new?template=bug_report.yml&"));
+        assertTrue(url, url.startsWith("https://github.com/xhyxfxxc/lynx-patches/issues/new?body="));
+        assertFalse(url, url.contains("SysAdminDoc"));
         assertTrue(url, url.length() <= app.morphe.extension.shared.settings.preference.ReportProblem.MAX_LENGTH);
         String decoded = java.net.URLDecoder.decode(url, "UTF-8");
-        assertTrue(decoded, decoded.contains("&versions=Hushfacebook "));
+        assertTrue(decoded, decoded.contains("Versions: Hushfacebook "));
         assertTrue(decoded, decoded.contains(" on Facebook "));
-        assertTrue(decoded, decoded.contains("&device="));
-        // "What went wrong?" stays empty for the person to type in (#488).
-        assertFalse(decoded, decoded.contains("bug_description="));
-        assertFalse(decoded, decoded.contains("What happened:"));
+        assertTrue(decoded, decoded.contains("\nPhone: "));
+        // Lynx build: no issue form, so the body ends with the two questions for the person to answer.
+        assertFalse(decoded, decoded.contains("template="));
+        assertTrue(decoded, decoded.contains("What happened:"));
         // Hide sponsored posts starts on, Marketplace only starts off.
         assertTrue(decoded, decoded.contains("Switches on: "));
         assertTrue(decoded, decoded.contains("Hide sponsored posts"));
@@ -918,7 +919,7 @@ public class SettingsNavigationTest {
         page.navigation.navigate(SettingsNavigation.SUPPORT);
         tap(SettingsNavigation.REPORT);
         assertEquals("No app on this phone can open the link. The address is "
-                + L10n.isolate("github.com/SysAdminDoc/Hushfacebook") + ".", ShadowToast.getTextOfLatestToast());
+                + L10n.isolate("github.com/xhyxfxxc/lynx-patches/tree/main/packs/facebook") + ".", ShadowToast.getTextOfLatestToast());
         assertFalse(controller.get().isFinishing());
     }
 

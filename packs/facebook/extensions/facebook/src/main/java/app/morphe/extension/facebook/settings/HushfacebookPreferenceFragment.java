@@ -172,7 +172,7 @@ import app.morphe.extension.shared.settings.preference.QuickSetups;
 public final class HushfacebookPreferenceFragment extends AbstractPreferenceFragment
         implements ReleaseCheck.Listener {
     /** The repository as a link, and as a person reads it. ExtensionHostsTest reads the link. */
-    static final String SOURCE_URL = "https://github.com/SysAdminDoc/Hushfacebook";
+    static final String SOURCE_URL = "https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/facebook";
     static final String SOURCE_ADDRESS = SOURCE_URL.substring(SOURCE_URL.indexOf("://") + 3);
     /** The English of the row listing what Pause can't reach, and its key in {@link L10n}. */
     static final String STAYS_WHILE_PAUSED = "Stays in while paused";

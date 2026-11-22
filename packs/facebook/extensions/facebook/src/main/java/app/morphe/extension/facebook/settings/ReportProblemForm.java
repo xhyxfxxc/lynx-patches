@@ -28,16 +28,18 @@ import app.morphe.extension.shared.settings.preference.ReportProblem;
  */
 @SuppressWarnings("deprecation")
 final class ReportProblemForm {
-    /** owner/name, read off the Source code link so the two can't drift apart. */
-    static final String REPOSITORY = HushfacebookPreferenceFragment.SOURCE_URL
-            .substring(HushfacebookPreferenceFragment.SOURCE_URL.indexOf("github.com/") + "github.com/".length());
+    /** Lynx build: where Report a problem goes. Reports of this modified build go to Lynx Patches, not to the original author. */
+    static final String ISSUES_URL = "https://github.com/xhyxfxxc/lynx-patches/issues/new";
+
+    /** owner/name, read off the issues link so the two can't drift apart. */
+    static final String REPOSITORY = ISSUES_URL.substring("https://github.com/".length(),
+            ISSUES_URL.length() - "/issues/new".length());
 
     /**
-     * The bug form and the ids of the fields filled in. A renamed id in the form has to change here
-     * too. "What went wrong?" (bug_description) is left for the person to type in.
+     * Lynx build: no issue form. The Lynx Patches repository's own bug form does not have this
+     * pack's field ids, so the versions, the phone and the switches that are on go in the issue's body.
      */
-    static final ReportProblem.Form FORM = new ReportProblem.Form(REPOSITORY, "bug_report.yml",
-            "versions", "device", "additional_context");
+    static final ReportProblem.Form FORM = new ReportProblem.Form(REPOSITORY, null, null, null, null);
 
     private ReportProblemForm() {
     }

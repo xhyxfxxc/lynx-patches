@@ -102,7 +102,7 @@ public class SettingsScreenStatesTest {
             ShadowLooper.idleMainLooper();
 
             String tip = String.valueOf(ShadowToast.getTextOfLatestToast());
-            assertTrue(tip, tip.contains("github.com/SysAdminDoc/Hushfacebook"));
+            assertTrue(tip, tip.contains("github.com/xhyxfxxc/lynx-patches/tree/main/packs/facebook"));
         }
     }
 

@@ -5,39 +5,31 @@
 package app.morphe.extension.facebook.settings;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.regex.Pattern;
+
+import app.morphe.extension.shared.settings.preference.ReportProblem;
 
 /**
- * Report a problem fills GitHub's bug form by field id, and GitHub drops a value whose id the form
- * doesn't have without a word. Each id the link uses is held to the form in the repository.
+ * Lynx build: Report a problem opens a new issue on the Lynx Patches repository, never on the
+ * original author's. That repository has no form with this pack's field ids, so the report's text
+ * goes in the issue's body.
  */
 public class ReportProblemFormTest {
     @Test
-    public void theLinkPointsAtThisRepositorysBugFormAndItsFields() throws IOException {
-        assertEquals("SysAdminDoc/Hushfacebook", ReportProblemForm.REPOSITORY);
-        File form = new File(root(), ".github/ISSUE_TEMPLATE/bug_report.yml");
-        assertTrue("no bug form at " + form, form.isFile());
-        String yaml = new String(Files.readAllBytes(form.toPath()), StandardCharsets.UTF_8);
-        for (String id : Arrays.asList("versions", "device", "additional_context")) {
-            assertTrue("bug_report.yml has no field " + id,
-                    Pattern.compile("(?m)^\\s*id:\\s*" + Pattern.quote(id) + "\\s*$").matcher(yaml).find());
-        }
-    }
-
-    /** The repository root, found from wherever Gradle runs the test. */
-    private static File root() {
-        for (File dir = new File("").getAbsoluteFile(); dir != null; dir = dir.getParentFile()) {
-            if (new File(dir, "settings.gradle.kts").isFile() && new File(dir, "gradlew").isFile()) return dir;
-        }
-        throw new AssertionError("no repository root above " + new File("").getAbsolutePath());
+    public void theLinkPointsAtTheLynxPatchesIssueTrackerWithoutAForm() {
+        assertEquals("https://github.com/xhyxfxxc/lynx-patches/issues/new", ReportProblemForm.ISSUES_URL);
+        assertEquals("xhyxfxxc/lynx-patches", ReportProblemForm.REPOSITORY);
+        ReportProblem.Facts facts = new ReportProblem.Facts("Hushfacebook", "0.23.0-lynx.1", "Facebook",
+                "587.0.0.39.55", 707414333L, "samsung", "SM-S901U", "16", 36, Arrays.asList("Hide sponsored posts"));
+        String url = ReportProblem.issueUrl(ReportProblemForm.FORM, facts);
+        assertTrue(url, url.startsWith(ReportProblemForm.ISSUES_URL + "?body="));
+        assertFalse(url, url.contains("template="));
+        assertFalse(url, url.toLowerCase(java.util.Locale.ROOT).contains("sysadmindoc"));
+        assertTrue(url, url.length() <= ReportProblem.MAX_LENGTH);
     }
 }

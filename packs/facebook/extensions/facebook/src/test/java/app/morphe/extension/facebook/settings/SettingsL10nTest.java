@@ -62,7 +62,7 @@ public class SettingsL10nTest {
 
     /** Text that stays as it is in every language: the product's name and its source's address. */
     private static final Set<String> AS_IS = new LinkedHashSet<>(Arrays.asList(
-            "Hushfacebook", "github.com/SysAdminDoc/Hushfacebook",
+            "Hushfacebook", "github.com/xhyxfxxc/lynx-patches/tree/main/packs/facebook",
             // The Badge, Logo and Selected tab color rows' hint: a color code reads the same in every language.
             "#2ECC71"));
 
