@@ -59,7 +59,8 @@ object BundleVerifier {
             "Bundle differs from the Android build output; a DEX or JVM payload may be stale"
         }
         val signed = if (args.size == 6) {
-            val signer = requireSignedBy(bundle, File(args[4]).readText().trim())
+            // Lynx build: no published key file means the bundle has to be unsigned.
+            val signer = requireSignedBy(bundle, File(args[4]).takeIf { it.isFile }?.readText()?.trim())
             require(signer != null || args[5] != "true") { "A signing key was set, but the bundle came out unsigned" }
             signer?.let { ", signed by ${PatchBundleSignature.fingerprint(it)}" } ?: ", unsigned"
         } else ""
@@ -85,15 +86,18 @@ object BundleVerifier {
      * [published] (morphe-signing.pub) would lock every user out of the next update. An unsigned
      * bundle answers null: everyday builds don't sign, and a release run refuses one.
      */
-    fun requireSignedBy(bundle: File, published: String): String? {
+    fun requireSignedBy(bundle: File, published: String?): String? {
         val signer = try {
             PatchBundleSignature.verify(bundle)
         } catch (failure: SecurityException) {
             throw IllegalArgumentException(failure.message, failure)
         }
+        require(published != null || signer == null) {
+            "Bundle is signed by ${PatchBundleSignature.fingerprint(signer!!)}, but this build publishes no signing key"
+        }
         require(signer == null || signer == published) {
             "Bundle is signed by ${PatchBundleSignature.fingerprint(signer!!)}, not the key morphe-signing.pub publishes " +
-                "(${PatchBundleSignature.fingerprint(published)})"
+                "(${PatchBundleSignature.fingerprint(published.orEmpty())})"
         }
         return signer
     }

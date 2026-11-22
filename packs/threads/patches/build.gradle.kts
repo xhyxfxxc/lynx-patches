@@ -1104,6 +1104,9 @@ tasks {
     // MORPHE_SIGNING_KEY to its own key, and a shell that kept it would fail the key check here.
     val bundleSigningKey = providers.environmentVariable("HUSHTHREADS_BUNDLE_SIGNING_KEY")
         .orElse(providers.environmentVariable("MORPHE_SIGNING_KEY"))
+        // Lynx build: morphe-signing.pub (the upstream author's public key) is not in this tree, and
+        // a Lynx bundle is never signed with it, so without that file any key in the environment is ignored.
+        .map { if (rootProject.file("morphe-signing.pub").isFile) it else "" }
     val verifyBundle = register<JavaExec>("verifyBundle") {
         group = "verification"
         description = "Check the Android bundle and its published patch list without rebuilding it"
@@ -1192,7 +1195,9 @@ tasks {
         val publicKeyFile = rootProject.layout.projectDirectory.file("morphe-signing.pub")
         // Whether the bundle is signed changes the output, but the key itself is never an input.
         inputs.property("bundleSigned", signingKey.map { it.isNotBlank() }.orElse(false))
-        inputs.file(publicKeyFile).withPropertyName("bundlePublicKey").withPathSensitivity(PathSensitivity.NONE)
+        if (publicKeyFile.asFile.isFile) {
+            inputs.file(publicKeyFile).withPropertyName("bundlePublicKey").withPathSensitivity(PathSensitivity.NONE)
+        }
         // Why the stamp is zero, when the tree is the reason, said where the stamp is written: the
         // release receipt refuses such a bundle, and only this build saw the tree it came from.
         val unheldChanges = if (sourceDateEpochFromEnvironment == null) uncommittedChanges else emptyList()
@@ -1212,7 +1217,7 @@ tasks {
             // Before the checksum, so what is recorded is what a rebuild will produce.
             pinBundleTimestamp(releaseBundle, pinnedEpoch, buildSourceSnapshot)
             // Signed before the checksum too: the bundle a release publishes is the signed file.
-            signBundle(releaseBundle, signingKey.orNull, publicKeyFile.asFile.readText().trim())
+            signBundle(releaseBundle, signingKey.orNull, publicKeyFile.asFile.takeIf { it.isFile }?.readText()?.trim().orEmpty())
             if (unheldChanges == null) {
                 logger.warn("git couldn't say whether the working tree matches HEAD, so $releaseBundleName is " +
                     "stamped 0 rather than a commit's time, and no release receipt will take it.")
