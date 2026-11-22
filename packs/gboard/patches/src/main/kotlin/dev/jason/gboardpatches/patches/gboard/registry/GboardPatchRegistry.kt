@@ -906,7 +906,9 @@ val gboardPackageRenamePatch = gboardPublicResourcePatch(
 val gboardSignatureBypassPatch = gboardPublicResourcePatch(
     featureId = "add_gboard_signature_bypass",
     name = "Add Gboard Signature Bypass",
-    description = "攔截 Gboard 的簽章白名單檢查並強制通過\nBypass Gboard signature whitelist checks and force them to pass.",
+    description = "攔截 Gboard 的簽章白名單檢查並強制通過\n" +
+        "Bypass Gboard signature whitelist checks and force them to pass. " +
+        "Lynx: only Gboard's check of its own package is bypassed.",
     default = true
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)

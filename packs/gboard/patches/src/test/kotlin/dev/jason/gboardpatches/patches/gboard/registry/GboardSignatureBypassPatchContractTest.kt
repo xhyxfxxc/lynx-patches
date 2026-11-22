@@ -65,8 +65,14 @@ class GboardSignatureBypassPatchContractTest {
         assertFalse(source.contains("17.0.10"))
         assertFalse(source.contains("addInstructions(0, SIGNATURE_BYPASS_DELEGATE)"))
         assertFalse(source.contains("SIGNATURE_BYPASS_DELEGATE"))
-        assertFalse(source.contains("Ljava/lang/String;->equals"))
         assertFalse(source.contains("contains(\"com.google.android.inputmethod.latin\")"))
+        // Lynx: the bypass is a guard at the start of the method (own package only) and the
+        // original returns are no longer rewritten.
+        assertTrue(source.contains("Ljava/lang/String;->equals(Ljava/lang/Object;)Z"))
+        assertTrue(source.contains("Landroid/content/Context;->getPackageName()Ljava/lang/String;"))
+        assertTrue(source.contains("insertOwnPackageGuard"))
+        assertFalse(source.contains("forceSignatureBypassReturns"))
+        assertFalse(source.contains("replaceInstruction"))
     }
 
     @Test
@@ -102,7 +108,8 @@ class GboardSignatureBypassPatchContractTest {
         const val TARGET_VERSION = "18.5.4.993608717-release-arm64-v8a"
         const val SIGNATURE_BYPASS_DESCRIPTION =
             "攔截 Gboard 的簽章白名單檢查並強制通過\n" +
-                "Bypass Gboard signature whitelist checks and force them to pass."
+                "Bypass Gboard signature whitelist checks and force them to pass. " +
+                "Lynx: only Gboard's check of its own package is bypassed."
         const val SIGNATURE_PATCH_PATH =
             "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/" +
                 "signaturebypass/GboardSignatureBypassBytecodePatch.kt"

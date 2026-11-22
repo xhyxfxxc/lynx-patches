@@ -1,11 +1,13 @@
 package dev.jason.gboardpatches.patches.gboard.features.signaturebypass
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
-import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
+import app.morphe.patcher.util.smali.ExternalLabel
 import com.android.tools.smali.dexlib2.AccessFlags
+import com.android.tools.smali.dexlib2.builder.BuilderOffsetInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -15,6 +17,7 @@ import dev.jason.gboardpatches.patches.gboard.shared.mutableClass
 import dev.jason.gboardpatches.patches.gboard.shared.VerifiedTransformationPlan
 import dev.jason.gboardpatches.patches.gboard.shared.VerifiedTransformationState
 import dev.jason.gboardpatches.patches.gboard.shared.applyVerified
+import dev.jason.gboardpatches.patches.gboard.shared.invokeRegisters
 import dev.jason.gboardpatches.patches.gboard.shared.isFieldReference
 import dev.jason.gboardpatches.patches.gboard.shared.isLiteralWrite
 import dev.jason.gboardpatches.patches.gboard.shared.isMethodReference
@@ -49,13 +52,19 @@ internal fun Iterable<MutableMethod>.findGboardSignatureBypassTargetOrThrow(): M
     return targets.single()
 }
 
+// Lynx change: upstream forced all three returns of this method to true. That also let any app that
+// is merely NAMED like a Google tool through Gboard's exported debug bridge provider
+// (WebDebugBridgeContentProvider checks the caller's package name and then calls this method for
+// the caller). Now only Gboard's own start-up self check is let through, because it passes its own
+// package name (a re-signed Gboard fails the check otherwise). Every other call falls through into
+// the unmodified original body.
 internal fun MutableMethod.applyGboardSignatureBypass() {
     applyVerified(
         VerifiedTransformationPlan(
             targetName = SIGNATURE_CHECK_DESCRIPTOR,
             classify = MutableMethod::classifyGboardSignatureBypass,
             mutate = { method ->
-                method.forceSignatureBypassReturns()
+                method.insertOwnPackageGuard()
                 method
             },
         ),
@@ -66,11 +75,17 @@ private fun MutableMethod.classifyGboardSignatureBypass(): VerifiedTransformatio
     check(isExactGboardSignatureBypassTarget()) {
         "Refusing non-target signature bypass method $definingClass->$name"
     }
-    val instructions = implementation?.instructions
+    val allInstructions = implementation?.instructions
         ?: error("No instructions available in $SIGNATURE_CHECK_DESCRIPTOR")
     check(implementation!!.registerCount == TARGET_REGISTER_COUNT) {
         "Unexpected register count in $SIGNATURE_CHECK_DESCRIPTOR"
     }
+    check(implementation!!.tryBlocks.isEmpty()) {
+        "Unexpected try blocks in $SIGNATURE_CHECK_DESCRIPTOR"
+    }
+    // The stock body checks below run on the instructions after the Lynx guard, when it is present.
+    val hasGuard = allInstructions.hasOwnPackageGuard()
+    val instructions = if (hasGuard) allInstructions.drop(OWN_PACKAGE_GUARD_LENGTH) else allInstructions
 
     val returnIndices = instructions.indices.filter { index ->
         instructions[index].isOpcode("RETURN")
@@ -103,6 +118,8 @@ private fun MutableMethod.classifyGboardSignatureBypass(): VerifiedTransformatio
         }
     }
 
+    // Upstream's old shape (every return forced to true) has extra "const/4 vX, 0x1" literals in
+    // the body, so it is reported as MALFORMED and refused; it is never patched a second time.
     val completedReturns = returnIndices.count { returnIndex ->
         val returned = instructions[returnIndex] as OneRegisterInstruction
         instructions.getOrNull(returnIndex - 1).isForcedTrueFor(returned.registerA)
@@ -111,32 +128,43 @@ private fun MutableMethod.classifyGboardSignatureBypass(): VerifiedTransformatio
         instruction.normalizedOpcode().startsWith("CONST") &&
             (instruction as? NarrowLiteralInstruction)?.narrowLiteral == 1
     }
+    val bodyIsStock = completedReturns == 0 && oneLiteralCount == TARGET_STOCK_ONE_LITERAL_COUNT
     return when {
-        completedReturns == returnIndices.size &&
-            oneLiteralCount == TARGET_COMPLETED_ONE_LITERAL_COUNT ->
-            VerifiedTransformationState.PATCHED
-        completedReturns == 0 &&
-            oneLiteralCount == TARGET_STOCK_ONE_LITERAL_COUNT ->
-            VerifiedTransformationState.STOCK
-        else -> VerifiedTransformationState.MALFORMED
+        !bodyIsStock -> VerifiedTransformationState.MALFORMED
+        hasGuard -> VerifiedTransformationState.PATCHED
+        else -> VerifiedTransformationState.STOCK
     }
 }
 
-private fun MutableMethod.forceSignatureBypassReturns() {
-    val instructions = implementation?.instructions
+private fun MutableMethod.insertOwnPackageGuard() {
+    val originalFirstInstruction = implementation?.instructions?.firstOrNull()
         ?: error("No instructions available in $SIGNATURE_CHECK_DESCRIPTOR")
-    val returnIndices = instructions.indices.filter { index ->
-        instructions[index].isOpcode("RETURN")
-    }
-    returnIndices.asReversed().forEach { returnIndex ->
-        val resultRegister = (instructions[returnIndex] as OneRegisterInstruction).registerA
-        check(resultRegister <= MAX_CONST_4_REGISTER) {
-            "RETURN register v$resultRegister cannot be forced with const/4"
-        }
-        replaceInstruction(returnIndex, "const/4 v$resultRegister, 0x1")
-        addInstruction(returnIndex + 1, "return v$resultRegister")
-    }
+    addInstructionsWithLabels(
+        0,
+        OWN_PACKAGE_GUARD,
+        ExternalLabel(ORIGINAL_BODY_LABEL, originalFirstInstruction),
+    )
 }
+
+// True when the method starts with exactly the Lynx guard and its branch jumps to the first
+// instruction after the guard, which is the start of the original body.
+private fun List<Instruction>.hasOwnPackageGuard(): Boolean {
+    if (size <= OWN_PACKAGE_GUARD_LENGTH) return false
+    val branch = this[4] as? BuilderOffsetInstruction ?: return false
+    return this[0].isOpcode("INVOKE_VIRTUAL") &&
+        this[0].invokeRegisters(CONTEXT_GET_PACKAGE_NAME_DESCRIPTOR) == listOf(CONTEXT_REGISTER) &&
+        this[1].isOpcode("MOVE_RESULT_OBJECT") && this[1].isRegisterA(0) &&
+        this[2].isOpcode("INVOKE_VIRTUAL") &&
+        this[2].invokeRegisters(STRING_EQUALS_DESCRIPTOR) == listOf(0, PACKAGE_NAME_REGISTER) &&
+        this[3].isOpcode("MOVE_RESULT") && this[3].isRegisterA(0) &&
+        this[4].isOpcode("IF_EQZ") && this[4].isRegisterA(0) &&
+        branch.target.location.index == OWN_PACKAGE_GUARD_LENGTH &&
+        this[5].isForcedTrueFor(0) &&
+        this[6].isOpcode("RETURN") && this[6].isRegisterA(0)
+}
+
+private fun Instruction.isRegisterA(register: Int): Boolean =
+    (this as? OneRegisterInstruction)?.registerA == register
 
 private fun MutableMethod.isExactGboardSignatureBypassTarget(): Boolean =
     definingClass == SIGNATURE_UTILS_CLASS &&
@@ -191,6 +219,22 @@ private val TARGET_BASELINE_LITERALS = listOf(
 private val TARGET_RETURN_REGISTERS = listOf(6, 4, 3)
 private const val TARGET_REGISTER_COUNT = 8
 private const val TARGET_STOCK_ONE_LITERAL_COUNT = 1
-private const val TARGET_COMPLETED_ONE_LITERAL_COUNT = 4
-private const val MAX_CONST_4_REGISTER = 15
+private const val CONTEXT_GET_PACKAGE_NAME_DESCRIPTOR =
+    "Landroid/content/Context;->getPackageName()Ljava/lang/String;"
+private const val STRING_EQUALS_DESCRIPTOR = "Ljava/lang/String;->equals(Ljava/lang/Object;)Z"
+// The method has 8 registers and 2 parameters: p0 (the Context) is v6, p1 (the package name) is v7.
+private const val CONTEXT_REGISTER = 6
+private const val PACKAGE_NAME_REGISTER = 7
+private const val ORIGINAL_BODY_LABEL = "lynx_original"
+private const val OWN_PACKAGE_GUARD_LENGTH = 7
+// v0 is free at method entry: the original body writes it first (const/4 v0, 0x3).
+private val OWN_PACKAGE_GUARD = """
+    invoke-virtual {p0}, $CONTEXT_GET_PACKAGE_NAME_DESCRIPTOR
+    move-result-object v0
+    invoke-virtual {v0, p1}, $STRING_EQUALS_DESCRIPTOR
+    move-result v0
+    if-eqz v0, :$ORIGINAL_BODY_LABEL
+    const/4 v0, 0x1
+    return v0
+""".trimIndent()
 private val TARGET_ACCESS_FLAGS = AccessFlags.PUBLIC.value or AccessFlags.STATIC.value
