@@ -14,20 +14,18 @@ A reviewed copy of Piko's source (GPL-3.0), built by Lynx CI from this folder, s
 read and not the upstream author's binary. The changes below are on top of it.
 
 ## What Lynx changed
-1. Builds without the Instagram half. `DisableAutoScrollPatch.kt` imported a small helper from the Instagram
-   code; it now has its own copy in `twitter/utils/Utils.kt`. `DisablePlayStoreUpdates.kt` no longer lists
-   Instagram. `CheckString.kt` (the optional string check) no longer looks for Instagram strings.
+1. Builds without the Instagram half: `DisableAutoScrollPatch.kt` has its own copy of a small helper
+   (`twitter/utils/Utils.kt`), `DisablePlayStoreUpdates.kt` and `CheckString.kt` no longer mention Instagram.
 2. Removed the translator provider "Google translator V2" (`GTranslateV2.java`). It sent the text of posts
    to ftapi.pythonanywhere.com, a private person's free hosting account. A saved setting that pointed at it
    now uses the default provider (Google). Audit F2.
-3. Removed the patch "Log server response" (`ResponseLogger.java`, its patch, settings and strings). Switched
-   on, it wrote every server answer, direct messages and login answers included, to a text file in the public
-   Download folder. Audit F4.
+3. Removed the patch "Log server response" (`ResponseLogger.java`, patch, settings, strings). Switched on, it
+   wrote every server answer, direct messages and logins included, to a file in the public Download folder. F4.
 4. Removed the patch "Show changelogs" (`Changelogs.java`, its patch, settings and strings, and the HTTP
    helper classes only it used). On by default, it downloaded CHANGELOG.md from the upstream author's GitHub
    branch and showed it with clickable links. Audit F3.
 5. "Native reader mode" is not selected by default (`default = false`, as "Export all activities" is). Its
-   code is unchanged. It loads posts from the third-party site twitter-thread.com into a web view. Audit F1.
+   code is unchanged. It loads posts from the third-party site twitter-thread.com into a web view. F1.
 6. Fixed a start-up crash: one malformed saved feature flag (for example after restoring a wrong file) made
    X crash at every start. `FeatureSwitchPatch.java` and `FeatureFlagsFragment.java` skip such entries;
    `RestorePrefFragment.java` keeps only well-formed entries. Audit section 5.
@@ -39,8 +37,10 @@ read and not the upstream author's binary. The changes below are on top of it.
    files, unchanged. It fixes the "Update Required" screen in X Chat (direct messages) by reporting a newer
    app version (12.44.0-prod.01) on X Chat requests only. It shows under the category "Old patches".
 9. Marked as a modified version: bundle name, source, website and author in `patches/build.gradle.kts`, a
-   Lynx section at the top of `NOTICE` (the Piko text below it is unchanged), and this file.
-   `patches-list.json` was regenerated (`generatePatchesList`): 74 X patches.
+   Lynx section at the top of `NOTICE` (Piko's text unchanged), and this file. `patches-list.json` regenerated.
+10. The link `https://x.com/r/status/<id>` opened the reader mode web view even with its patch off. It now
+   does so only when the patch is applied and its switch is on (`DeepLink.java`); otherwise X handles the link.
+11. A link without a host crashed the custom link handler (audit F9). `HandleCustomDeepLinksPatch.java` skips it.
 
 ## What was reviewed and what was not
 
