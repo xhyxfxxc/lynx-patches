@@ -25,6 +25,8 @@ import com.android.tools.smali.dexlib2.iface.reference.StringReference
 
 private object ReplySortingInvokeClassFinderFingerprint : Fingerprint(
     definingClass = "Lcom/twitter/tweetview/focal/ui/replysorting/ReplySortingViewDelegateBinder;",
+    // Lynx: only the constructor, so the fingerprint matches one method (it is used to find the class).
+    name = "<init>",
 )
 
 private object replySortingLastSelectedFinderFingerprint : Fingerprint(
