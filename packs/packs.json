@@ -132,7 +132,8 @@
         "tasks": ":patches:buildAndroid",
         "output": "patches/build/libs/patches-*.mpp",
         "args": ""
-      }
+      },
+      "commit": "297519632c897d19e9f0df0c39e5b315d1a7390b"
     }
   }
 }
