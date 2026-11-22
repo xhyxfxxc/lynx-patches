@@ -206,7 +206,6 @@
     <string name="piko_pref_app_version">應用程式版本</string>
     <string name="piko_pref_patch_info">修補訊息</string>
     <string name="piko_pref_version_info">版本訊息</string>
-    <string name="piko_changelogs_title">變更日誌</string>
     <string name="piko_pref_patches">補丁</string>
     <string name="piko_pref_included">包含</string>
     <string name="piko_pref_excluded">排除</string>

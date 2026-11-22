@@ -261,7 +261,6 @@
     <string name="piko_pref_app_version">Версия приложения</string>
     <string name="piko_pref_patch_info">Информация о патче</string>
     <string name="piko_pref_version_info">Информация о версии</string>
-    <string name="piko_changelogs_title">Список изменений</string>
     <string name="piko_debug">Отладка Piko</string>
     <string name="piko_pref_patches">Патчи</string>
     <string name="piko_pref_included">Применен</string>

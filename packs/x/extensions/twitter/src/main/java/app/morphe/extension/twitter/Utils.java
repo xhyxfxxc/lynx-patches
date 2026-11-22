@@ -177,7 +177,6 @@ public class Utils {
 
     public static String getAll(boolean no_flags) {
         JSONObject prefs = sp.getAll();
-        prefs.remove(Settings.LAST_CHANGELOG.key);
         if (no_flags) {
             prefs.remove(Settings.MISC_FEATURE_FLAGS.key);
             prefs.remove(Settings.MISC_FEATURE_FLAGS_SEARCH.key);

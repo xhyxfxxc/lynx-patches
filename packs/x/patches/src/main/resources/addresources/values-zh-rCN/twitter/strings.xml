@@ -261,7 +261,6 @@
     <string name="piko_pref_app_version">App 版本</string>
     <string name="piko_pref_patch_info">补丁信息</string>
     <string name="piko_pref_version_info">版本信息</string>
-    <string name="piko_changelogs_title">变更日志</string>
     <string name="piko_debug">Piko debug</string>
     <string name="piko_pref_patches">补丁</string>
     <string name="piko_pref_included">包括</string>

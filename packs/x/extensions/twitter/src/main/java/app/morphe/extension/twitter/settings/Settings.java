@@ -112,9 +112,6 @@ public class Settings {
     public static final StringSetting CUSTOM_POST_FONT_SIZE = new StringSetting("customisation_post_font_size", String.valueOf(ResourceUtils.getDimension("font_size_normal")));
     public static final BooleanSetting MORE_INFO_ON_PROFILE = new BooleanSetting("more_info_on_profile", true);
 
-    public static final StringSetting LAST_CHANGELOG_VERSION = new StringSetting("last_changelog_version", "0");
-    public static final StringSetting LAST_CHANGELOG = new StringSetting("last_changelog", "0");
-
     public static final String EXPORT_PREF = "export_pref";
     public static final String EXPORT_FLAGS = "export_flags";
     public static final String IMPORT_PREF = "import_pref";
@@ -133,7 +130,6 @@ public class Settings {
     public static final String EXPORT_LOGIN_TOKEN = "export_login_token";
     public static final String APP_VERSION = "piko_pref_app_version";
     public static final String PIKO_PATCHES = "piko_title_piko_patches";
-    public static final String CHANGELOGS_TITLE = "piko_changelogs_title";
     public static final String SUPPORTED_LINKS = "piko_settings_supported_links";
 
     public static final String PREMIUM_SECTION = "premium_section";

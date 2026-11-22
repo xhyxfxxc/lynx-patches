@@ -11,8 +11,6 @@ import app.morphe.extension.twitter.patches.FeatureSwitchPatch;
 
 public class SettingsStatus {
 
-    public static boolean showChangelogsPatchEnabled = false;
-
     public static boolean changeDownloadEnabled = false;
     public static boolean customSharingDomainEnabled = false;
     public static boolean enableFontMod = false;
@@ -93,9 +91,6 @@ public class SettingsStatus {
 
     public static void inlineDownloadButton() {
         inlineDownloadButton = true;
-    }
-    public static void showChangelogsPatchEnabled() {
-        showChangelogsPatchEnabled = true;
     }
     public static void hideCommBadge() {
         hideCommBadge = true;

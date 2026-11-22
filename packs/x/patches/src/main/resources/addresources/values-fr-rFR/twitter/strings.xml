@@ -261,7 +261,6 @@
     <string name="piko_pref_app_version">Version de l\'application</string>
     <string name="piko_pref_patch_info">Informations sur le patch</string>
     <string name="piko_pref_version_info">Informations de version</string>
-    <string name="piko_changelogs_title">Notes de version</string>
     <string name="piko_debug">Débogage de Piko</string>
     <string name="piko_pref_patches">Patchs</string>
     <string name="piko_pref_included">Inclus</string>

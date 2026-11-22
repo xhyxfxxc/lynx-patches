@@ -261,7 +261,6 @@
     <string name="piko_pref_app_version">Uygulama sürümü</string>
     <string name="piko_pref_patch_info">Yama Bilgileri</string>
     <string name="piko_pref_version_info">Sürüm Bilgisi</string>
-    <string name="piko_changelogs_title">Değişiklikler</string>
     <string name="piko_debug">Piko hata ayıklama</string>
     <string name="piko_pref_patches">Yamalar</string>
     <string name="piko_pref_included">Dahil</string>

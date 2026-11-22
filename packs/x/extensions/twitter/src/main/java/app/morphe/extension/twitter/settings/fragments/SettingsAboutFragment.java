@@ -66,15 +66,6 @@ public class SettingsAboutFragment extends PreferenceFragment {
                 )
         );
 
-        text = Settings.CHANGELOGS_TITLE;
-        verPref.addPreference(
-                helper.buttonPreference(
-                        str(text),
-                        "",
-                        text
-                )
-        );
-
         text = Settings.SUPPORTED_LINKS;
         verPref.addPreference(
                 helper.buttonPreference(
@@ -158,7 +149,6 @@ public class SettingsAboutFragment extends PreferenceFragment {
         flags.put(str("piko_pref_customisation_searchtabs"),SettingsStatus.searchTabCustomisation);
         flags.put(str("piko_pref_hide_todays_news"),SettingsStatus.hideTodaysNews);
         flags.put(str("piko_pref_show_post_source"),SettingsStatus.showSourceLabel);
-        flags.put(str("piko_changelogs_title"),SettingsStatus.showChangelogsPatchEnabled);
         flags.put(str("piko_pref_pause_search_suggestion"),SettingsStatus.pauseSearchSuggestions);
         flags.put(str("piko_pref_search_suggestion"),SettingsStatus.removeSearchSuggestions);
         flags.put(str("piko_pref_customisation_change_app_icon"),SettingsStatus.appIconCustomisation);

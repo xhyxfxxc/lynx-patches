@@ -261,7 +261,6 @@
     <string name="piko_pref_app_version">إصدار التطبيق</string>
     <string name="piko_pref_patch_info">معلومات التعديل</string>
     <string name="piko_pref_version_info">معلومات الإصدار</string>
-    <string name="piko_changelogs_title">سجل التغييرات</string>
     <string name="piko_debug">Piko debug</string>
     <string name="piko_pref_patches">التعديلات</string>
     <string name="piko_pref_included">مضمّن</string>

@@ -23,7 +23,6 @@ import app.morphe.extension.shared.ResourceType;
 import app.morphe.extension.shared.ResourceUtils;
 import app.morphe.extension.crimera.PikoUtils;
 
-import app.morphe.extension.twitter.patches.Changelogs;
 import app.morphe.extension.twitter.patches.DatabasePatch;
 import app.morphe.extension.twitter.patches.customise.appIcon.IconSelectorFragment;
 import app.morphe.extension.twitter.patches.customise.font.FontPickerFragment;
@@ -144,8 +143,6 @@ public class ButtonPref extends Preference {
                         PikoUtils.toast(str("copied_to_clipboard")+": "+ summary);
                     } else if (key.equals(Settings.SUPPORTED_LINKS)){
                         PikoUtils.openDefaultLinks();
-                    } else if (key.equals(Settings.CHANGELOGS_TITLE)){
-                        Changelogs.showChangelogDialog(context);
                     } else {
                         ActivityHook.startActivity(key);
                     }
