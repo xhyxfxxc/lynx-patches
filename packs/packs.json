@@ -52,7 +52,8 @@
         "tasks": ":patches:generatePatchesList :patches:buildAndroid",
         "output": "patches/build/libs/patches-*.mpp",
         "args": ""
-      }
+      },
+      "commit": "d50db1f74898db1f593af13ee31b722a23b52689"
     },
     "gboard": {
       "title": "Gboard patches (Lynx build)",

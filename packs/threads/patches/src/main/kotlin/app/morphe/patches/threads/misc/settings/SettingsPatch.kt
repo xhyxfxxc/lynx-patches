@@ -1,0 +1,211 @@
+/*
+ * Forked from https://github.com/SysAdminDoc/Hushfacebook at c15d4f79 (GPL-3.0),
+ * modified for HushThreads (Threads), 2026.
+ *
+ * Copyright 2026 Hushfacebook contributors
+ * https://github.com/SysAdminDoc/Hushfacebook
+ *
+ * Built on SysAdminDoc/hushfeed (GPL-3.0).
+ */
+package app.morphe.patches.threads.misc.settings
+
+import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
+import app.morphe.patcher.patch.BytecodePatchContext
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.patch.resourcePatch
+import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
+import app.morphe.patches.shared.compat.AppCompatibilities
+import app.morphe.patches.threads.feed.copytext.copyTextPatch
+import app.morphe.patches.threads.misc.extension.EXTENSION_PACKAGE
+import app.morphe.patches.threads.misc.extension.THREADS_APPLICATION
+import app.morphe.patches.threads.misc.extension.patchLog
+import app.morphe.patches.threads.misc.extension.threadsExtensionPatch
+import app.morphe.patches.threads.misc.fbns.pushProcessPatch
+import app.morphe.patches.threads.misc.resignedtrust.fbnsSignersPatch
+import app.morphe.util.superclassChain
+import com.android.tools.smali.dexlib2.Opcode
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+
+internal const val ENTRY = "$EXTENSION_PACKAGE/settings/SettingsEntry;"
+
+/** The activity Threads' launcher opens. A manifest name is never obfuscated. */
+internal const val MAIN_ACTIVITY = "Lcom/instagram/barcelona/mainactivity/BarcelonaActivity;"
+
+/** [MAIN_ACTIVITY] as the manifest writes it. */
+internal const val MAIN_ACTIVITY_NAME = "com.instagram.barcelona.mainactivity.BarcelonaActivity"
+
+/**
+ * The activity alias the settings patch adds for Android's App info page. Its name sits in the
+ * extension's package, so it can't meet a component of Threads' own.
+ */
+internal const val SETTINGS_ALIAS_NAME = "app.morphe.extension.hushthreads.settings.OpenSettings"
+
+/**
+ * The extension's activity that opens Android's file picker for Export settings and Import
+ * settings and takes its answer, which a settings page Threads rebuilt couldn't. Not exported.
+ */
+internal const val SETTINGS_FILE_PICKER_NAME = "app.morphe.extension.hushthreads.settings.SettingsFilePicker"
+
+/** The intent Android's App info page sends to "Additional settings in the app". */
+internal const val APPLICATION_PREFERENCES = "android.intent.action.APPLICATION_PREFERENCES"
+
+/**
+ * The first class in [type]'s hierarchy, as far as the APK carries it, that declares this
+ * method with a body.
+ */
+internal fun BytecodePatchContext.declaredInHierarchy(
+    type: String,
+    name: String,
+    vararg parameters: String,
+): MutableMethod = superclassChain(type)
+    .mapNotNull { mutableClassDefByOrNull(it) }
+    .firstNotNullOfOrNull { classDef ->
+        classDef.methods.singleOrNull { method ->
+            method.name == name && method.returnType == "V" && method.implementation != null &&
+                method.parameterTypes.map { it.toString() } == parameters.toList()
+        }
+    } ?: throw PatchException("No class of $type's hierarchy declares $name(${parameters.joinToString("")})V")
+
+/**
+ * Adds an alias of [MAIN_ACTIVITY] that answers [APPLICATION_PREFERENCES], which is what makes
+ * Android's App info page for Threads show "Additional settings in the app". The alias opens
+ * Threads' own launcher activity with that action, and the extension opens the settings from there.
+ * Also declares [SETTINGS_FILE_PICKER_NAME], see-through and reachable from Threads alone. Nothing
+ * of Threads' own manifest changes.
+ */
+internal val settingsManifestPatch = resourcePatch {
+    execute {
+        document("AndroidManifest.xml").use { addSettingsEntries(it) }
+    }
+}
+
+/** What [settingsManifestPatch] adds to [document]. Refused, with nothing changed, when it's there already. */
+internal fun addSettingsEntries(document: Document) {
+    val application = document.getElementsByTagName("application").item(0) as? Element
+        ?: throw PatchException("AndroidManifest.xml has no application element")
+    val activities = document.getElementsByTagName("activity")
+    val main = (0 until activities.length).map { activities.item(it) as Element }
+        .singleOrNull { it.getAttribute("android:name") == MAIN_ACTIVITY_NAME }
+        ?: throw PatchException("AndroidManifest.xml doesn't declare $MAIN_ACTIVITY_NAME")
+    if (main.getAttribute("android:exported") != "true") {
+        throw PatchException("$MAIN_ACTIVITY_NAME isn't exported, so Android's App info page couldn't open it")
+    }
+    val aliases = document.getElementsByTagName("activity-alias")
+    if ((0 until aliases.length).any { (aliases.item(it) as Element).getAttribute("android:name") == SETTINGS_ALIAS_NAME }) {
+        throw PatchException("AndroidManifest.xml already has $SETTINGS_ALIAS_NAME")
+    }
+    if ((0 until activities.length).any { (activities.item(it) as Element).getAttribute("android:name") == SETTINGS_FILE_PICKER_NAME }) {
+        throw PatchException("AndroidManifest.xml already has $SETTINGS_FILE_PICKER_NAME")
+    }
+
+    val alias = document.createElement("activity-alias").apply {
+        setAttribute("android:name", SETTINGS_ALIAS_NAME)
+        setAttribute("android:targetActivity", MAIN_ACTIVITY_NAME)
+        setAttribute("android:exported", "true")
+    }
+    val filter = document.createElement("intent-filter")
+    filter.appendChild(document.createElement("action").apply { setAttribute("android:name", APPLICATION_PREFERENCES) })
+    filter.appendChild(
+        document.createElement("category").apply { setAttribute("android:name", "android.intent.category.DEFAULT") },
+    )
+    alias.appendChild(filter)
+    application.appendChild(alias)
+
+    // It draws nothing, and the picker covers it. Configuration changes don't rebuild it, though a
+    // rebuilt one still waits for the picker's answer. Threads' application lets its activities
+    // move to Threads' own task when that comes forward; this one stays over the settings that
+    // opened it, which can sit in another app's task.
+    application.appendChild(
+        document.createElement("activity").apply {
+            setAttribute("android:name", SETTINGS_FILE_PICKER_NAME)
+            setAttribute("android:exported", "false")
+            setAttribute("android:theme", "@android:style/Theme.Translucent.NoTitleBar")
+            setAttribute("android:configChanges", SETTINGS_FILE_PICKER_CONFIG_CHANGES)
+            setAttribute("android:allowTaskReparenting", "false")
+        },
+    )
+}
+
+/** The configuration changes [SETTINGS_FILE_PICKER_NAME] takes without being rebuilt. */
+internal const val SETTINGS_FILE_PICKER_CONFIG_CHANGES =
+    "keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|fontScale|density|locale|layoutDirection"
+
+/**
+ * Makes the HushThreads screen reachable four ways. From the home screen, a long-press shortcut on
+ * Threads' launcher icon opens Threads with an extra; from Android's App info page for Threads,
+ * "Additional settings in the app" opens it with [APPLICATION_PREFERENCES]. Threads' launcher
+ * activity reports its intent, and the screen opens over the next Threads activity to resume.
+ * Every name used for those is a manifest component or a framework override or call. Inside
+ * Threads, a HushThreads row above More settings in Threads' own settings opens it too
+ * ([addThreadsSettingsRow]), found by Compose's notes and the settings list's enum names, and so
+ * does a long press on the Threads logo at the top of the home feed ([addLogoLongPress]), found by
+ * the refresh reason the logo's tap sends. Neither asks whether HushThreads is paused.
+ */
+@Suppress("unused")
+val settingsPatch = bytecodePatch(
+    name = "HushThreads settings",
+    description = "Adds a HushThreads page to Threads where you turn features on or off, pause HushThreads, back up" +
+        " your settings and read the licenses. Open it from Threads' own settings, or long-press the Threads " +
+        "logo at the top of your feed. Works as soon as you patch it in. Each way in has its own switch under " +
+        "Pause, backup and diagnostics, and the last one that's on stays on.",
+    default = true,
+) {
+    category("Settings")
+    // fbnsSignersPatch and pushProcessPatch are the #6 fixes, copyTextPatch the #9 one. Every
+    // HushThreads patch depends on this one, so naming them here puts them in every build.
+    dependsOn(threadsExtensionPatch, settingsManifestPatch, fbnsSignersPatch, pushProcessPatch, copyTextPatch)
+    // The settings header's logo goes into drawable-nodpi. See SettingsLogo.kt.
+    dependsOn(settingsLogoPatch)
+    compatibleWith(*AppCompatibilities.threads())
+
+    execute {
+        // Before each return of the application's onCreate, after Threads' own startup: the
+        // extension registers activity lifecycle callbacks there, and that's only safe once Threads
+        // has set itself up.
+        val applicationOnCreate = declaredInHierarchy(THREADS_APPLICATION, "onCreate")
+        val returns = applicationOnCreate.implementation!!.instructions.withIndex()
+            .filter { it.value.opcode == Opcode.RETURN_VOID }
+            .map { it.index }
+        if (returns.isEmpty()) throw PatchException("$THREADS_APPLICATION.onCreate never returns")
+        returns.asReversed().forEach { index ->
+            applicationOnCreate.addInstruction(
+                index,
+                "invoke-static/range { p0 .. p0 }, $ENTRY->onApplicationCreate(Landroid/content/Context;)V",
+            )
+        }
+
+        declaredInHierarchy(MAIN_ACTIVITY, "onCreate", "Landroid/os/Bundle;").addInstruction(
+            0,
+            "invoke-static/range { p0 .. p0 }, $ENTRY->onActivityCreate(Landroid/app/Activity;)V",
+        )
+        declaredInHierarchy(MAIN_ACTIVITY, "onNewIntent", "Landroid/content/Intent;").addInstruction(
+            0,
+            "invoke-static/range { p0 .. p1 }, $ENTRY->onNewIntent(Landroid/app/Activity;Landroid/content/Intent;)V",
+        )
+
+        // Threads pushes its own shortcuts at rank 0, and the newest push goes first, so the
+        // shortcut above could end up last, where a launcher that shows only a few cuts it off.
+        // Each of those calls now goes through the extension, which puts it back in front
+        // afterwards. Framework names only, which the obfuscator keeps.
+        rerouteShortcutCalls()
+
+        // Every patch depends on this one, and HushThreads still opens from its launcher shortcut
+        // and App info without the row, so a build the row doesn't fit gets the rest of this patch
+        // and a warning saying why. The row checks everything before it writes anything.
+        try {
+            addThreadsSettingsRow()
+        } catch (e: PatchException) {
+            patchLog.warning("${e.message} The HushThreads row is left out of Threads' settings; HushThreads still opens from its launcher shortcut and App info.")
+        }
+
+        // The same for the long press on the Threads logo, which also reads everything before it
+        // writes anything, so a build it doesn't fit keeps the row and the other ways in.
+        try {
+            addLogoLongPress()
+        } catch (e: PatchException) {
+            patchLog.warning("${e.message} The long press on the Threads logo is left out. HushThreads still opens from the row in Threads' settings, its launcher shortcut and App info.")
+        }
+    }
+}

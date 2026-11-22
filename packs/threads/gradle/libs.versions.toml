@@ -1,0 +1,60 @@
+[versions]
+# Align with morphe-patches-template (Compatibility / Manager display names). Hold the patcher
+# at the version the stable Morphe Manager bundles: a newer pin trips the manager's
+# Patcher-Version gate and it refuses the bundle. Stable Manager 2.5.0 bundles 2.3.0, and so do
+# desktop 2.1.x and CLI 2.1.x, which the fixture gates run. 2.3.0 went stable on 2026-11-06: Patch
+# lost its type parameter, extensionStreamProviders moved up from BytecodePatch to Patch,
+# PatchClasses takes a PatcherProgress beside the class set, and ARSCLib moved to 675bed2de3, whose
+# TableBlock.load takes a progress callback. 2.2.0 added PKCS12 keystores and a one-pass APK
+# write. 2.1.0 brought bundle signing and a refusal of classes newer than Java 17. A 2.0 patcher
+# matches a fingerprint string against the whole literal, decodes only the resources a patch asks
+# for, and hides compatiblePackages behind compatibility (PatchListGenerator rebuilds the old
+# field). Manager 2.4.0 and older refuse a bundle built on 2.3.0 with their update prompt.
+morphe-patcher = "2.3.0"
+# First stable Manager release that bundled the patcher above. The release fact check holds the
+# README's stated floor to this value.
+manager-floor = "2.5.0"
+# Read by the app.morphe.patches settings plugin, not by anything in this repo: remove it and
+# configuration fails with "Version with alias smali not found in version catalog". The commit
+# resolves as com.github.MorpheApp.smali through JitPack. It is not waiting on an official
+# release, which google/smali 3.0.10 delivered on 2026-08-20. Keep it the commit the patcher
+# above requests (2.3.0 back to 2.0.1 ask for ac700e1942; 2.0.0 asked for 4220ae75f7). Gradle merges
+# the two requests into one module and keeps the version that sorts higher, not the newer commit:
+# an old pin one commit behind once sorted higher and silently replaced the patcher's dexlib2 in
+# every compile, test and R8 graph. Another group's smali would instead put two copies of dexlib2
+# on the R8 classpath, and buildAndroid fails with "Classpath type already present".
+#noinspection GradleDependency
+smali = "ac700e1942"
+# The Android Gradle plugin and Kotlin come from the app.morphe.patches settings plugin
+# (2.1.0 brings AGP 9.1.0 and Kotlin 2.4.21); nothing here pins them.
+annotation = "1.10.0"
+gson = "2.14.0"
+# Tool-only OSV Maven ordering. This comparator never joins a carried classpath.
+maven-artifact = "3.9.16"
+# Compile-only for the extension: see extensions/threads/build.gradle.kts. The settings
+# plugin brings Kotlin 2.4.21, so this matches it.
+kotlin-stdlib = "2.4.21"
+# Outside GHSA-xxph-c9ww-hj94 (4.0 to 33.7.1). settings.gradle.kts sets the same version as a floor
+# on the plugins' classpath, where the catalog doesn't reach; move both together.
+guava = "33.7.2-jre"
+# Every org.bouncycastle request in this build is rewritten to this, in :extensions:threads's
+# test graph and in :patches' build graph. It has to be a version that publishes all three
+# modules: 1.85.2 is a bcprov-only patch release, so forcing bcpkix and bcutil to it resolved
+# nothing and the dependency report said FAILED while the build still succeeded. 1.86
+# (2026-09-11) publishes bcprov, bcpkix and bcutil, and sits outside six advisories on
+# versions below 1.85: CVE-2025-8916 (1.44 to 1.78), CVE-2026-5588 (1.67 to 1.83),
+# CVE-2025-14813 and CVE-2026-0636 (both fixed in 1.84), CVE-2026-8763 and CVE-2026-13506
+# (both fixed in 1.85). The patcher's own 1.77 is inside all six; the Android build tools'
+# 1.79 is outside CVE-2025-8916 but inside the other five.
+bouncycastle = "1.86"
+
+[libraries]
+morphe-patcher = { module = "app.morphe:morphe-patcher", version.ref = "morphe-patcher" }
+annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+maven-artifact = { module = "org.apache.maven:maven-artifact", version.ref = "maven-artifact" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin-stdlib" }
+
+[plugins]
+android-library = { id = "com.android.library" }

@@ -1,0 +1,545 @@
+/*
+ * Forked from https://github.com/SysAdminDoc/Hushfacebook at c15d4f79 (GPL-3.0),
+ * modified for HushThreads (Threads), 2026.
+ *
+ * Copyright 2026 Hushfacebook contributors
+ * https://github.com/SysAdminDoc/Hushfacebook
+ */
+package app.morphe.extension.hushthreads.settings;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.res.ColorStateList;
+import android.content.res.TypedArray;
+import android.graphics.Color;
+import android.preference.Preference;
+import android.preference.PreferenceCategory;
+import android.preference.PreferenceGroup;
+import android.preference.SwitchPreference;
+import android.view.View;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import app.morphe.extension.shared.L10n;
+import app.morphe.extension.shared.SettingsContextRule;
+import app.morphe.extension.shared.diagnostics.DiagnosticCategory;
+import app.morphe.extension.shared.settings.BaseSettings;
+import app.morphe.extension.shared.settings.BooleanSetting;
+import app.morphe.extension.shared.settings.HushThreadsPause;
+import app.morphe.extension.shared.settings.PauseForTests;
+import app.morphe.extension.shared.settings.preference.LogBufferManager;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.Robolectric;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
+import org.robolectric.Shadows;
+import org.robolectric.android.controller.ActivityController;
+import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowAlertDialog;
+import org.robolectric.shadows.ShadowLooper;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+/**
+ * The settings screen as it draws inside Threads: a black page whose rows must be readable, and a
+ * row for each patch this build carries and none for the rest.
+ *
+ * <p>On a phone on 2026-09-24 every row title was near-black on black, because the rows took the
+ * host's light activity theme, and the two diagnostics rows had no text at all.
+ */
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk = 30)
+@SuppressWarnings("deprecation")
+public class HushThreadsPreferenceFragmentTest {
+    @Rule public final SettingsContextRule settingsContext = new SettingsContextRule();
+
+    /** Wording that tells the reader a paused Threads is an unpatched one, which it isn't. */
+    private static final Pattern UNPATCHED = Pattern.compile("(?i)unpatched|n't patched|not patched|as if it weren");
+
+    /** The row each patch adds, by the title it shows. */
+    private final Map<PatchFamily, String> ROW_TITLES = new LinkedHashMap<>();
+
+    @Before
+    public void initializeRowTitlesAfterContext() {
+        ROW_TITLES.put(PatchFamily.HIDE_ADS, "Hide ads");
+        ROW_TITLES.put(PatchFamily.HIDE_SUGGESTED_USERS, "Hide suggested users");
+        ROW_TITLES.put(PatchFamily.RETURN_REFRESH, "Keep feed position on return");
+        ROW_TITLES.put(PatchFamily.VIDEO_AUTOPLAY, "Tap to play videos");
+        ROW_TITLES.put(PatchFamily.MAX_IMAGE_QUALITY, "Full size photos");
+        ROW_TITLES.put(PatchFamily.SWIPE_TO_SEARCH, "No swipe into Search");
+        ROW_TITLES.put(PatchFamily.SANITIZE_SHARING_LINKS, "Remove tracking from shared links");
+        ROW_TITLES.put(PatchFamily.EXTERNAL_BROWSER, "Open links in your browser");
+        ROW_TITLES.put(PatchFamily.DISABLE_ANALYTICS, "Stop analytics uploads");
+        ROW_TITLES.put(PatchFamily.SCREENSHOT_DETECTION, "Hide screenshots from Threads");
+        ROW_TITLES.put(PatchFamily.SPOOF_SIM_REGION, "Spoof SIM region");
+        ROW_TITLES.put(PatchFamily.SAVE_MEDIA, "Save photos and videos");
+        ROW_TITLES.put(PatchFamily.PURE_BLACK, "Pure black dark mode");
+        ROW_TITLES.put(PatchFamily.HIDE_INSTAGRAM_BUTTON, "Hide the Instagram button");
+        ROW_TITLES.put(PatchFamily.HIDE_GHOST_POST_BUBBLES, "Hide ghost post bubbles");
+        ROW_TITLES.put(PatchFamily.FULL_SIZE_PROFILE_PICTURES, "Full size profile pictures");
+        ROW_TITLES.put(PatchFamily.EXACT_POST_TIMES, "Show the date and time");
+        ROW_TITLES.put(PatchFamily.FILTER_COMMENTS, "Filter comments");
+        ROW_TITLES.put(PatchFamily.REMOVE_AD_ID, "Advertising ID removed");
+        ROW_TITLES.put(PatchFamily.RESTORE_TRUST, "Re-signed build fix");
+        ROW_TITLES.put(PatchFamily.VERSION_CODE, "Version code raised");
+        ROW_TITLES.put(PatchFamily.REMOVE_SHARE_TARGETS, "Share sheet entry removed");
+        ROW_TITLES.put(PatchFamily.TRUST_USER_CERTIFICATES, "User certificates trusted");
+        ROW_TITLES.put(PatchFamily.CHANGE_PACKAGE_NAME, "Own package name");
+        ROW_TITLES.put(PatchFamily.CHANGE_APP_NAME, "Own app name");
+    }
+
+    /** The sections every build has, in the order they're drawn. */
+    private static final List<String> EVERY_BUILD = Arrays.asList(
+            "Posts", "Links", "Updates", "Pause, backup and diagnostics", "About");
+
+    @After
+    public void restore() {
+        PatchFamily.inBuildForTests = null;
+        PauseForTests.resume();
+        BaseSettings.SAFE_MODE.resetToDefault();
+    }
+
+    @Test
+    public void everyRowHasATitleAndLightText() {
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            assertReadable(rowsOf(controller));
+        }
+    }
+
+    /**
+     * A test JVM has no patched status flags, so the test above sees only the rows every build
+     * has. This one draws the screen with every patch in.
+     */
+    @Test
+    public void withEveryPatchInEveryRowIsReadableAndNoneCallsAPausedThreadsUnpatched() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            List<Preference> rows = rowsOf(controller);
+            assertReadable(rows);
+
+            Set<String> switchKeys = new HashSet<>();
+            for (PatchFamily family : PatchFamily.values()) {
+                for (BooleanSetting setting : family.switches) switchKeys.add(setting.key);
+            }
+            // The settings entry's own switches are Pause's to turn off too.
+            for (BooleanSetting setting : PatchFamily.ENTRY_SWITCHES) switchKeys.add(setting.key);
+            Set<String> shown = new HashSet<>();
+            Preference stays = null;
+            for (Preference row : rows) {
+                String text = row.getTitle() + " " + row.getSummary();
+                assertFalse("\"" + text + "\" says a paused Threads is unpatched", UNPATCHED.matcher(text).find());
+                if (row instanceof SwitchPreference && switchKeys.contains(row.getKey())) shown.add(row.getKey());
+                if (HushThreadsPreferenceFragment.STAYS_WHILE_PAUSED.contentEquals(row.getTitle())) stays = row;
+            }
+            assertEquals("a switch Pause turns off is missing from the screen", switchKeys, shown);
+            assertNotNull("nothing on the screen says what Pause can't reach", stays);
+            assertEquals(PatchFamily.staysWhilePausedSummary(EnumSet.allOf(PatchFamily.class)),
+                    String.valueOf(stays.getSummary()));
+
+            // Pause covers runtime features and explicitly keeps debugging available.
+            int pause = indexOfKey(rows, BaseSettings.PAUSED.key);
+            assertTrue("the Pause row is missing", pause >= 0);
+            for (String key : switchKeys) {
+                assertTrue(key + " is drawn below the Pause row", indexOfKey(rows, key) < pause);
+            }
+            assertTrue("Debug logging is drawn above the Pause row", indexOfKey(rows, BaseSettings.DEBUG.key) > pause);
+            String pauseSummary = String.valueOf(rows.get(pause).getSummary());
+            assertTrue(pauseSummary, pauseSummary.contains("Turns off every HushThreads switch except Debug logging"));
+            assertTrue(pauseSummary, pauseSummary.contains("What you chose when you patched stays"));
+        }
+    }
+
+    /**
+     * Each patch's row is on the screen only when the patch is in the build: alone, with every
+     * other patch, and not at all. A section with nothing of its build to show isn't drawn, and the
+     * sections every build needs always are.
+     */
+    @Test
+    public void theFeatureRowsAreThePatchesInThisBuild() {
+        List<Set<PatchFamily>> builds = new ArrayList<>();
+        builds.add(EnumSet.noneOf(PatchFamily.class));
+        for (PatchFamily family : PatchFamily.values()) builds.add(EnumSet.of(family));
+        builds.add(EnumSet.allOf(PatchFamily.class));
+        assertEquals("every patch needs its row here", EnumSet.allOf(PatchFamily.class), ROW_TITLES.keySet());
+
+        List<String> wrong = new ArrayList<>();
+        for (Set<PatchFamily> build : builds) {
+            PatchFamily.inBuildForTests = build;
+            try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+                HushThreadsPreferenceFragment page = pageOf(controller);
+                List<Preference> rows = new ArrayList<>();
+                collect(page.getPreferenceScreen(), rows);
+                Set<String> titles = new HashSet<>();
+                for (Preference row : rows) titles.add(String.valueOf(row.getTitle()));
+                for (Map.Entry<PatchFamily, String> row : ROW_TITLES.entrySet()) {
+                    if (build.contains(row.getKey()) != titles.contains(row.getValue())) {
+                        wrong.add(build + ": " + row.getValue() + (build.contains(row.getKey()) ? " is missing" : " is shown"));
+                    }
+                }
+                for (PatchFamily family : PatchFamily.values()) {
+                    for (BooleanSetting setting : family.switches) {
+                        boolean drawn = page.findPreference(setting.key) != null;
+                        if (drawn != build.contains(family)) wrong.add(build + ": " + setting.key + (drawn ? " is drawn" : " isn't drawn"));
+                    }
+                }
+
+                List<String> sections = sections(page);
+                List<String> expected = new ArrayList<>();
+                if (build.contains(PatchFamily.HIDE_ADS) || build.contains(PatchFamily.HIDE_SUGGESTED_USERS)
+                        || build.contains(PatchFamily.RETURN_REFRESH) || build.contains(PatchFamily.VIDEO_AUTOPLAY)
+                        || build.contains(PatchFamily.MAX_IMAGE_QUALITY) || build.contains(PatchFamily.SWIPE_TO_SEARCH)) {
+                    expected.add("Feed");
+                }
+                if (build.contains(PatchFamily.SANITIZE_SHARING_LINKS) || build.contains(PatchFamily.EXTERNAL_BROWSER)
+                        || build.contains(PatchFamily.DISABLE_ANALYTICS) || build.contains(PatchFamily.SCREENSHOT_DETECTION)
+                        || build.contains(PatchFamily.SPOOF_SIM_REGION)) {
+                    expected.add("Privacy");
+                }
+                if (build.contains(PatchFamily.FILTER_COMMENTS)) expected.add("Comments");
+                if (build.contains(PatchFamily.SAVE_MEDIA)) expected.add("Downloads");
+                if (build.contains(PatchFamily.PURE_BLACK) || build.contains(PatchFamily.HIDE_INSTAGRAM_BUTTON)
+                        || build.contains(PatchFamily.HIDE_GHOST_POST_BUBBLES)
+                        || build.contains(PatchFamily.FULL_SIZE_PROFILE_PICTURES)) {
+                    expected.add("Appearance");
+                }
+                expected.addAll(EVERY_BUILD.subList(0, 3));
+                if (build.contains(PatchFamily.REMOVE_AD_ID) || build.contains(PatchFamily.RESTORE_TRUST)
+                        || build.contains(PatchFamily.VERSION_CODE) || build.contains(PatchFamily.REMOVE_SHARE_TARGETS)
+                        || build.contains(PatchFamily.TRUST_USER_CERTIFICATES)
+                        || build.contains(PatchFamily.CHANGE_PACKAGE_NAME) || build.contains(PatchFamily.CHANGE_APP_NAME)) {
+                    expected.add("Set when you patched");
+                }
+                expected.addAll(EVERY_BUILD.subList(3, EVERY_BUILD.size()));
+                if (!expected.equals(sections)) wrong.add(build + ": sections " + sections);
+            }
+        }
+        assertEquals(Collections.emptyList(), wrong);
+    }
+
+    /** Each selected patch's row says what it does, in Threads' own words. */
+    @Test
+    public void eachPatchsRowSaysWhatItDoes() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushThreadsPreferenceFragment page = pageOf(controller);
+            assertEquals("Hide ads", String.valueOf(page.findPreference(Settings.HIDE_ADS.key).getTitle()));
+            assertEquals("Sponsored posts come out of For you, Following and the posts you open before Threads shows them, so no gap is left.",
+                    String.valueOf(page.findPreference(Settings.HIDE_ADS.key).getSummary()));
+            assertEquals("Hide suggested users", String.valueOf(page.findPreference(Settings.HIDE_SUGGESTED_USERS.key).getTitle()));
+            assertEquals("Removes the cards that suggest accounts to follow, in your feed and on profiles. Normal posts and reposts stay.",
+                    String.valueOf(page.findPreference(Settings.HIDE_SUGGESTED_USERS.key).getSummary()));
+            assertEquals("Hide follow suggestions in Search",
+                    String.valueOf(page.findPreference(Settings.HIDE_SEARCH_SUGGESTIONS.key).getTitle()));
+            assertEquals("Takes the Follow suggestions row off the Search screen. Your searches and topics stay.",
+                    String.valueOf(page.findPreference(Settings.HIDE_SEARCH_SUGGESTIONS.key).getSummary()));
+            assertEquals("Hide suggested threads",
+                    String.valueOf(page.findPreference(Settings.HIDE_SUGGESTED_THREADS.key).getTitle()));
+            assertEquals("Takes the suggested threads off the bottom of a post you open. The post and its replies stay.",
+                    String.valueOf(page.findPreference(Settings.HIDE_SUGGESTED_THREADS.key).getSummary()));
+            assertEquals("Keep feed position on return", String.valueOf(page.findPreference(Settings.BLOCK_RETURN_REFRESH.key).getTitle()));
+            assertEquals("Returning to Threads within ten minutes keeps your place. Pull to refresh still works.",
+                    String.valueOf(page.findPreference(Settings.BLOCK_RETURN_REFRESH.key).getSummary()));
+            assertEquals("No time limit", String.valueOf(page.findPreference(Settings.RETURN_REFRESH_NO_LIMIT.key).getTitle()));
+            assertEquals("With the switch above on, your place stays however long you're away. Pull to refresh and a fresh "
+                    + "start still load new posts.", String.valueOf(page.findPreference(Settings.RETURN_REFRESH_NO_LIMIT.key).getSummary()));
+            assertEquals("Tap to play videos", String.valueOf(page.findPreference(Settings.DISABLE_VIDEO_AUTOPLAY.key).getTitle()));
+            assertEquals("Videos in your feed wait for a tap instead of playing as you scroll.",
+                    String.valueOf(page.findPreference(Settings.DISABLE_VIDEO_AUTOPLAY.key).getSummary()));
+            assertEquals("Full size photos", String.valueOf(page.findPreference(Settings.MAX_IMAGE_QUALITY.key).getTitle()));
+            assertEquals("Photos load at the largest size Threads has, not one picked for your screen. They look sharper and use more data.",
+                    String.valueOf(page.findPreference(Settings.MAX_IMAGE_QUALITY.key).getSummary()));
+            assertEquals("No swipe into Search", String.valueOf(page.findPreference(Settings.DISABLE_SWIPE_TO_SEARCH.key).getTitle()));
+            assertEquals("A sideways swipe on your feed no longer slides into Search. The Search button still opens it. "
+                + "Restart Threads to see the change.",
+                    String.valueOf(page.findPreference(Settings.DISABLE_SWIPE_TO_SEARCH.key).getSummary()));
+            assertEquals("Takes tracking tags such as xmt and slof off the post links you copy or share. A short share "
+                    + "link becomes the post's own link.", String.valueOf(page.findPreference(Settings.SANITIZE_SHARING_LINKS.key).getSummary()));
+            assertEquals("Open links in your browser", String.valueOf(page.findPreference(Settings.OPEN_LINKS_EXTERNALLY.key).getTitle()));
+            assertEquals("Links you tap open in your browser or the site's app, skipping Threads' link tracking. "
+                + "Threads and Instagram pages still open in Threads.",
+                    String.valueOf(page.findPreference(Settings.OPEN_LINKS_EXTERNALLY.key).getSummary()));
+            assertEquals("Stops most usage reports from reaching Meta. Some may still get through. Turn this off to "
+                + "send them as before.",
+                    String.valueOf(page.findPreference(Settings.DISABLE_ANALYTICS.key).getSummary()));
+            assertEquals("Hide screenshots from Threads", String.valueOf(page.findPreference(Settings.DISABLE_SCREENSHOT_DETECTION.key).getTitle()));
+            assertEquals("Threads isn't told when you take a screenshot, so it can't log it or react to it.",
+                    String.valueOf(page.findPreference(Settings.DISABLE_SCREENSHOT_DETECTION.key).getSummary()));
+            // Threads keeps what it read of the SIM for a whole start, so the summary carries the restart line.
+            assertEquals("Spoof SIM region", String.valueOf(page.findPreference(Settings.SPOOF_SIM_REGION.key).getTitle()));
+            assertEquals("Threads sees your SIM and network as the region picked below. Meta can still go by your "
+                + "connection and your account. Restart Threads to see the change.",
+                    String.valueOf(page.findPreference(Settings.SPOOF_SIM_REGION.key).getSummary()));
+            // The region's row sits right under its switch, and names the country it starts on.
+            android.preference.ListPreference region = (android.preference.ListPreference) page.findPreference(
+                    app.morphe.extension.hushthreads.misc.SimRegions.REGION.key);
+            assertEquals("SIM region", String.valueOf(region.getTitle()));
+            assertEquals("us", region.getValue());
+            assertEquals(app.morphe.extension.shared.L10n.isolate("United States"), String.valueOf(region.getSummary()));
+            assertEquals(app.morphe.extension.hushthreads.misc.SimRegions.REGIONS.length, region.getEntries().length);
+            assertEquals("Cancel", String.valueOf(region.getNegativeButtonText()));
+            assertEquals("Pure black dark mode", String.valueOf(page.findPreference(Settings.PURE_BLACK.key).getTitle()));
+            assertEquals("Dark mode uses true black instead of dark gray. Turn on dark mode in Threads to see it. "
+                + "Restart Threads to see the change.",
+                    String.valueOf(page.findPreference(Settings.PURE_BLACK.key).getSummary()));
+            assertEquals("Hide the Instagram button", String.valueOf(page.findPreference(Settings.HIDE_INSTAGRAM_BUTTON.key).getTitle()));
+            assertEquals("Takes the Instagram button off the top of profiles, yours and other people's. "
+                + "Restart Threads to see the change.",
+                    String.valueOf(page.findPreference(Settings.HIDE_INSTAGRAM_BUTTON.key).getSummary()));
+            assertEquals("Hide ghost post bubbles", String.valueOf(page.findPreference(Settings.HIDE_GHOST_POST_BUBBLES.key).getTitle()));
+            assertEquals("Takes the ghost post bubbles off profile pictures, on profiles and in the row at the top "
+                + "of your feed. Restart Threads to see the change.",
+                    String.valueOf(page.findPreference(Settings.HIDE_GHOST_POST_BUBBLES.key).getSummary()));
+            // Read each time a picture opens, so its summary carries no restart line.
+            assertEquals("Full size profile pictures", String.valueOf(page.findPreference(Settings.FULL_SIZE_PROFILE_PICTURES.key).getTitle()));
+            assertEquals("A profile picture you open on a profile shows full size, where you can zoom in and save it, "
+                + "instead of the small circle.",
+                    String.valueOf(page.findPreference(Settings.FULL_SIZE_PROFILE_PICTURES.key).getSummary()));
+            assertEquals("Show the date and time", String.valueOf(page.findPreference(Settings.EXACT_POST_TIMES.key).getTitle()));
+            assertEquals("Posts and replies show the date and time they went up instead of 3h or 2d, in your phone's "
+                + "12 or 24-hour format.", String.valueOf(page.findPreference(Settings.EXACT_POST_TIMES.key).getSummary()));
+            // A reply is matched with the posts shown under it, and a bare domain with no path isn't
+            // a link, so both summaries say so.
+            assertEquals("Replies matching the patterns below are left out of a post's replies, so a spam reply never "
+                + "shows. A reply and the replies shown under it are checked and left out as one. Normal replies "
+                + "keep their order.", String.valueOf(page.findPreference(Settings.FILTER_COMMENTS.key).getSummary()));
+            assertEquals("Replies with a web link are left out, whatever the patterns say. Add a bare site name such "
+                + "as shopee.vn as a pattern.", String.valueOf(page.findPreference(Settings.HIDE_COMMENT_LINKS.key).getSummary()));
+            // The patterns dialog names its own Save, so it isn't left to Android's OK in the phone's language.
+            assertEquals("Save", String.valueOf(((android.preference.EditTextPreference) page.findPreference(
+                    app.morphe.extension.hushthreads.comments.CommentSettings.FILTER_COMMENT_PATTERNS.key)).getPositiveButtonText()));
+            // The patches that were always in Manager's default selection ship their switches on,
+            // Search's and an opened post's parts of Hide suggested users included.
+            for (BooleanSetting setting : Arrays.asList(Settings.HIDE_ADS, Settings.HIDE_SUGGESTED_USERS, Settings.HIDE_SEARCH_SUGGESTIONS,
+                    Settings.HIDE_SUGGESTED_THREADS, Settings.SANITIZE_SHARING_LINKS, Settings.OPEN_LINKS_EXTERNALLY, Settings.DISABLE_ANALYTICS)) {
+                assertTrue(setting.key, ((SwitchPreference) page.findPreference(setting.key)).isChecked());
+            }
+            // The ones that joined it later start off, so a default build looks like Threads, and so
+            // do Hide the Instagram button, Hide ghost post bubbles, Disable swipe to Search, Show
+            // exact post times and Full size profile pictures, which came after.
+            for (BooleanSetting setting : Arrays.asList(Settings.BLOCK_RETURN_REFRESH, Settings.DISABLE_VIDEO_AUTOPLAY,
+                    Settings.MAX_IMAGE_QUALITY, Settings.DISABLE_SCREENSHOT_DETECTION, Settings.SPOOF_SIM_REGION,
+                    Settings.PURE_BLACK,
+                    Settings.HIDE_INSTAGRAM_BUTTON, Settings.HIDE_GHOST_POST_BUBBLES, Settings.DISABLE_SWIPE_TO_SEARCH,
+                    Settings.EXACT_POST_TIMES, Settings.FULL_SIZE_PROFILE_PICTURES)) {
+                assertFalse(setting.key, ((SwitchPreference) page.findPreference(setting.key)).isChecked());
+            }
+            // The time limit holds until someone lifts it.
+            assertFalse(((SwitchPreference) page.findPreference(Settings.RETURN_REFRESH_NO_LIMIT.key)).isChecked());
+            List<Preference> rows = new ArrayList<>();
+            collect(page.getPreferenceScreen(), rows);
+            for (Preference row : rows) {
+                String text = row.getTitle() + " " + row.getSummary();
+                assertFalse("\"" + text + "\" names Facebook", text.contains("Facebook"));
+            }
+        }
+    }
+
+    @Test
+    public void thePausedCardSaysWhatStaysInForEveryReason() {
+        for (HushThreadsPause.Reason why : HushThreadsPause.Reason.values()) {
+            String summary = HushThreadsPreferenceFragment.pausedSummary(why, "com.instagram.barcelona");
+            assertFalse(why + ": " + summary, UNPATCHED.matcher(summary).find());
+            assertTrue(why + ": " + summary, summary.contains("what was set when you patched stays in"));
+            // Debug logging is kept as saved while paused, so the card can't say every switch is off.
+            assertTrue(why + ": " + summary, summary.contains("Every switch but Debug logging"));
+        }
+
+        // The marker counts only in the app's own files folder, and the card names that folder,
+        // not the one above it a person finds first. The folder is isolated, so a right-to-left
+        // sentence keeps the path in the order it was written.
+        String pkg = RuntimeEnvironment.getApplication().getPackageName();
+        assertTrue(HushThreadsPreferenceFragment.pausedSummary(HushThreadsPause.Reason.MARKER_FILE, pkg)
+                .contains("in " + L10n.isolate("Android/data/" + pkg + "/files") + " paused HushThreads"));
+
+        PauseForTests.pause(HushThreadsPause.Reason.CRASH_LOOP);
+        // A crash-loop pause comes from safe mode, which stays on for the next start too. The card
+        // reads that to say whether the next start still runs paused.
+        BaseSettings.SAFE_MODE.save(true);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            Preference card = rowsOf(controller).get(0);
+            assertEquals("HushThreads is paused", String.valueOf(card.getTitle()));
+            assertEquals(HushThreadsPreferenceFragment.pausedSummary(HushThreadsPause.Reason.CRASH_LOOP, pkg)
+                    + " Tap to turn it back on.", String.valueOf(card.getSummary()));
+        }
+    }
+
+    /**
+     * A version is a value set into a sentence, so the About row isolates it: in a right-to-left
+     * sentence "450.0.0.51.78" then keeps the order it was written in. The card leaves the
+     * versions to the header and About.
+     */
+    @Test
+    public void theVersionRowsIsolateTheVersions() {
+        android.content.Context context = RuntimeEnvironment.getApplication();
+        Shadows.shadowOf(context.getPackageManager())
+                .getInternalMutablePackageInfo(context.getPackageName()).versionName = "450.0.0.51.78";
+        String threads = app.morphe.extension.shared.Utils.getAppVersionName();
+        assertTrue("no Threads version to look for", threads != null && !threads.isEmpty());
+
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            List<Preference> rows = rowsOf(controller);
+            Preference card = rows.get(0);
+            assertEquals("HushThreads is on", String.valueOf(card.getTitle()));
+            // The card shows only with something to say; the header and About carry the versions.
+            assertNull(card.getSummary());
+            Preference version = null;
+            for (Preference row : rows) {
+                if ("Version".contentEquals(row.getTitle())) version = row;
+            }
+            assertNotNull("no Version row", version);
+            assertTrue(String.valueOf(version.getSummary()), String.valueOf(version.getSummary()).contains(L10n.isolate(threads)));
+            assertTrue(String.valueOf(version.getSummary()), String.valueOf(version.getSummary()).contains(L10n.isolate("unknown")));
+        }
+    }
+
+    /**
+     * The page's own dialogs are drawn over its activity's window. Open when the page went,
+     * on a rotation, Back or Threads closing, they outlived that
+     * window, which Android reports as a leaked window.
+     */
+    @Test
+    public void thePagesDialogsCloseWhenItsViewGoes() {
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            List<Preference> rows = rowsOf(controller);
+            List<AlertDialog> open = new ArrayList<>();
+            Preference jump = rows.get(indexOfKey(rows, "action_jump_to_section"));
+            jump.getOnPreferenceClickListener().onPreferenceClick(jump);
+            open.add(ShadowAlertDialog.getLatestAlertDialog());
+            Preference export = rows.get(indexOfKey(rows, "action_export_diagnostic_report"));
+            export.getOnPreferenceClickListener().onPreferenceClick(export);
+            open.add(ShadowAlertDialog.getLatestAlertDialog());
+            Preference licenses = null;
+            for (Preference row : rows) if ("Licenses".contentEquals(row.getTitle())) licenses = row;
+            assertNotNull("no Licenses row", licenses);
+            licenses.getOnPreferenceClickListener().onPreferenceClick(licenses);
+            open.add(ShadowAlertDialog.getLatestAlertDialog());
+
+            List<String> titles = new ArrayList<>();
+            for (AlertDialog dialog : open) {
+                assertTrue(dialog.isShowing());
+                titles.add(String.valueOf(Shadows.shadowOf(dialog).getTitle()));
+            }
+            assertEquals(Arrays.asList("Jump to a section", "Export diagnostic report", "Licenses"), titles);
+
+            controller.recreate();
+            ShadowLooper.idleMainLooper();
+
+            for (AlertDialog dialog : open) {
+                assertFalse(Shadows.shadowOf(dialog).getTitle() + " outlived the page", dialog.isShowing());
+            }
+        }
+    }
+
+    @Test
+    public void theDiagnosticActionNamesClearOrRestoreAndSurvivesRecreation() {
+        LogBufferManager.clearLogBuffer();
+        LogBufferManager.clearLogBuffer();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            LogBufferManager.appendEvent(DiagnosticCategory.OTHER, "RestoreTitle", "INFO", "kept diagnostic event");
+            HushThreadsPreferenceFragment page = pageOf(controller);
+            Preference clear = page.findPreference("action_clear_diagnostic_data");
+            assertEquals("Clear diagnostic data", clear.getTitle());
+            clear.getOnPreferenceClickListener().onPreferenceClick(clear);
+            assertEquals("Restore diagnostic data", clear.getTitle());
+            View row = clear.getView(null, new ListView(controller.get()));
+            assertEquals("Restore diagnostic data", ((TextView) row.findViewById(android.R.id.title)).getText());
+
+            controller.recreate();
+            ShadowLooper.idleMainLooper();
+            page = (HushThreadsPreferenceFragment) controller.get().getFragmentManager()
+                    .findFragmentById(android.R.id.content);
+            Preference restore = page.findPreference("action_clear_diagnostic_data");
+            assertEquals("Restore diagnostic data", restore.getTitle());
+            restore.getOnPreferenceClickListener().onPreferenceClick(restore);
+            assertEquals("Clear diagnostic data", restore.getTitle());
+            assertTrue(LogBufferManager.buildExportText().contains("kept diagnostic event"));
+        } finally {
+            LogBufferManager.clearLogBuffer();
+            LogBufferManager.clearLogBuffer();
+        }
+    }
+
+    private static int indexOfKey(List<Preference> rows, String key) {
+        for (int i = 0; i < rows.size(); i++) {
+            if (key.equals(rows.get(i).getKey())) return i;
+        }
+        return -1;
+    }
+
+    private static HushThreadsPreferenceFragment pageOf(ActivityController<Activity> controller) {
+        HushThreadsPreferenceFragment fragment = new HushThreadsPreferenceFragment();
+        controller.get().getFragmentManager().beginTransaction()
+                .add(android.R.id.content, fragment)
+                .commitNow();
+        return fragment;
+    }
+
+    private static List<Preference> rowsOf(ActivityController<Activity> controller) {
+        List<Preference> rows = new ArrayList<>();
+        collect(pageOf(controller).getPreferenceScreen(), rows);
+        assertFalse("the screen has no rows", rows.isEmpty());
+        return rows;
+    }
+
+    /** The titles of the page's sections, in the order they're drawn. */
+    private static List<String> sections(HushThreadsPreferenceFragment page) {
+        List<String> titles = new ArrayList<>();
+        PreferenceGroup screen = page.getPreferenceScreen();
+        for (int i = 0; i < screen.getPreferenceCount(); i++) {
+            if (screen.getPreference(i) instanceof PreferenceCategory) {
+                titles.add(String.valueOf(screen.getPreference(i).getTitle()));
+            }
+        }
+        return titles;
+    }
+
+    private static void assertReadable(List<Preference> rows) {
+        for (Preference row : rows) {
+            CharSequence title = row.getTitle();
+            assertTrue("a row has no title: " + row.getClass().getSimpleName() + " " + row.getKey(),
+                    title != null && title.toString().trim().length() > 0);
+
+            TypedArray styled = row.getContext().obtainStyledAttributes(
+                    new int[]{android.R.attr.textColorPrimary});
+            try {
+                ColorStateList primary = styled.getColorStateList(0);
+                assertTrue("no primary text color for " + title, primary != null);
+                assertTrue("\"" + title + "\" is drawn dark on the black page",
+                        Color.luminance(primary.getDefaultColor()) > 0.5f);
+            } finally {
+                styled.recycle();
+            }
+        }
+    }
+
+    private static void collect(PreferenceGroup group, List<Preference> rows) {
+        for (int i = 0; i < group.getPreferenceCount(); i++) {
+            Preference preference = group.getPreference(i);
+            if (preference instanceof PreferenceGroup) {
+                collect((PreferenceGroup) preference, rows);
+            } else {
+                rows.add(preference);
+            }
+        }
+    }
+}

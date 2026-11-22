@@ -1,0 +1,1414 @@
+{
+  "schemaVersion": 1,
+  "note": "Every public source found for com.instagram.barcelona, with the branches and commits it was last read at, its licence and what HushThreads may take from it. scripts/threads-sources.ps1 holds it to its rules, scripts/audit-threads-sources.ps1 refreshes it, and a local release needs a census from the last 14 days. README.md#where-the-patches-come-from is the readable version. branches[].commit pins the newest commit touching watchPaths on that branch. branches[].head and headChecked preserve the separately inspected whole-branch snapshot. License URLs and any adoption or provenance pins are independent of those watched-path commits.",
+  "census": {
+    "checkedAt": "2026-10-18",
+    "skipped": [
+      "gitlab-code-search"
+    ]
+  },
+  "self": {
+    "repository": "https://github.com/SysAdminDoc/HushThreads"
+  },
+  "officialBundle": {
+    "repository": "https://github.com/MorpheApp/morphe-patches",
+    "branch": "main",
+    "list": "patches-list.json",
+    "packages": []
+  },
+  "indexes": [
+    {
+      "id": "morphe-directory",
+      "name": "Morphe community directory",
+      "url": "https://morphe-patches.software",
+      "hushthreads": {
+        "status": "listed",
+        "url": "https://morphe-patches.software/#bundles",
+        "checked": "2026-10-18",
+        "evidence": {
+          "url": "https://morphe-patches.software/data/bundles.json",
+          "sha256": "419c486bd921bd821a318b3e8928333a603d826a7c08d88ba7f8400e0e4c0cb6",
+          "repository": "SysAdminDoc/HushThreads"
+        }
+      }
+    },
+    {
+      "id": "awesome-morphe",
+      "name": "Awesome Morphe",
+      "url": "https://github.com/nvbangg/awesome-morphe",
+      "hushthreads": {
+        "status": "listed",
+        "url": "https://github.com/nvbangg/awesome-morphe/blob/main/data/hashes.json",
+        "checked": "2026-10-18",
+        "evidence": {
+          "url": "https://github.com/nvbangg/awesome-morphe/blob/a34fea1164242e1deffcbcb825ed0e3b901a6122/data/hashes.json",
+          "sha256": "e1dcd0c0190d8de10133ec7ea65b43f1c0ac6008804bcdf332d1c7ddc3372b0b",
+          "repository": "SysAdminDoc/HushThreads",
+          "blob": "a80263edfb0500bdcd06b71b6c1a40d7788ce98c"
+        }
+      }
+    },
+    {
+      "id": "morphe-patch-tracker",
+      "name": "Morphe Patch Tracker",
+      "url": "https://drnx64.github.io/morphe-track-patches/",
+      "hushthreads": {
+        "status": "listed",
+        "url": "https://drnx64.github.io/morphe-track-patches/",
+        "checked": "2026-10-18",
+        "evidence": {
+          "url": "https://github.com/drnx64/morphe-track-patches/blob/f12583ba9c068e64f316453fd759dde9b218e9cd/data/bundles.json",
+          "sha256": "82c5a05a76b0eac218d3c4e835f26111c2a78d4b7c238887c5087ce91438049d",
+          "repository": "SysAdminDoc/HushThreads",
+          "blob": "2533ed86fdb481f480c894326d6a08247cbefad4"
+        }
+      }
+    },
+    {
+      "id": "jman-bundles",
+      "name": "Jman's Patch Bundle Registry",
+      "url": "https://github.com/Jman-Github/Patch-Bundle-Registry",
+      "hushthreads": {
+        "status": "listed",
+        "url": "https://github.com/Jman-Github/Patch-Bundle-Registry/blob/bundles/config/sources.json",
+        "checked": "2026-10-18",
+        "evidence": {
+          "url": "https://github.com/Jman-Github/Patch-Bundle-Registry/blob/d51a430ba4db2c2ff832964839ad3f121c8e6451/config/sources.json",
+          "sha256": "42e9f24eb6b47c616bd0661f9a5282449ac70f21ca0646a003a34aeedc465782",
+          "repository": "SysAdminDoc/HushThreads",
+          "blob": "5e770be3cd0e32e115faf88555fbc90b8d4a351b"
+        }
+      }
+    },
+    {
+      "id": "morphe-archive",
+      "name": "Morphe Archive",
+      "url": "https://rushiforai.github.io/morphe-archive/",
+      "hushthreads": {
+        "status": "listed",
+        "url": "https://github.com/rushiforai/morphe-archive/blob/main/examplepatches/SysAdminDoc/HushThreads/patches-list.json",
+        "checked": "2026-10-18",
+        "evidence": {
+          "url": "https://github.com/rushiforai/morphe-archive/blob/5815efc27c8b699e0ac757a73bb3dee39bbf6348/examplepatches/SysAdminDoc/HushThreads/patches-list.json",
+          "sha256": "e404a0c27fecb28fcb8474ef5854df723058c50185bfc20c0ac0d9d7a9a2d371",
+          "repository": "SysAdminDoc/HushThreads",
+          "blob": "9eeeae05433c74124cbe9f3fc63b4a836d1b4e05"
+        }
+      }
+    }
+  ],
+  "entries": [
+    {
+      "id": "revanced",
+      "repository": "https://gitlab.com/ReVanced/revanced-patches",
+      "lineage": "revanced",
+      "upstream": null,
+      "kind": "revanced-patches",
+      "packages": [
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": [
+          "382.0.0.51.85"
+        ]
+      },
+      "features": [
+        "Hide ads"
+      ],
+      "branches": [
+        {
+          "name": "main",
+          "commit": "ab2ac36e3041cda87b659924ea2b75089f0bdb6e",
+          "head": "015fe10a23ea5b919a3fda6e7da2c176517ae75d",
+          "headChecked": "2026-10-02"
+        },
+        {
+          "name": "dev",
+          "commit": "a24cfda56da8e0b7266a533b484238cca7fd7ef8",
+          "head": "12487bc071590ab5d844049ba08c59c534e3dcf9",
+          "headChecked": "2026-10-02"
+        }
+      ],
+      "watchPaths": [
+        "patches/src/main/kotlin/app/revanced/patches/threads",
+        "patches/src/main/kotlin/app/revanced/patches/meta/ads"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://gitlab.com/ReVanced/revanced-patches/-/blob/015fe10a23ea5b919a3fda6e7da2c176517ae75d/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "candidate",
+      "reason": "The first Threads patch anyone published: Hide ads through the same meta/ads fingerprint ReVanced uses for Instagram, which shows the two apps share their ad code. It's pinned to 382 and its anchor string, SponsoredContentController.insertItem, is gone from 449. Ancestry and shared-code evidence, no code to port.",
+      "archived": false,
+      "forks": [
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-87752871",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-87715729",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-87616265",
+        "h-jangra/revanced-patches",
+        "cornyabs/revanced-patches-neo",
+        "EddSC/revanced-patches",
+        "load-test3/ReVanced-revanced-patches-255",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-87563593",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-87521398",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-87487475",
+        "radkawwa/revanced-patches",
+        "sudo-panda/revanced-patches",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-87462565",
+        "Bobocato/revanced-patches",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-87427817",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-87382344",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-87336999",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-87193458",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-87246759",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-87291057",
+        "yuanleo/revanced-patches",
+        "joan.comas.fdz/revanced-patches",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-87117622",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-87072100",
+        "dangphuc2470/revanced-patches",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-87026966",
+        "tehniatashiq/youtube-liquid-glass",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-86981388",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-86949965",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-86927103",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-86892377",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-86849772",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-86783510",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-86707754",
+        "Crafter-Y/revanced-patches",
+        "chandler.bing/ecoscan-80488462-deletion_scheduled-86675967",
+        "rachel.green.r/ecoscan-80488462-deletion_scheduled-86653713",
+        "isdzjfs/revanced-patches",
+        "Leandro-734/revanced-patches",
+        "rosset.nocpes/revanced-patches",
+        "Vic-41148/revanced-patches",
+        "LulzRose/revanced-patches",
+        "THE-M0P/revanced-patches",
+        "joshi33/revanced-patches",
+        "patrickvanc/revanced-patches",
+        "ALSchwalm/revanced-patches",
+        "xat.king6969/revanced-patches",
+        "delath/revanced-patches",
+        "darkensyde/revanced-patches",
+        "munzur63/revanced-patches",
+        "nyraa/revanced-patches",
+        "meowtochondria/revanced-patches",
+        "asd56yu/revanced-patches",
+        "kamilstyrna047/revanced-patches",
+        "zappybiby/revanced-patches",
+        "drunkbatya/revanced-patches",
+        "dwismath/revanced-patches",
+        "nijave/revanced-patches",
+        "belgradebc/revanced-patches",
+        "culpen0/revanced-patches",
+        "brskt/revanced-patches",
+        "francescograzioso1995/revanced-patches",
+        "elia_vandi/revanced-patches",
+        "dtricks/revanced-patches",
+        "Indranil012/revanced-patches",
+        "hank722089/revanced-patches",
+        "PhateValleyman/revanced-patches",
+        "pengleixinkuzi/revanced-patches",
+        "gajgaje2000/revanced-patches",
+        "tuanhasan1124/revanced-patches",
+        "dariovinci200217/revanced-patches",
+        "SayanthD/revanced-patches",
+        "kenw2255/revanced-patches",
+        "RikoDEV/revanced-patches",
+        "lucas-martinati/revanced-patches",
+        "Aiedevsm/revanced-patches-1",
+        "kadirtml01/revanced-patches",
+        "mostafaNazari702/revanced-patches",
+        "ToyVo/revanced-patches",
+        "arrrnmp/revanced-patches",
+        "jakahudoklin/revanced-patches",
+        "nguyenhoaivan1997/revanced-patches",
+        "nic.silver/revanced-patches",
+        "tristan23612/revanced-patches",
+        "proivan1711/revanced-patches",
+        "hxreborn/revanced-patches",
+        "lfnincao/revanced-patches",
+        "samolego/revanced-patches",
+        "anto426/revanced-patches",
+        "hashworks/revanced-patches",
+        "gh3ttokill4/revanced-patches",
+        "niftiest/revanced-patches",
+        "XCossale/revanced-patches",
+        "Ushie/revanced-patches",
+        "Super_dude/revanced-patches",
+        "yonggamer/revanced-patches",
+        "blaxor1/revanced-patches"
+      ],
+      "contentHashes": [
+        "c718694806d015bcc655633b7ddcad3f2b86f22f",
+        "e0c92255fe9d65f6f9828468a1d5101405ae830f"
+      ],
+      "mirrors": [
+        {
+          "repository": "https://github.com/ReVanced/revanced-patches",
+          "reason": "ReVanced's original GitHub home, blocked by a DMCA notice (HTTP 451) since 2026-03-24.",
+          "blobs": []
+        },
+        {
+          "repository": "https://github.com/4lifeeee/TulipPatch",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at ab2ac36e3041cda87b659924ea2b75089f0bdb6e. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "e0c92255fe9d65f6f9828468a1d5101405ae830f"
+          ],
+          "branch": {
+            "name": "tulip-early-sim-spoof",
+            "head": "1c4365c55c67380eb2ef7678784f651567f43dd1",
+            "commit": "ab2ac36e3041cda87b659924ea2b75089f0bdb6e",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/4lifeeee/TulipPatch/blob/1c4365c55c67380eb2ef7678784f651567f43dd1/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/AndrJ/revanced-patches",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at ab2ac36e3041cda87b659924ea2b75089f0bdb6e. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "e0c92255fe9d65f6f9828468a1d5101405ae830f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "b632d0f04239d49f14425f86f21784a526594518",
+            "commit": "ab2ac36e3041cda87b659924ea2b75089f0bdb6e",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/AndrJ/revanced-patches/blob/b632d0f04239d49f14425f86f21784a526594518/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/brnywz/Patches",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at ab2ac36e3041cda87b659924ea2b75089f0bdb6e. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "e0c92255fe9d65f6f9828468a1d5101405ae830f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "6f66187af930386703fea1c8e96de1676efa7447",
+            "commit": "65db21aed4323afcf2a201103e1cda9110cbdc43",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/brnywz/Patches/blob/6f66187af930386703fea1c8e96de1676efa7447/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/cevente/revanced-patches",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at e138501657c5dec18574cc7c7db373133b0a8de8. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "c718694806d015bcc655633b7ddcad3f2b86f22f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "a324e63c59d6422bf2f689bc1d8db0e317c4b341",
+            "commit": "e138501657c5dec18574cc7c7db373133b0a8de8",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/cevente/revanced-patches/blob/a324e63c59d6422bf2f689bc1d8db0e317c4b341/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/error-reporting/revanced-android-studio-client-bump-test",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at e138501657c5dec18574cc7c7db373133b0a8de8. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "c718694806d015bcc655633b7ddcad3f2b86f22f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "e113674489159c453210b523c63b59dc83cd50ec",
+            "commit": "3558c44a05c13f19fefdbbf14b364181a79f17c0",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/error-reporting/revanced-android-studio-client-bump-test/blob/e113674489159c453210b523c63b59dc83cd50ec/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/hajs110208/test123",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at e138501657c5dec18574cc7c7db373133b0a8de8. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "c718694806d015bcc655633b7ddcad3f2b86f22f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "56a1a645ad5334e0e9394725972808293edd5b4d",
+            "commit": "66d2702504aa9f6089ef5e93bf6bed5eeb925108",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/hajs110208/test123/blob/56a1a645ad5334e0e9394725972808293edd5b4d/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/israelterry/Patch33",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at e138501657c5dec18574cc7c7db373133b0a8de8. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "c718694806d015bcc655633b7ddcad3f2b86f22f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "f060fd5ed7cb76720a8b3373b4d1c4b251791ccc",
+            "commit": "3558c44a05c13f19fefdbbf14b364181a79f17c0",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/israelterry/Patch33/blob/f060fd5ed7cb76720a8b3373b4d1c4b251791ccc/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/LOrhun/Revanced-Patches.5.51.0",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at e138501657c5dec18574cc7c7db373133b0a8de8. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "c718694806d015bcc655633b7ddcad3f2b86f22f"
+          ],
+          "branch": {
+            "name": "master",
+            "head": "ffa5f3775170a8fd14926cffac2004a04079ce4c",
+            "commit": "ffa5f3775170a8fd14926cffac2004a04079ce4c",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/LOrhun/Revanced-Patches.5.51.0/blob/ffa5f3775170a8fd14926cffac2004a04079ce4c/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/phit/revanced-patch",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at e138501657c5dec18574cc7c7db373133b0a8de8. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "c718694806d015bcc655633b7ddcad3f2b86f22f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "b9bc7e3e58f9fe860e0285bd91499d72c52b93f6",
+            "commit": "e138501657c5dec18574cc7c7db373133b0a8de8",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/phit/revanced-patch/blob/b9bc7e3e58f9fe860e0285bd91499d72c52b93f6/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/thelok1s/tiktok-rv",
+          "reason": "The inspected revanced-patches/patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at ab2ac36e3041cda87b659924ea2b75089f0bdb6e. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "e0c92255fe9d65f6f9828468a1d5101405ae830f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "12b3ff57e07124c917830c8b6b5eb97db55ba120",
+            "commit": "fa23792c52217f0423a912fdf8640f344a3c8856",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/thelok1s/tiktok-rv/blob/12b3ff57e07124c917830c8b6b5eb97db55ba120/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/TheMaskedGuardian/revanced-patches",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at e138501657c5dec18574cc7c7db373133b0a8de8. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "c718694806d015bcc655633b7ddcad3f2b86f22f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "d92d979a8e84a5633c09f2cd735a593e9cdba510",
+            "commit": "3558c44a05c13f19fefdbbf14b364181a79f17c0",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/TheMaskedGuardian/revanced-patches/blob/d92d979a8e84a5633c09f2cd735a593e9cdba510/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/vinh2201/rv-NEW-patch22",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at ab2ac36e3041cda87b659924ea2b75089f0bdb6e. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "e0c92255fe9d65f6f9828468a1d5101405ae830f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "63a6304f867bc14f4025cb65dacd7627bbef436c",
+            "commit": "ab2ac36e3041cda87b659924ea2b75089f0bdb6e",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/vinh2201/rv-NEW-patch22/blob/63a6304f867bc14f4025cb65dacd7627bbef436c/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/vomw/patches",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at e138501657c5dec18574cc7c7db373133b0a8de8. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "c718694806d015bcc655633b7ddcad3f2b86f22f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "4d0229ea2a6ae743783cc23cfba79817356bed5f",
+            "commit": "46d425d7d40dfd056364e6fb22e1d2f4931c8668",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/vomw/patches/blob/4d0229ea2a6ae743783cc23cfba79817356bed5f/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/vomw/revanced-patches",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at ab2ac36e3041cda87b659924ea2b75089f0bdb6e. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "e0c92255fe9d65f6f9828468a1d5101405ae830f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "b632d0f04239d49f14425f86f21784a526594518",
+            "commit": "ab2ac36e3041cda87b659924ea2b75089f0bdb6e",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/vomw/revanced-patches/blob/b632d0f04239d49f14425f86f21784a526594518/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        },
+        {
+          "repository": "https://github.com/nstefan13/personal-revanced-patches",
+          "reason": "The inspected patches/src/main/kotlin/app/revanced/patches/threads/HideAdsPatch.kt is byte-for-byte canonical ReVanced source at ab2ac36e3041cda87b659924ea2b75089f0bdb6e. This records that observed file, without asserting whole-repository identity.",
+          "blobs": [
+            "e0c92255fe9d65f6f9828468a1d5101405ae830f"
+          ],
+          "branch": {
+            "name": "main",
+            "head": "d5832122f5c4c9d9628e5230310391674d378b5f",
+            "commit": "ab2ac36e3041cda87b659924ea2b75089f0bdb6e",
+            "headChecked": "2026-10-02"
+          },
+          "license": {
+            "spdx": "GPL-3.0",
+            "url": "https://github.com/nstefan13/personal-revanced-patches/blob/d5832122f5c4c9d9628e5230310391674d378b5f/LICENSE",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          },
+          "checked": "2026-10-18"
+        }
+      ],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "chiggi",
+      "repository": "https://github.com/durgesh0505/chiggi_morphe_patches",
+      "lineage": "chiggi",
+      "upstream": null,
+      "kind": "morphe-patches",
+      "packages": [
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": [
+          "434.0.0.41.74"
+        ]
+      },
+      "features": [
+        "Hide ads",
+        "Remove AD_ID permission",
+        "Change app name",
+        "Change package name"
+      ],
+      "branches": [
+        {
+          "name": "main",
+          "commit": "5ca4854ff1ce7ea91a51d89b608b37c6f926e6ab",
+          "head": "c303b8962a38b6e423a0926629160fecc4dfb5cb",
+          "headChecked": "2026-10-02"
+        }
+      ],
+      "watchPaths": [
+        "patches/src/main/kotlin/app/chiggi/threads"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://github.com/durgesh0505/chiggi_morphe_patches/blob/c303b8962a38b6e423a0926629160fecc4dfb5cb/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "candidate",
+      "reason": "Where the Threads ads lineage starts (2026-06-19). Its filter keys on obfuscated Media methods and a boolean method of BarcelonaSpoolFeedCacheHandler that 449 no longer has, and its own issues #5 and #16 report the filter broken. Kept for ancestry and for the feature list.",
+      "archived": false,
+      "forks": [
+        "vaimalaviya1233/chiggi_morphe_patches",
+        "fakeoomblues/chiggi_morphe_patches"
+      ],
+      "contentHashes": [],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "zeldrisho",
+      "repository": "https://github.com/zeldrisho/morphe-patches",
+      "lineage": "chiggi",
+      "upstream": "https://github.com/durgesh0505/chiggi_morphe_patches",
+      "kind": "morphe-patches",
+      "packages": [
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": [
+          "449.0.0.54.82",
+          "445.0.0.46.83",
+          "434.0.0.41.74"
+        ]
+      },
+      "features": [
+        "Hide ads",
+        "Open links externally",
+        "Remove AD_ID permission",
+        "Change app name",
+        "Change package name"
+      ],
+      "branches": [
+        {
+          "name": "docs/consistent-analysis-layout",
+          "commit": "446b878616f6c2692cd7074d7f18f6bd48733c19",
+          "head": "bb2c187d6a21f28272216936943895efe48d8599",
+          "headChecked": "2026-10-18"
+        },
+        {
+          "name": "main",
+          "commit": "446b878616f6c2692cd7074d7f18f6bd48733c19",
+          "head": "9418386935c67b382a58cbac7084eb67bc20ae86",
+          "headChecked": "2026-10-18"
+        }
+      ],
+      "watchPaths": [
+        "patches/src/main/kotlin/com/zeldrisho/patches/threads",
+        "extensions/threads/src/main/java/com/zeldrisho/threads"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://github.com/zeldrisho/morphe-patches/blob/dbbe65e7777268c8eb97932cb995eacc6b93dcf9/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "candidate",
+      "reason": "Found the place HushThreads takes ads out, the feed cache's merge of a fetched page, found by its shape and the Kotlin lambda it builds. That anchor is unique on 449 and HushThreads credits it. Its extension reflects on obfuscated names written down per build (DED, DGK, A05, A02 and more), so none of its code is taken. Its Open links externally (21c07f40cf, 2026-10-02) hooks the named WebLinkUseCase and returns Unit after a launch; HushThreads' own Open links in browser already covers it, so nothing is taken from it either. Its commits from 5711fdf to 446b878 (2026-10-07) make Open links check an http(s) link's host (IDN names too) and port before launching. HushThreads checks only the scheme and leaves a link with a broken host to the browser, which shows its own error, so nothing is taken from those.",
+      "archived": false,
+      "forks": [
+        "truongvantuan/morphe-patches",
+        "fakeoomblues/Threads-Patches",
+        "haocv95-netizen/Zalo-mod"
+      ],
+      "contentHashes": [],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "kareem",
+      "repository": "https://github.com/kareemlukitomo/morphe-patches",
+      "lineage": "kareem",
+      "upstream": null,
+      "kind": "morphe-patches",
+      "packages": [
+        "com.instagram.barcelona",
+        "com.instagram.android"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": [
+          "426.0.0.36.67"
+        ]
+      },
+      "features": [
+        "Change Threads share domain"
+      ],
+      "branches": [
+        {
+          "name": "main",
+          "commit": "8eabfafadac197022a807e619343f93fef9b4c86",
+          "head": "d60e85c68ab6c268b497f849000645da263c3b4d",
+          "headChecked": "2026-10-02"
+        }
+      ],
+      "watchPaths": [
+        "patches/src/main/kotlin/app/kareem/patches/threads",
+        "extensions/extension/src/main/java/app/kareem/extension/threads",
+        "patches/src/main/kotlin/app/kareem/patches/shared/Constants.kt"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://github.com/kareemlukitomo/morphe-patches/blob/d60e85c68ab6c268b497f849000645da263c3b4d/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "candidate",
+      "reason": "A custom share domain for Threads links. CopyToClipboardUseCase$copyLink$result$1 still exists on 449, but its chat invite string sits in five methods, so the anchor is ambiguous there. A candidate for a later share domain patch. HushThreads cleans the link where the server's permalink is parsed instead.",
+      "archived": false,
+      "forks": [
+        "onnxscibroccoli/morphe-patches-1",
+        "shoemakk/morphe-patches"
+      ],
+      "contentHashes": [],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "chirag127",
+      "repository": "https://github.com/chirag127/morphe-patches",
+      "lineage": "chirag127",
+      "upstream": null,
+      "kind": "morphe-patches",
+      "packages": [
+        "com.instagram.barcelona",
+        "com.instagram.android"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": []
+      },
+      "features": [
+        "ThreadsDistractionFree (STUB)",
+        "ThreadsNoAds (STUB)"
+      ],
+      "branches": [
+        {
+          "name": "main",
+          "commit": "4eb8630374fa1be3b83ffa1ee764a77cd4406807",
+          "head": "85cdca127fb282562f4c49c9a256e6532adb109b",
+          "headChecked": "2026-10-02"
+        }
+      ],
+      "watchPaths": [
+        "patches/src/main/kotlin/app/chirag127/morphe/patches/targets/threads",
+        "patches/src/main/kotlin/app/chirag127/morphe/patches/shared/Constants.kt"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://github.com/chirag127/morphe-patches/blob/85cdca127fb282562f4c49c9a256e6532adb109b/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "rejected",
+      "reason": "Its two Threads patches are names without working bodies. Its Instagram set belongs to HushGram's ledger.",
+      "archived": false,
+      "forks": [
+        "webbrain-one/morphe-patches"
+      ],
+      "contentHashes": [],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "mrxsin",
+      "repository": "https://github.com/MrxSiN/ThreadsHideAds",
+      "lineage": "mrxsin",
+      "upstream": null,
+      "kind": "xposed-module",
+      "packages": [
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": [
+          "448.0.0.54.85"
+        ]
+      },
+      "features": [
+        "Hide ads (Xposed, DexKit shape discovery)"
+      ],
+      "branches": [
+        {
+          "name": "main",
+          "commit": "e9d84e20961f55f60c7b4a2276c47f1245716a25",
+          "head": "15eb0f885b0d93b29e9bdc0e9531f8517d396c5e",
+          "headChecked": "2026-10-02"
+        }
+      ],
+      "watchPaths": [
+        "app/src/main/java/my/github/MrxSiN/threadshideads",
+        "brainfuck/src",
+        "brainfuck/generated"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://github.com/MrxSiN/ThreadsHideAds/blob/15eb0f885b0d93b29e9bdc0e9531f8517d396c5e/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "candidate",
+      "reason": "An Xposed module that discovers Threads ad hooks with DexKit and records its findings in HOOK_NOTES.md. The inspected 2.0.0 source uses the modern Xposed API 102, with model, Pando and rendered-label filtering and a compiled Brainfuck policy. Its current compatibility table reports Threads 448.0.0.54.85. Kept as an independent source of ad-anchor evidence. No code has been adopted.",
+      "archived": false,
+      "forks": [],
+      "contentHashes": [],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "aunali-revanced-experiments",
+      "repository": "https://github.com/Aunali321/ReVancedExperiments",
+      "lineage": "revanced-experiments",
+      "upstream": "https://github.com/ReVanced/revanced-patches-template",
+      "kind": "revanced-patches",
+      "packages": [
+        "com.instagram.android",
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": []
+      },
+      "features": [
+        "Hide Ads"
+      ],
+      "branches": [
+        {
+          "name": "dev",
+          "commit": "8a25c59ead57a1a63c7e8b442ed49b67e7a82414",
+          "head": "f66e29411eed1e55faef0e503477a4872fb25183",
+          "headChecked": "2026-10-02"
+        },
+        {
+          "name": "main",
+          "commit": "332ed74d50f138b179bd2abd3a00cdf11d2b762d",
+          "head": "3c4ba599f59304b034985ab746babc4c4be651af",
+          "headChecked": "2026-10-02"
+        },
+        {
+          "name": "patcher-v22",
+          "commit": "eb5633b39cf04d1169f4d191666723360e7d4e67",
+          "head": "4ff2626f0684dcb91d4d391afb5a3240b93e0551",
+          "headChecked": "2026-10-02"
+        }
+      ],
+      "watchPaths": [
+        "patches/src/main/kotlin/li/auna/patches/instagram/adblock",
+        "patches/src/main/kotlin/li/auna/util/BytecodeUtils.kt"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://github.com/Aunali321/ReVancedExperiments/blob/3c4ba599f59304b034985ab746babc4c4be651af/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "candidate",
+      "reason": "GPL-3.0 patch source explicitly targets Threads and Instagram. Hide Ads returns false from the private Boolean method matched by SponsoredContentController.insertItem. No exact Threads versions are declared. GitHub records generation from the ReVanced patch template. No code has been adopted and no current fixture compatibility has been verified.",
+      "archived": false,
+      "forks": [
+        "vaimalaviya1233/ReVancedExperiments",
+        "kjaz89/ReVancedExperiments",
+        "shittim-plana/ReVancedExperiments",
+        "r7reiz/ReVancedExperiments",
+        "SamBlu0/ReVancedExperiments",
+        "dimon222/ReVancedExperiments",
+        "sam-reza/ReVancedExperiments",
+        "Adish08/ReVancedExperiments",
+        "who0ps/ReVancedExperiments"
+      ],
+      "contentHashes": [
+        "221bc588d8cc9db6cc92a28ac38623e77786189b",
+        "874fce0d956b630d32252f41a2f4e0279b305fa3",
+        "e61b63f36f6c40866350243845ce0f308b0a8bb4"
+      ],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "nexalloy",
+      "repository": "https://github.com/NexAlloy/NexAlloy",
+      "lineage": "chsbuffer-revancedxposed",
+      "upstream": null,
+      "kind": "xposed-module",
+      "packages": [
+        "com.instagram.android",
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": []
+      },
+      "features": [
+        "Hide ads"
+      ],
+      "branches": [
+        {
+          "name": "archived/main",
+          "commit": "7ad6d956061e742650f183fc80f5810ea0c8013b",
+          "head": "b88fee2767029f5f81fee062e1efa94fa623e71e",
+          "headChecked": "2026-10-02"
+        },
+        {
+          "name": "archived/twitch",
+          "commit": "990b72b4a4d977e3a6dadc48c87641fc0f17b263",
+          "head": "990b72b4a4d977e3a6dadc48c87641fc0f17b263",
+          "headChecked": "2026-10-02"
+        },
+        {
+          "name": "main",
+          "commit": "904107829d0479694f1243ce4933e9c6023e1286",
+          "head": "7c3cc7d02f8e02396655159db0eca2f05af612a6",
+          "headChecked": "2026-10-18"
+        }
+      ],
+      "watchPaths": [
+        "app/src/main/java/io/github/nexalloy/AppPatchInfo.kt",
+        "app/src/main/java/io/github/nexalloy/MainHook.kt",
+        "app/src/main/java/io/github/nexalloy/revanced/meta",
+        "app/src/main/resources/META-INF/xposed/scope.list",
+        "app/src/main/java/io/github/chsbuffer/revancedxposed/AppPatchInfo.kt",
+        "app/src/main/java/io/github/chsbuffer/revancedxposed/MainHook.kt",
+        "app/src/main/java/io/github/chsbuffer/revancedxposed/meta",
+        "app/src/main/res/values/arrays.xml"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://github.com/NexAlloy/NexAlloy/blob/ebab7a812c95b6ae33cd0ecb9f18bf847d24c5f6/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "candidate",
+      "reason": "The canonical ChsBuffer/ReVancedXposed repository now resolves to NexAlloy/NexAlloy. Its GPL-3.0 current source explicitly routes Threads to Hide ads, matches Is ad pod, and replaces the method with a false return. The 2026-08-03 change claims v435+ compatibility but declares no exact Threads version list. Archived source branches retain the older processValidatedContent void hook. No code has been adopted or fixture compatibility verified. Its 2026-10-17 watched change (9041078) only moved MainHook's resource lookup to the app's own getIdentifier.",
+      "archived": false,
+      "forks": [
+        "luthfeew/NexAlloy",
+        "T0pyt0p/NexAlloy-my-",
+        "1mad3/NexAlloy",
+        "nutine/NexAlloy",
+        "tariqbinmostafiz/NexAlloy-",
+        "S88S/NexAlloy",
+        "sharpscrutal-wq/NexAlloy",
+        "zahinabil25-code/NexAlloy",
+        "2eno/NexAlloy",
+        "microllate/NexAlloy",
+        "enocbazanblanco-png/NexAlloy",
+        "Itsfitts/NexAlloy",
+        "NULL0B/NexAlloy",
+        "DenBroLiik/NexAlloy",
+        "shensuisenlin/NexAlloy",
+        "x3cl1Meero/NexAlloy",
+        "A-Archives-and-Forks/NexAlloy",
+        "Bouteillepleine/NexAlloy",
+        "hohojia886/NexAlloy",
+        "gassity/NexAlloy",
+        "tryigit/NexAlloy",
+        "anhduc2003/NexAlloy",
+        "azxle/NexAlloy",
+        "Rocker14427c/NexAlloy",
+        "redkazey/NexAlloy",
+        "sheerboy/FemAlloy",
+        "RSR1337/NexAlloy",
+        "sipeter/NexAlloy",
+        "shodevR/NexAlloy",
+        "surenwysr/NexAlloy",
+        "ashurajo/NexAlloy",
+        "opanx/NexAlloy",
+        "sungamma/NexAlloy",
+        "haidirx6-web/NexAlloy",
+        "m4mental/NexAlloy",
+        "mohdakil2426/NexAlloy",
+        "moetayuko/NexAlloy",
+        "cappuccinoassasino/NexAlloy",
+        "0556sagar/YoutubePremium",
+        "wuc656/NexAlloy",
+        "omeos-fork/NexAlloy.NexAlloy",
+        "jemimajenkins4335-lgtm/NexAlloy",
+        "AGmcxiao10/NexAlloy",
+        "Weigui-X/NexAlloy",
+        "Chanmingqwerty/ReVancedXposed",
+        "naijun0403/ReVancedXposed",
+        "BoBppy/ReVancedXposed",
+        "sad25kag/ReVancedXposed",
+        "gnadgnaoh/SexAlloy",
+        "TTT158368/ReVancedXposed",
+        "kessejay1-glitch/ReVancedXposed",
+        "chalau/ReVancedXposed",
+        "boomzed/ReVancedXposed",
+        "yukimeguri/ReVancedXposed",
+        "danpropc/ReVancedXposed",
+        "TeiPing/ReVancedXposed",
+        "Katak69/ReVancedXposed",
+        "xploitoverload/ReVancedXposed",
+        "mosS-Green/ReVancedXposed",
+        "gothight/ReVancedXposed",
+        "seekerxy/ReVancedXposed",
+        "RomanK2311/ReVancedXposed",
+        "ArmyAmor/ReVancedXposed",
+        "traviszech/ReVancedXposed",
+        "akkun2/chsbuffer__ReVancedXposed",
+        "chyuwen/ReVancedXposed",
+        "hwt112726/ReVancedXposed",
+        "tyr7z/ReVancedXposed",
+        "Allenvian/ReVancedXposed",
+        "NordicAdam/ReVancedXposed",
+        "daffaibra104-cpu/ReVancedXposed",
+        "tristan23612/ReVancedXposed",
+        "shawnko0511/ReVancedXposed",
+        "DHD2280/ReVancedXposed",
+        "Zeranamu/ReVancedXposed",
+        "CEOmasterartt/ReVancedXposed",
+        "lvpre/ReVancedXposed",
+        "Regimidia/ReVancedXposed",
+        "Muntz33/ReVancedXposed",
+        "ahmadhusein17/ReVancedXposed",
+        "KrazyKleb/ReVancedXposed",
+        "dim-ghub/ReVancedExtendedXposed",
+        "johncarlonaldo2-collab/ReVancedXposed",
+        "jiangfufu/ReVancedXposed",
+        "Greatz08/ReVancedXposed",
+        "Root-Modules/ReVancedXposed",
+        "rendyjhorgi32-cmd/ReVancedXposed",
+        "sofiyan3/ReVancedXposed",
+        "ferdi02-123/ReVancedXposed",
+        "kunalxml/ReVancedXposed",
+        "wondersimply/ReVancedXposed",
+        "YudhaPratamaPutra/ReVancedXposed",
+        "shuxtyn/ReVancedXposed",
+        "H3XDaemon/ReVancedXposed",
+        "hoangxg4/ReVancedXposed",
+        "siofei/ReVancedXposed",
+        "66sahil01-a11y/ReVancedXposed",
+        "db8852/ReVancedXposed",
+        "nanjidae/ReVancedXposed",
+        "john-yu268/ReVancedXposed",
+        "taken7/ReVancedXposed",
+        "thaomaitam/ReVancedXposed",
+        "luochaolong520/ReVancedXposedugomin",
+        "dhug386/ReVancedXposed",
+        "xu782734853/ReVancedXposed",
+        "raviraj0007/ReVancedXposed",
+        "Hiirbaf/Spotify-ReVancedXposed",
+        "pda24/ReVancedXposed",
+        "devaige/ReVancedXposed",
+        "RunTheBot/ReVancedXposed",
+        "DeadSecure/ReVancedXposed",
+        "bru02/ReVancedXposed",
+        "1imran397/ReVancedXposed",
+        "THANOOJ666/ReVancedXposed",
+        "weihongloke/ReVancedXposed",
+        "jaxgiffyb/ReVancedXposed",
+        "Dabskutz/ReVancedXposed",
+        "Macflylegamer/ReVancedXposed",
+        "run-my-job/ReVancedXposed",
+        "meiMingle/ReVancedXposed",
+        "huicrh/ReVancedXposed",
+        "lihe07/ReVancedXposed",
+        "YuKnight/ReVancedXposed",
+        "Shootmir/ReVancedXposed",
+        "vtrayy/ReVancedXposed",
+        "hoa-w/ReVancedXposed",
+        "quietlyboy/RevancedXposed",
+        "CrackerCat/RevancedXposed",
+        "wuhua111/RevancedXposed",
+        "jyotidwi/RevancedXposed",
+        "ammlrr/RevancedXposed",
+        "Familyye/RevancedXposed",
+        "Xennet7/RevancedXposed",
+        "victor20010/RevancedXposed",
+        "ammlr/RevancedXposed"
+      ],
+      "contentHashes": [
+        "02130accf9bbe37e4c5c294febedc9f9d4589701",
+        "3350230f9c32031f8ed912359397795f595528af",
+        "49a6434e84fbdf088603068505d79192debca094",
+        "7445b4b1c459174089d7a8043649d77b20f5e640",
+        "89d36e0c4e0e577d6bc4f6217e99598187c0e42e",
+        "95ec7e782a1f5a61c7ba591848f1b2a5303287fc",
+        "b98747651ed7a68bf5e4eccb340cdf8755bdb13b",
+        "be4dc8357a065bb74fc0ebac365bcfc281516a18",
+        "d47f329759561f718ce4af126684962200e6b558",
+        "ea3c1d55bccf00dc81264a681fb5e6be3417c9be",
+        "ef6119094b22c0a37ca06e17da18c5b70d0733c7",
+        "f013850d61b0d96c0b7cb19be52ea7171d193400"
+      ],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "nexalloy-xes",
+      "repository": "https://github.com/gnadgnaoh/SexAlloy",
+      "lineage": "chsbuffer-revancedxposed",
+      "upstream": "https://github.com/NexAlloy/NexAlloy",
+      "kind": "xposed-module",
+      "packages": [
+        "com.instagram.android",
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": []
+      },
+      "features": [
+        "Hide ads",
+        "Block ads and analytics",
+        "Sanitize tracking links",
+        "Disable screenshot detection",
+        "Save videos",
+        "Hide read receipts",
+        "Hide typing indicator",
+        "Show a post's exact time",
+        "Profile picture menu"
+      ],
+      "branches": [
+        {
+          "name": "nonroot",
+          "commit": "0c6cff85d67b4e520d91bb2a83bf07d8ed91a895",
+          "head": "d4073b84faf31ddc8518ea7429a6d6b3b705ad6f",
+          "headChecked": "2026-11-05"
+        },
+        {
+          "name": "root",
+          "commit": "0c6cff85d67b4e520d91bb2a83bf07d8ed91a895",
+          "head": "79acad234eadf0d291f3a46d7bd2a85557444589",
+          "headChecked": "2026-11-05"
+        }
+      ],
+      "watchPaths": [
+        "app/src/main/java/io/github/nexalloy/AppPatchInfo.kt",
+        "app/src/main/java/io/github/nexalloy/MainHook.kt",
+        "app/src/main/java/io/github/nexalloy/revanced/threads",
+        "app/src/main/resources/META-INF/xposed/scope.list"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://github.com/gnadgnaoh/SexAlloy/blob/79acad234eadf0d291f3a46d7bd2a85557444589/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "rejected",
+      "reason": "Was gnadgnaoh/NexAlloy-XES. A GPL-3.0 fork of NexAlloy whose Threads hook adds eight patches to NexAlloy's Hide ads: Block ads and analytics, Sanitize tracking links, Disable screenshot detection, Save videos, Hide read receipts, Hide typing indicator, Show a post's exact time and Profile picture menu. Its Sanitize tracking links description rewords HushThreads' Sanitize sharing links, and Block ads and analytics hooks the same analytics_endpoint, logging URL and Pigeon reads as HushThreads' Disable analytics, so its Threads work reads as HushThreads' behavior carried over to Xposed. Reviewed by its file list and patch bodies at 0c6cff8 on 2026-11-05. Nothing to take, and no code has been adopted.",
+      "archived": false,
+      "forks": [
+        "TheFloresto/NexAlloy-XES",
+        "ahtuaan309/NexAlloy-XES",
+        "trangkyanh17/NexAlloy-XES",
+        "a092devs/NexAlloy-XES",
+        "wszmx332650748/SexAlloy",
+        "siritami/SexAlloy",
+        "asizon/SexAlloy",
+        "Rainy-PlayGround/SexAlloy",
+        "dotarma/Armalloy",
+        "FiorenMas/NexAlloy",
+        "49ronind/NexAlloy",
+        "peerkaiser8-create/NexAlloy",
+        "thinhzero/NexAlloy"
+      ],
+      "contentHashes": [
+        "044e3cc6ff62f8a78b8c8ce4cc7368ab62297357",
+        "089cc5614e8ba223909bdb32e03ba77964f48546",
+        "133df9c456932506bc883c731813334fe4dfd0fe",
+        "1a257bdb0a4c61a7695e29d5d6fa7d5f29152b25",
+        "32fb84a896188c505213ffc996cc8fa3eee68348",
+        "347a77e59ab2b63f3c6122e0ee2c8062aed03a2d",
+        "4569ad80f7fa7651c8426e3238e951ce3621f161",
+        "4aa6f3c4a518652242fcf01d0407a34a9c4dea73",
+        "5d4f9b64411dad17cfc96adbdcac6c235346ac92",
+        "600bd0af5244addec0f8d37213149230fc180905",
+        "77d3d933284a9b5bbd23601f09ddee687798d957",
+        "919bf8f0d7e15f1677f434da444c2d9c4e17c4d0",
+        "9df6a3ccabf7bd665228924d8d5dae2d5c91c40a",
+        "9ecbb98a0ebe20e83483bb1a858efc7fd5a187a5",
+        "af18ad451f14457f6b49b8c0dec630df22214e9f",
+        "c19f3e2fceeac68eb827c792edb20c95320d9c9d",
+        "c6ca25c574ad817bac1f66936a52fdaaac87cd9e",
+        "cd337abd0fa1bbe800132a8773f27e37a73d5937",
+        "dc9d59653d71b9b1a0bfa3e9f67b6832b83976a0",
+        "debacbd619a1ccfb7437d2090251e3ce7001a20a",
+        "e07b5134b7926c70941a987d2a32ab84540e2d53",
+        "ffcb4fad44b40e49064d862c62795f1af4568eab"
+      ],
+      "mirrors": [],
+      "lastChecked": "2026-11-05"
+    },
+    {
+      "id": "joel-revancedxposed",
+      "repository": "https://github.com/joel122002/ReVancedXposed",
+      "lineage": "chsbuffer-revancedxposed",
+      "upstream": "https://github.com/NexAlloy/NexAlloy",
+      "kind": "xposed-module",
+      "packages": [
+        "com.instagram.android",
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": []
+      },
+      "features": [
+        "Hide ads"
+      ],
+      "branches": [
+        {
+          "name": "main",
+          "commit": "8945acc5d634a073568e0c3171ee98c5d1d3f56b",
+          "head": "60f90e8a1bdc9e08f0f17a7f2d5bb9771811bb5b",
+          "headChecked": "2026-10-02"
+        }
+      ],
+      "watchPaths": [
+        "app/src/main/java/io/github/chbuffer/rencedxposed/MainHook.kt",
+        "app/src/main/java/io/github/chbuffer/rencedxposed/meta",
+        "app/src/main/res/values/arrays.xml"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://github.com/joel122002/ReVancedXposed/blob/60f90e8a1bdc9e08f0f17a7f2d5bb9771811bb5b/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "candidate",
+      "reason": "GPL-3.0 historical ChsBuffer derivative that routes Threads to the processValidatedContent void ad hook. The four inspected hook files equal canonical historical files at 81f203bca88457449f7b41a88c425409d10c6afc after only a package namespace change. Their blobs differ, so this is a separate source entry. The comparison proves those files only, not whole-repository identity. No exact Threads builds are declared, and no code has been adopted.",
+      "archived": false,
+      "forks": [],
+      "contentHashes": [
+        "40e0c71804bf3c0793c82d9232a9f4d105d7cd75",
+        "75dafc37a2cbfcecddd321ca60e9f9dad911fff9",
+        "81326964620d7cab6b9f28dd4539404d26327e3c",
+        "829bda69c0fe204b1fc295bdd586c84070bff776",
+        "b2295a92d0cc2780bb61158ca38c6eed5fb55204"
+      ],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "kairus-yt-revanced-icon",
+      "repository": "https://github.com/kairusds/yt-revanced-icon",
+      "lineage": "revanced",
+      "upstream": "https://gitlab.com/ReVanced/revanced-patches",
+      "kind": "readme-only",
+      "packages": [
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": [
+          "382.0.0.51.85"
+        ]
+      },
+      "features": [
+        "Hide ads"
+      ],
+      "branches": [
+        {
+          "name": "master",
+          "commit": "78d51e26a9265207a9d2be04b6e562deeafed0fa",
+          "head": "767dad972ba157d4a7540036de0a6f8270fe2ee8",
+          "headChecked": "2026-10-02"
+        }
+      ],
+      "watchPaths": [
+        "README.md",
+        "patches.json"
+      ],
+      "license": null,
+      "contaminatedBy": null,
+      "disposition": "behavior-only",
+      "reason": "No repository license is present. The watched README and patches.json cache official ReVanced metadata for Hide ads on Threads 382.0.0.51.85. The repack workflow downloads the official catalog and patch bundle and changes branding. This is derived catalog evidence with no independent Threads source body to adopt.",
+      "archived": false,
+      "forks": [
+        "tykimikk/yt-revanced-icon"
+      ],
+      "contentHashes": [
+        "b83ba4638910d4af972f4c0d9556fdb941a7fdec",
+        "bcc0b26f64d22386279b22357f7b5bf061e218c9"
+      ],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "soda-revanced-troubleshooting-guide",
+      "repository": "https://github.com/SodaWithoutSparkles/revanced-troubleshooting-guide",
+      "lineage": "revanced",
+      "upstream": "https://gitlab.com/ReVanced/revanced-patches",
+      "kind": "readme-only",
+      "packages": [
+        "com.instagram.android",
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": []
+      },
+      "features": [
+        "Hide ads"
+      ],
+      "branches": [
+        {
+          "name": "main",
+          "commit": "a35998ef386b33d0a54d71526c6fc90393a4eff4",
+          "head": "b542d6cb67e2f7e7d652c85f77de9ae926df2da3",
+          "headChecked": "2026-10-02"
+        },
+        {
+          "name": "retype",
+          "commit": "8b7018917d73c111e8f75e6301f3a045a8c13fc7",
+          "head": "a55ab255357739ad86965b5c42c4b4dda6bf42ae",
+          "headChecked": "2026-10-02"
+        }
+      ],
+      "watchPaths": [
+        "python/list.json",
+        "python/.conf/python/patches_list.json"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "url": "https://github.com/SodaWithoutSparkles/revanced-troubleshooting-guide/blob/b542d6cb67e2f7e7d652c85f77de9ae926df2da3/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "contaminatedBy": null,
+      "disposition": "rejected",
+      "reason": "The GPL-3.0 troubleshooting guide retains two official ReVanced catalog snapshots. Each names Hide ads for Threads and Instagram with null version lists, so no exact Threads builds are declared. Its updater fetches the official catalog. There is no independent Threads patch body to adopt.",
+      "archived": false,
+      "forks": [
+        "Adhjie/revanced-troubleshooting-guide",
+        "validcube/revanced-troubleshooting-guide",
+        "EatVanced/revanced-troubleshooting-guide",
+        "HokoraYinphineMPP/revanced-troubleshooting-guide"
+      ],
+      "contentHashes": [
+        "23704dfb8b24438639e277b181f329b925497905",
+        "2cf32f37c1b75ba3f633a34437c29fd6cf33aac8"
+      ],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "id": "user2user1-rvmm-config-gen",
+      "repository": "https://github.com/user2user1/rvmm-config-gen",
+      "lineage": "revanced",
+      "upstream": "https://gitlab.com/ReVanced/revanced-patches",
+      "kind": "readme-only",
+      "packages": [
+        "com.instagram.barcelona"
+      ],
+      "targetVersions": {
+        "com.instagram.barcelona": [
+          "382.0.0.51.85"
+        ]
+      },
+      "features": [
+        "Hide ads"
+      ],
+      "branches": [
+        {
+          "name": "master",
+          "commit": "61dfd2686086a9c5dbd3ab344450cb087cfc697d",
+          "head": "61dfd2686086a9c5dbd3ab344450cb087cfc697d",
+          "headChecked": "2026-10-02"
+        }
+      ],
+      "watchPaths": [
+        "docs/patches.json"
+      ],
+      "license": {
+        "spdx": "AGPL-3.0",
+        "url": "https://github.com/user2user1/rvmm-config-gen/blob/61dfd2686086a9c5dbd3ab344450cb087cfc697d/LICENSE",
+        "sha256": "9599dfa847ff0d6e7028fbe10f53a7cc2e828dca9b47319a6596b3aaa2892b40"
+      },
+      "contaminatedBy": null,
+      "disposition": "behavior-only",
+      "reason": "The repository uses AGPL-3.0, which this ledger's license allowlist does not admit. docs/patches.json is a derived official ReVanced catalog declaring Hide ads for Threads 382.0.0.51.85. Its workflow extracts that catalog from the official release bundle. There is no independent Threads patch body to adopt.",
+      "archived": false,
+      "forks": [],
+      "contentHashes": [
+        "9356919505866b8a49d24042afda389c64572f58"
+      ],
+      "mirrors": [],
+      "lastChecked": "2026-10-18"
+    }
+  ],
+  "outOfScope": [
+    {
+      "repository": "https://github.com/crimera/piko",
+      "reason": "Instagram only, with no Threads target. Its Instagram fingerprints were run against Threads 449 for research: 65 of 299 match uniquely, which is shared-code evidence. HushGram's ledger holds it.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/bluecxt/instagram-revanced-patches",
+      "reason": "Instagram only, ReVanced-derived. HushGram's ledger holds it.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/daboynb/revanced-instagram-viewonce",
+      "reason": "Instagram only: view-once media.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/wb1016/instagram-revanced-patches",
+      "reason": "Instagram only, and no licence.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/ReSo7200/InstaEclipse",
+      "reason": "An Instagram Xposed module (Apache-2.0). Nothing for Threads.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/mamiiblt/instafel",
+      "reason": "An Instagram Alpha patcher with its own engine (MIT). Nothing for Threads.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/pawjects/PawGram",
+      "reason": "An Instagram client (MIT). Nothing for Threads.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/rushiforai/morphe-archive",
+      "reason": "An archive of other projects' builds with no licence of its own. It's listed under indexes.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/rushiforai/revanced-archive",
+      "reason": "An archive of ReVanced builds with no licence of its own.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/joristdh/platypatch",
+      "reason": "No Threads code on main. Its v1.0.0 (2026-04-14) carried a copy of ReVanced's Threads Hide ads and removed it the same day (cc7b0fd). The stale predictive-back-gesture branch still holds that copy, which the revanced entry already covers.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/rookieenough/de-vanced",
+      "reason": "A fork of morphe-patches-template that carried the same copy of ReVanced's Threads Hide ads from v1.0.2 to v1.1.1 and dropped it on 2026-08-12 (e554c2b5da). Nothing on main targets Threads.",
+      "lastChecked": "2026-10-18"
+    },
+    {
+      "repository": "https://github.com/kveld9/kveld-morphe-patches",
+      "reason": "A universal Block Trackers resource patch, off by default and with no compatibleWith. Its tracker list names two Threads providers (the liteprovider usdid UsdidValuesProvider and BarcelonaLiteContentProvider). Nothing else in it targets Threads and none of its code is taken.",
+      "lastChecked": "2026-10-18"
+    }
+  ]
+}

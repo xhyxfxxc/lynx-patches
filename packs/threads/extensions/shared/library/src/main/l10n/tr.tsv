@@ -1,0 +1,393 @@
+# Turkish for HushThreads: the English key, a tab, the translation. One row per string.
+# After editing, run python scripts/gen-l10n.py from the repository root.
+Build %1$s	Derleme %1$s
+%1$d item in that file isn't a setting this version of HushThreads knows, so it'll be left out.	O dosyadaki %1$d öğe, HushThreads'un bu sürümünün tanıdığı ayarlardan değil, bu yüzden atlanacak.
+%1$d items in that file aren't settings this version of HushThreads knows, so they'll be left out.	O dosyadaki %1$d öğe, HushThreads'un bu sürümünün tanıdığı ayarlardan değil, bu yüzden atlanacak.
+%1$d switch will change.	%1$d anahtar değişecek.
+%1$d switches will change.	%1$d anahtar değişecek.
+%1$s. It was set when you patched, so Pause can't turn it off. To rule it out, patch again and leave out that patch.	%1$s. Yamaladığında ayarlandığı için Duraklatma bunu kapatamaz. Bunu elemek için yeniden yamala ve o yamayı dışarıda bırak.
+%1$s. They were set when you patched, so Pause can't turn them off. To rule one out, patch again and leave out the patch in brackets after it.	%1$s. Yamaladığında ayarlandıkları için Duraklatma bunları kapatamaz. Birini elemek için yeniden yamala ve onun ardından parantez içinde yazan yamayı dışarıda bırak.
+A diagnostic report is already being saved.	Bir tanılama raporu zaten kaydediliyor.
+A file named %1$s in %2$s paused HushThreads.	%2$s içindeki %1$s adlı bir dosya HushThreads'u duraklattı.
+About	Hakkında
+Advertising ID removed	Reklam kimliği kaldırıldı
+Android 11 and older don't say which links open here. Tap to open this app's settings, then Open by default.	Android 11 ve öncesi burada hangi bağlantıların açıldığını bildirmez. Bu uygulamanın ayarlarını açmak için dokunun, ardından Varsayılan olarak aç'a gidin.
+Android only sends Threads links to an app signed by Meta. Selecting the addresses sends their links here instead. Your other link settings stay as they are.	Android, Threads bağlantılarını yalnızca Meta'nın imzaladığı bir uygulamaya gönderir. Adresleri seçersen bağlantıları bunun yerine buraya gelir. Diğer bağlantı ayarların aynı kalır.
+Android verified this app for Threads' web addresses, so their links open here.	Android bu uygulamayı Threads'in web adresleri için doğruladı, bu yüzden bağlantıları burada açılır.
+Android's settings for this app didn't open. Open App info from Threads' icon, then Open by default.	Bu uygulamanın Android ayarları açılamadı. Threads simgesinden Uygulama bilgileri'ni, ardından Varsayılan olarak aç'ı açın.
+Back	Geri
+Cancel	İptal
+Changing these	Bunları değiştirmek
+Choose a settings file. Before anything is imported, you'll see how many switches it changes.	Bir ayar dosyası seç. İçe aktarmadan önce kaç anahtarın değişeceğini görürsün.
+Clear diagnostic data	Tanılama verilerini temizle
+Copy a quick report or save the full one to Download/Morphe. Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.	Kısa raporu kopyala veya tam raporu Download/Morphe konumuna kaydet. Bağlantılar, kimlikler, çerezler ve oturum belirteçleri çıkarılır. Paylaşmadan önce başka özel bilgi olup olmadığına bak.
+Copy quick report	Hızlı raporu kopyala
+Couldn't import the settings, and couldn't put back the ones you had. Check the switches on this screen.	Ayarlar içe aktarılamadı ve önceki ayarların geri yüklenemedi. Bu ekrandaki anahtarları kontrol et.
+Couldn't import the settings. Nothing was changed.	Ayarlar içe aktarılamadı. Hiçbir şey değiştirilmedi.
+Couldn't open that file. Nothing was changed.	Bu dosya açılamadı. Hiçbir şey değiştirilmedi.
+Couldn't open the file picker. Try again.	Dosya seçici açılamadı. Tekrar dene.
+Couldn't put back the diagnostic data. Try again.	Tanılama verileri geri getirilemedi. Tekrar dene.
+Couldn't save the settings file. Try again.	Ayar dosyası kaydedilemedi. Tekrar dene.
+Couldn't start that. Try again in a moment.	Bu işlem başlatılamadı. Birazdan tekrar dene.
+Couldn't start the report export. Try again shortly.	Rapor dışa aktarımı başlatılamadı. Birazdan tekrar dene.
+Couldn't turn HushThreads back on. Try again.	HushThreads yeniden açılamadı. Tekrar dene.
+Debug logging	Hata ayıklama günlüğü
+Diagnostic data cleared. Tap again to put it back.	Tanılama verileri temizlendi. Geri getirmek için tekrar dokun.
+Diagnostic data put back.	Tanılama verileri geri getirildi.
+Diagnostic report copied to the clipboard.	Tanılama raporu panoya kopyalandı.
+Clears the saved log, patch check results and any kept crash that a report would include.	Bir raporun içereceği kayıtlı günlüğü, yama kontrol sonuçlarını ve saklanan çökme kaydını temizler.
+Every switch but Debug logging acts as if it were off, and what was set when you patched stays in. Your settings stay as they are.	Hata ayıklama günlüğü dışındaki her anahtar kapalıymış gibi davranır, yamaladığında ayarlananlar ise devrede kalır. Ayarların olduğu gibi kalır.
+Export diagnostic report	Tanılama raporunu dışa aktar
+Export settings	Ayarları dışa aktar
+Feed	Akış
+Turns off every HushThreads switch except Debug logging the next time Threads starts. What you chose when you patched stays, and your choices are saved.	Threads bir sonraki açılışında Hata ayıklama günlüğü dışındaki tüm HushThreads anahtarlarını kapatır. Yamalarken seçtiklerin kalır ve tercihlerin kayıtlı kalır.
+Hide ads	Reklamları gizle
+HushThreads %1$s on Threads %2$s	Threads %2$s üzerinde HushThreads %1$s
+HushThreads %1$s targets Threads %2$s.	HushThreads %1$s, Threads %2$s için hazırlandı.
+HushThreads pauses when Threads restarts.	HushThreads, Threads yeniden başladığında duraklatılır.
+HushThreads turns back on when Threads restarts.	HushThreads, Threads yeniden başladığında tekrar açılır.
+It targets Threads %1$s.	Threads %1$s için hazırlandı.
+None of Threads' web addresses are selected for this app, so their links open elsewhere. Tap to select them in Android's settings.	Threads'in web adreslerinden hiçbiri bu uygulama için seçili değil, bu yüzden bağlantıları başka yerde açılır. Android ayarlarında seçmek için dokunun.
+Only some of Threads' web addresses are selected for this app, and links to the rest open elsewhere. Tap to select them in Android's settings.	Threads'in web adreslerinden yalnızca bazıları bu uygulama için seçili ve diğerlerinin bağlantıları başka yerde açılır. Android ayarlarında seçmek için dokunun.
+Privacy	Gizlilik
+Save your switches to a file. Pause and Debug logging aren't included, and neither is the release check.	Anahtarlarını bir dosyaya kaydet. Duraklatma ve Hata ayıklama günlüğü dahil edilmez, sürüm denetimi de edilmez.
+Saved. Restart Threads to apply this change.	Kaydedildi. Bu değişikliği uygulamak için Threads'i yeniden başlat.
+Some Threads screens check who signed the app and fail on a patched one. This fix makes them open again.	Bazı Threads ekranları uygulamayı kimin imzaladığına bakar ve yamalı uygulamada açılmaz. Bu düzeltme onları yeniden açılır yapar.
+Settings exported. The app holding the file wouldn't let HushThreads read it back, so it wasn't checked.	Ayarlar dışa aktarıldı. Dosyayı tutan uygulama HushThreads'un onu geri okumasına izin vermedi, bu yüzden kontrol edilmedi.
+# context: summary of the Hide ads switch; For you and Following are the names of Threads' two feeds, written as the app shows them in this language
+Sponsored posts come out of For you, Following and the posts you open before Threads shows them, so no gap is left.	Sponsorlu gönderiler, Threads onları göstermeden önce Senin İçin ve Takip Edilenler akışlarından ve açtığın gönderilerden çıkarılır, böylece boşluk kalmaz.
+# context: summary of the Feed section link on the overview; the same two feed names as the Hide ads switch
+Sponsored posts in For you and Following	Senin İçin ve Takip Edilenler'deki sponsorlu gönderiler
+# context: Feed overview summaries when suggestions alone, or both feed rules, are selected
+Suggested accounts in your feed	Akışınızdaki önerilen hesaplar
+Ads and suggested accounts in your feed	Akışınızdaki reklamlar ve önerilen hesaplar
+Stop analytics uploads	Analiz yüklemelerini durdur
+# context: xmt and slof are the tags' own names in the link and stay as they are
+Takes tracking tags such as xmt and slof off the post links you copy or share. A short share link becomes the post's own link.	Kopyaladığın veya paylaştığın gönderi bağlantılarından xmt ve slof gibi izleme etiketlerini kaldırır. Kısa paylaşım bağlantısı, gönderinin kendi bağlantısına dönüşür.
+The app holding that file is taking too long, so HushThreads stopped waiting. Nothing was changed.	O dosyayı tutan uygulama çok uzun sürüyor, bu yüzden HushThreads beklemeyi bıraktı. Hiçbir şey değiştirilmedi.
+The app holding the last settings file still hasn't answered. Try again later.	Son ayar dosyasını tutan uygulama hâlâ yanıt vermedi. Daha sonra tekrar dene.
+The app holding the settings file is taking too long, so HushThreads stopped waiting. That app may still finish saving it, so check the file before you rely on it.	Ayar dosyasını tutan uygulama çok uzun sürüyor, bu yüzden HushThreads beklemeyi bıraktı. O uygulama kaydetmeyi yine de bitirebilir, bu yüzden dosyaya güvenmeden önce onu kontrol et.
+The file %1$s couldn't be removed. Delete it from %2$s, then tap Resume again.	%1$s dosyası kaldırılamadı. Onu %2$s içinden sil, sonra yeniden Devam et'e dokun.
+The settings file was saved, but it doesn't read back as what was written. Save it again as a new file.	Ayar dosyası kaydedildi, ancak geri okunduğunda yazılanla aynı değil. Yeni bir dosya olarak tekrar kaydet.
+Stops most usage reports from reaching Meta. Some may still get through. Turn this off to send them as before.	Kullanım raporlarının çoğunun Meta'ya ulaşmasını engeller. Bazıları yine de geçebilir. Eskisi gibi göndermek için kapat.
+Analytics address coverage	Analiz adresi kapsamı
+Blocked: %1$s. Not found in this build: %2$s.	Engellenen: %1$s. Bu sürümde bulunamayan: %2$s.
+This build didn't record which report types it covers. Patch again to see them.	Bu sürüm hangi rapor türlerini kapsadığını kaydetmedi. Görmek için yeniden yamala.
+none	yok
+Threads can't read your phone's advertising ID. The permission for it is gone from this build.	Threads telefonunuzun reklam kimliğini okuyamaz. Bunun için gereken izin bu sürümden kaldırıldı.
+Threads crashed or froze within a minute of starting three times in a row, so HushThreads paused itself.	Threads açıldıktan sonraki bir dakika içinde üst üste üç kez çöktü veya dondu, bu yüzden HushThreads kendini duraklattı.
+Threads' web addresses are selected for this app in Android's settings, so their links open here.	Threads'in web adresleri Android ayarlarında bu uygulama için seçili, bu yüzden bağlantıları burada açılır.
+Tracking in links and analytics uploads	Bağlantılardaki izleme ve analiz yüklemeleri
+Try again, or go back to Threads.	Tekrar dene veya Threads'e geri dön.
+Until you resume, every switch but Debug logging acts as if it were off. Changes made when you patched stay in.	Devam ettirene kadar Hata ayıklama günlüğü dışındaki her anahtar kapalıymış gibi davranır. Yamaladığında ayarlananlar devrede kalır.
+Full report saved to %1$s	Tam rapor şuraya kaydedildi: %1$s
+GPL-3.0, with the notices of the projects this is built on	GPL-3.0, üzerine kurulduğu projelerin lisans bildirimleriyle
+HushThreads is on	HushThreads açık
+HushThreads is paused	HushThreads duraklatıldı
+HushThreads settings	HushThreads ayarları
+HushThreads settings couldn't open	HushThreads ayarları açılamadı
+Import	İçe aktar
+Import settings	Ayarları içe aktar
+Importing settings	Ayarlar içe aktarılıyor
+Licenses	Lisanslar
+Links	Bağlantılar
+OK	Tamam
+Pause HushThreads	HushThreads'u duraklat
+Re-signed build fix	Yeniden imzalanmış sürüm düzeltmesi
+Reading the settings file	Ayar dosyası okunuyor
+Remove tracking from shared links	Paylaşılan bağlantılardan izlemeyi kaldır
+Retry	Yeniden dene
+Save full report	Tam raporu kaydet
+# The release check: its switch and Check now row under Updates, the status card's line about a newer release, and what a failed try says.
+Check for new HushThreads releases	Yeni HushThreads sürümlerini denetle
+Once a day, when Threads starts, checks GitHub for a newer HushThreads and tells you here. Nothing is downloaded.	Günde bir kez, Threads açılırken GitHub'da daha yeni bir HushThreads olup olmadığına bakar ve burada söyler. Hiçbir şey indirilmez.
+Check now	Şimdi denetle
+Asks GitHub for the newest release right now, even with the switch above off.	Yukarıdaki anahtar kapalı olsa bile GitHub'a en yeni sürümü hemen sorar.
+Checking GitHub now.	GitHub şu anda denetleniyor.
+HushThreads %1$s is out. Update it in Morphe Manager.	HushThreads %1$s çıktı. Morphe Manager'da güncelle.
+Version %1$s for Threads %2$s	Threads %2$s için %1$s sürümü
+You have the newest HushThreads release.	En yeni HushThreads sürümünü kullanıyorsun.
+The newest HushThreads release is %1$s.	En yeni HushThreads sürümü %1$s.
+Couldn't reach GitHub. Try again later.	GitHub'a ulaşılamadı. Daha sonra tekrar dene.
+GitHub is turning away checks from this network for now. Try again later.	GitHub şu an bu ağdan gelen sorguları geri çeviriyor. Daha sonra tekrar dene.
+GitHub sent back something HushThreads couldn't read. Try again later.	GitHub, HushThreads'in okuyamadığı bir yanıt gönderdi. Daha sonra tekrar dene.
+Saving the settings file	Ayar dosyası kaydediliyor
+Set when you patched	Yamaladığında ayarlananlar
+Settings couldn't open	Ayarlar açılamadı
+Settings couldn't refresh completely. Reopen settings and try again.	Ayarlar tamamen yenilenemedi. Ayarları yeniden açıp tekrar dene.
+Settings exported.	Ayarlar dışa aktarıldı.
+Settings imported. %1$d switch changed.	Ayarlar içe aktarıldı. %1$d anahtar değişti.
+Settings imported. %1$d switches changed.	Ayarlar içe aktarıldı. %1$d anahtar değişti.
+Source code and issues	Kaynak kodu ve sorunlar
+Stays in while paused	Duraklatılsa da devrede kalır
+Tap to turn it back on.	Yeniden açmak için dokun.
+That file is too large to be a settings file. Nothing was changed.	Bu dosya bir ayar dosyası olamayacak kadar büyük. Hiçbir şey değiştirilmedi.
+That file isn't readable text, so it may have been damaged on the way. Nothing was changed.	Bu dosya okunabilir bir metin değil, aktarım sırasında hasar görmüş olabilir. Hiçbir şey değiştirilmedi.
+That file lists a setting twice, so there's no telling which value to use. Nothing was changed.	Bu dosyada bir ayar iki kez geçiyor, bu yüzden hangi değerin kullanılacağı belli değil. Hiçbir şey değiştirilmedi.
+That isn't a HushThreads settings file. Nothing was changed.	Bu bir HushThreads ayar dosyası değil. Hiçbir şey değiştirilmedi.
+That settings file holds a value HushThreads can't read. Nothing was changed.	Bu ayar dosyasında HushThreads'un okuyamadığı bir değer var. Hiçbir şey değiştirilmedi.
+That settings file is damaged or only partly downloaded. Nothing was changed.	Bu ayar dosyası hasarlı ya da yalnızca bir kısmı indirilmiş. Hiçbir şey değiştirilmedi.
+That settings file was written by a newer HushThreads than this one. Nothing was changed.	Bu ayar dosyası, HushThreads'un bu sürümünden daha yeni bir sürümüyle oluşturulmuş. Hiçbir şey değiştirilmedi.
+The diagnostic report couldn't be saved yet. Try again in a moment.	Tanılama raporu henüz kaydedilemedi. Birazdan tekrar dene.
+The diagnostic report couldn't be saved. Try again.	Tanılama raporu kaydedilemedi. Tekrar dene.
+The file %1$s couldn't be removed. Delete it from %2$s to turn HushThreads back on.	%1$s dosyası kaldırılamadı. HushThreads'u yeniden açmak için onu %2$s içinden sil.
+Your choices are saved. Tap Resume, then restart Threads.	Tercihleriniz kayıtlı. Devam et'e dokunun, sonra Threads'i yeniden başlatın.
+the re-signed build fix	yeniden imzalanmış sürüm düzeltmesi
+The setting couldn't finish updating. Its saved value is shown.	Ayarın güncellenmesi tamamlanamadı. Kayıtlı değeri gösteriliyor.
+There's no diagnostic data to clear.	Temizlenecek tanılama verisi yok.
+There's no diagnostic data to put back.	Geri getirilecek tanılama verisi yok.
+They're chosen in Morphe Manager when you patch, and Pause doesn't turn them off. Patch again to change them.	Bunlar yamalarken Morphe Manager'da seçilir ve Duraklatma bunları kapatmaz. Değiştirmek için yeniden yamala.
+This phone has no file picker, so there's no way to choose a file here.	Bu telefonda dosya seçici yok, bu yüzden burada dosya seçmenin bir yolu yok.
+Version	Sürüm
+Record patch activity and show errors for a bug report. Leave off during normal use.	Hata raporu için yama etkinliğini kaydeder ve hataları gösterir. Normal kullanımda kapalı bırakın.
+You paused HushThreads.	HushThreads'u duraklattın.
+Your switches already match that file, so nothing will change.	Anahtarların zaten o dosyayla aynı, bu yüzden hiçbir şey değişmeyecek.
+Copy a short report to the clipboard.	Kısa raporu panoya kopyalar.
+Save the full report in Download/Morphe.	Tam raporu Download/Morphe konumuna kaydeder.
+Settings imported.	Ayarlar içe aktarıldı.
+No app on this phone can open the link. The address is %1$s.	Bu telefondaki hiçbir uygulama bağlantıyı açamıyor. Adres: %1$s.
+Pause, backup and diagnostics	Duraklatma, yedekleme ve tanılama
+Updates	Güncellemeler
+Jump to a section	Bir bölüme git
+Go straight to one group of settings. Back returns to where you were.	Doğrudan bir ayar grubuna git. Geri, bulunduğun yere döndürür.
+No matching settings	Eşleşen ayar yok
+%1$d setting found	%1$d ayar bulundu
+%1$d settings found	%1$d ayar bulundu
+Try a different word or clear the search.	Başka bir kelime deneyin veya aramayı temizleyin.
+Search settings	Ayarlarda ara
+Clear search	Aramayı temizle
+Saves	Kaydetmeler
+No saves in progress.	Devam eden kaydetme yok.
+Pause	Duraklat
+Resume	Devam et
+Undo	Geri al
+
+# context: Links section, the Supported links row. It reads Android's own per-app selection of Threads' web addresses (Android 12 and later) and opens Android's Open by default page for this app. Use the phone's own names for Open supported links, Open by default and App info.
+Supported links	Desteklenen bağlantılar
+Opening supported links is off for this app in Android's settings. Tap to turn it on.	“Desteklenen bağlantıları aç” Android ayarlarında bu uygulama için kapalı. Açmak için dokunun.
+Android didn't say which links open here. Tap to check in Android's settings.	Android burada hangi bağlantıların açıldığını bildirmedi. Android ayarlarında kontrol etmek için dokunun.
+Selecting links by hand	Bağlantıları elle seçme
+# context: an item in the sentence about what Pause can't turn off; the patch name Remove the advertising ID follows it in brackets, so it mustn't repeat that name
+the removed advertising ID permission	kaldırılan reklam kimliği izni
+
+# context: optional feed rule and its scope
+Hide suggested users	Önerilen kullanıcıları gizle
+Removes the cards that suggest accounts to follow, in your feed and on profiles. Normal posts and reposts stay.	Takip edilecek hesaplar öneren kartları akışınızdan ve profillerden kaldırır. Normal gönderiler ve yeniden paylaşımlar kalır.
+Keep feed position on return	Geri dönünce akış konumunu koru
+Returning to Threads within ten minutes keeps your place. Pull to refresh still works.	Threads'e on dakika içinde dönersen kaldığın yer korunur. Yenilemek için aşağı çekmeye devam edebilirsin.
+No time limit	Süre sınırı yok
+With the switch above on, your place stays however long you're away. Pull to refresh and a fresh start still load new posts.	Yukarıdaki anahtar açıkken ne kadar uzun süre uzakta kalırsan kal yerin korunur. Yenilemek için çekmek ve uygulamayı yeniden başlatmak yine yeni gönderileri yükler.
+Where you left off in your feed	Akışta kaldığın yer
+Open links in your browser	Bağlantıları tarayıcında aç
+Links you tap open in your browser or the site's app, skipping Threads' link tracking. Threads and Instagram pages still open in Threads.	Dokunduğun bağlantılar tarayıcında veya sitenin uygulamasında açılır, Threads'in bağlantı takibi atlanır. Threads ve Instagram sayfaları yine Threads'te açılır.
+Tap to play videos	Videoları dokunarak oynat
+Videos in your feed wait for a tap instead of playing as you scroll.	Akıştaki videolar, kaydırırken kendiliğinden oynamak yerine dokunmanı bekler.
+Videos in your feed	Akıştaki videolar
+
+# context: overview disclosure for default patches omitted from this build (Hushfacebook 814acd23)
+Tap to see which.	Hangileri olduğunu görmek için dokun.
+%1$d default patch isn't in this build	%1$d varsayılan yama bu sürümde yok
+%1$d default patches aren't in this build	%1$d varsayılan yama bu sürümde yok
+Not in this build: %1$s. Morphe Manager selects it by default. Patch again with it selected to get what it does.	Bu sürümde yok: %1$s. Morphe Manager bunu varsayılan olarak seçer. Yaptığı işi almak için onu seçip yeniden yamala.
+Not in this build: %1$s. Morphe Manager selects them by default. Patch again with them selected to get what they do.	Bu sürümde yok: %1$s. Morphe Manager bunları varsayılan olarak seçer. Yaptıkları işi almak için onları seçip yeniden yamala.
+Appearance	Görünüm
+Pure black dark mode	Saf siyah karanlık mod
+Dark mode uses true black instead of dark gray. Turn on dark mode in Threads to see it. Restart Threads to see the change.	Karanlık mod koyu gri yerine gerçek siyahı kullanır. Görmek için Threads'te karanlık modu aç. Değişikliği görmek için Threads'i yeniden başlat.
+Hide the Instagram button	Instagram düğmesini gizle
+Takes the Instagram button off the top of profiles, yours and other people's. Restart Threads to see the change.	Kendi profilinin ve başkalarının profillerinin üstündeki Instagram düğmesini kaldırır. Değişikliği görmek için Threads'i yeniden başlat.
+Hide ghost post bubbles	Hayalet gönderi balonlarını gizle
+Takes the ghost post bubbles off profile pictures, on profiles and in the row at the top of your feed. Restart Threads to see the change.	Profil fotoğraflarındaki hayalet gönderi balonlarını kaldırır, profillerde ve akışının üstündeki sırada. Değişikliği görmek için Threads'i yeniden başlat.
+Full size profile pictures	Tam boyutlu profil fotoğrafları
+A profile picture you open on a profile shows full size, where you can zoom in and save it, instead of the small circle.	Bir profilde açtığın profil fotoğrafı küçük daire yerine tam boyutta açılır, yakınlaştırıp kaydedebilirsin.
+Close	Kapat
+Couldn't load the picture. Try again in a moment.	Fotoğraf yüklenemedi. Biraz sonra tekrar dene.
+Turn features on or off	Özellikleri aç veya kapat
+# Fotoğrafları ve videoları kaydetme
+%1$d saved in lower quality than on Threads.	%1$d öğe Threads'tekinden daha düşük kalitede kaydedildi.
+%1$d saves stopped. Reopen the post and save again.	%1$d kaydetme durdu. Gönderiyi yeniden açıp tekrar kaydet.
+%1$d saves were interrupted	%1$d kaydetme işlemi kesildi
+%1$s becomes the date and time of the save, %2$s the video's number on Threads, %3$s who posted it and %4$s the day it was posted. What a save doesn't know is left out, and a name with none of these gets the date added. When the name is already in the folder, the time of the save goes on the end. Invalid characters become underscores. Leave it blank to use the default, %5$s.	%1$s kaydetme tarihine ve saatine, %2$s videonun Threads'teki numarasına, %3$s paylaşan kişinin adına, %4$s ise paylaşıldığı güne dönüşür. Kaydederken bilinmeyenler dışarıda bırakılır ve bunların hiçbirini içermeyen bir ada tarih eklenir. Ad klasörde zaten varsa sonuna kaydetme saati eklenir. Geçersiz karakterler alt çizgiye dönüşür. Varsayılan %5$s adını kullanmak için boş bırak.
+%1$s of %2$s	%1$s / %2$s
+%1$s so far	Şimdiye kadar %1$s
+A save stopped. Reopen the post and save again.	Bir kaydetme durdu. Gönderiyi yeniden açıp tekrar kaydet.
+A save was interrupted	Bir kaydetme işlemi kesildi
+Adds Save to a post's menu. A post with several photos or videos saves them all. Off or paused, you get Threads' normal menu.	Bir gönderinin menüsüne Kaydet ekler. Birden çok fotoğraf veya video varsa hepsi kaydedilir. Kapalıyken veya duraklatılmışken Threads'in normal menüsünü görürsün.
+Best	En iyi
+Cancel saving this carousel	Bu çoklu gönderinin kaydını iptal et
+Cancel saving this photo	Bu fotoğrafın kaydedilmesini iptal et
+Cancel saving this video	Bu videonun kaydedilmesini iptal et
+Carousel cancelled. Saved %1$d. Failed %2$d. Skipped %3$d.	İptal edildi. Kaydedilen %1$d. Başarısız %2$d. Atlanan %3$d.
+Choose a folder name under Movies and Pictures. Invalid characters become underscores. Leave it blank to use the default folder, %1$s.	Movies ve Pictures altında bir klasör adı seç. Geçersiz karakterler alt çizgiye dönüşür. Varsayılan %1$s klasörünü kullanmak için boş bırak.
+Copying to the gallery	Galeriye kopyalanıyor
+Download failed. Try again in a moment.	İndirme başarısız oldu. Biraz sonra tekrar dene.
+Download quality	İndirme kalitesi
+Downloading	İndiriliyor
+Downloads	İndirmeler
+Each video saves at %1$s or the closest quality below it. A video with nothing that low saves at the closest quality above.	Her video %1$s kalitesinde ya da bunun altındaki en yakın kalitede kaydedilir. Bu kadar düşük kalitesi olmayan video, bunun üstündeki en yakın kalitede kaydedilir.
+Each video saves at its lowest quality, for the smallest file.	Her video en düşük kalitesinde kaydedilir, böylece dosya en küçük olur.
+Each video saves at the best quality the player streams.	Her video, oynatıcının sunduğu en iyi kalitede kaydedilir.
+Example without post details	Gönderi ayrıntıları olmadan örnek
+File name	Dosya adı
+File name set to %1$s.	Dosya adı %1$s olarak ayarlandı.
+Folder name	Klasör adı
+Folder set to %1$s.	Klasör %1$s olarak ayarlandı.
+Helps if WhatsApp, an editor like CapCut or InShot, or a gallery plays your saved video without sound. May lower quality.	WhatsApp, CapCut veya InShot gibi bir düzenleyici ya da bir galeri kaydettiğin videoyu sessiz oynatıyorsa yardımcı olur. Kaliteyi düşürebilir.
+How far a photo or video you're saving has got, with a button to cancel it	Kaydettiğin fotoğraf veya videonun ilerleme durumu ve iptal etmek için bir düğme
+HushThreads saves	HushThreads kaydetme işlemleri
+Joining the picture and sound	Görüntü ve ses birleştiriliyor
+Last carousel save	Son çoklu gönderi kaydı
+Link expired. Reopen the post and try again	Bağlantının süresi doldu. Gönderiyi yeniden açıp tekrar dene
+Not saved: a carousel can have at most %1$d pages	Kaydedilmedi: çoklu gönderide en fazla %1$d sayfa olabilir
+Not saved: that isn't a Threads photo or video	Kaydedilmedi: Bu bir Threads fotoğrafı veya videosu değil
+Not saved: the file is over 512 MB	Kaydedilmedi: Dosya 512 MB'tan büyük
+Page %1$d of %2$d	%1$d / %2$d sayfa
+Photos and videos you save from posts	Gönderilerden kaydettiğin fotoğraflar ve videolar
+Reopen the post and save again.	Gönderiyi yeniden açıp tekrar kaydet.
+Save	Kaydet
+Save all	Tümünü kaydet
+Save cancelled	Kaydetme iptal edildi
+Save folder	Kayıt klasörü
+Save photo	Fotoğrafı kaydet
+Save photos and videos	Fotoğrafları ve videoları kaydet
+Save video	Videoyu kaydet
+Save videos other apps can open	Videoları diğer uygulamaların açabileceği biçimde kaydet
+Saved %1$d. Failed %2$d. Skipped %3$d.	Kaydedilen %1$d. Başarısız %2$d. Atlanan %3$d.
+Saved to %1$s	Şuraya kaydedildi: %1$s
+Saved to %1$s in lower quality than on Threads	Threads'tekinden düşük kalitede kaydedildi: %1$s
+Saved to the gallery	Galeriye kaydedildi
+Saved to the gallery in lower quality than on Threads	Galeriye Threads'tekinden düşük kalitede kaydedildi
+Saving a carousel	Çoklu gönderi kaydediliyor
+Saving a photo	Fotoğraf kaydediliyor
+Saving a video	Video kaydediliyor
+Saving...	Kaydediliyor...
+Saving... To cancel, open Downloads in HushThreads settings.	Kaydediliyor... İptal için HushThreads'te İndirmeler'i aç.
+Smallest	En küçük
+Video file name	Video dosya adı
+Videos are named %1$s. Photos are always named %2$s followed by the date and time.	Videoların adı %1$s olur. Fotoğrafların adı her zaman %2$s ile başlar, ardından tarih ve saat gelir.
+Videos go to %1$s and photos to %2$s.	Videolar %1$s klasörüne, fotoğraflar %2$s klasörüne kaydedilir.
+Version code raised	Sürüm kodu yükseltildi
+The version number is set as high as Android allows, so Google Play won't offer Meta's updates over this build. Threads still sees its real version. To go back to stock Threads, uninstall this one first, which deletes Threads' data on this phone. Later HushThreads builds need Change version code too, or they won't install over this one.	Sürüm numarası Android'in izin verdiği en yüksek değere ayarlı, bu yüzden Google Play Meta güncellemelerini bu sürümün üzerine önermez. Threads yine gerçek sürümünü görür. Orijinal Threads'e dönmek için önce bunu kaldır, bu da Threads'in bu telefondaki verilerini siler. Sonraki HushThreads sürümleri de Change version code ister, yoksa bunun üzerine kurulmaz.
+the raised version code	yükseltilmiş sürüm kodu
+Share sheet entry removed	Paylaşım menüsü girişi kaldırıldı
+Threads doesn't show up when you share from other apps. Sharing from Threads to other apps still works.	Diğer uygulamalardan paylaşırken Threads görünmez. Threads'ten diğer uygulamalara paylaşım çalışmaya devam eder.
+the removed share sheet entry	kaldırılan paylaşım menüsü girişi
+User certificates trusted	Kullanıcı sertifikalarına güveniliyor
+Threads accepts security certificates you added to your phone. Its own checks on Meta's certificates are unchanged, so a proxy still can't read most of its traffic.	Threads, telefonuna eklediğin güvenlik sertifikalarını kabul eder. Meta sertifikalarına yaptığı kendi kontroller değişmez, bu yüzden bir proxy trafiğinin çoğunu yine okuyamaz.
+the user certificate trust	kullanıcı sertifikalarına duyulan güven
+Own package name	Kendi paket adı
+This copy installs beside Threads as an app of its own, with its own sign-in.	Bu kopya, Threads'in yanına kendi oturum açma bilgisiyle ayrı bir uygulama olarak kurulur.
+the new package name	yeni paket adı
+Own app name	Kendi uygulama adı
+The name under the app's icon.	Uygulama simgesinin altındaki ad.
+the new app name	yeni uygulama adı
+Hide screenshots from Threads	Ekran görüntülerini Threads'ten gizle
+Threads isn't told when you take a screenshot, so it can't log it or react to it.	Ekran görüntüsü aldığında Threads'e haber verilmez, bu yüzden onu kaydedemez ya da ona tepki veremez.
+Spoof SIM region	SIM bölgesini taklit et
+Threads sees your SIM and network as the region picked below. Meta can still go by your connection and your account. Restart Threads to see the change.	Threads, SIM'ini ve ağını aşağıda seçilen bölgeye aitmiş gibi görür. Meta yine de bağlantına ve hesabına bakabilir. Değişikliği görmek için Threads'i yeniden başlat.
+SIM region	SIM bölgesi
+Full size photos	Tam boyutlu fotoğraflar
+Photos load at the largest size Threads has, not one picked for your screen. They look sharper and use more data.	Fotoğraflar ekranına göre seçilen bir boyutta değil, Threads'te bulunan en büyük boyutta yüklenir. Daha net görünür ve daha fazla veri kullanır.
+No swipe into Search	Aramaya kaydırma yok
+A sideways swipe on your feed no longer slides into Search. The Search button still opens it. Restart Threads to see the change.	Akışında yana kaydırmak artık Arama'ya götürmez. Arama düğmesi Arama'yı açmaya devam eder. Değişikliği görmek için Threads'i yeniden başlat.
+# context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
+Support HushThreads	HushThreads'i destekle
+# context: reports use the app's own Downloads folder on Android 9, where the shared Downloads collection isn't available
+Copy a quick report or save the full one in Threads' own Downloads folder. Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.	Kısa raporu kopyala veya tam raporu Threads'in kendi İndirilenler klasörüne kaydet. Bağlantılar, kimlikler, çerezler ve oturum belirteçleri çıkarılır. Paylaşmadan önce başka özel bilgi olup olmadığına bak.
+Save the full report in Threads' own Downloads folder.	Tam raporu Threads'in kendi İndirilenler klasörüne kaydeder.
+# context: diagnostic clear row's title when its next tap restores what was cleared
+Restore diagnostic data	Tanılama verilerini geri yükle
+# context: disabled backup row. The placeholder names the file action that is running on the other row
+%1$s. This action will be available when it finishes.	%1$s. Bittiğinde bu işlem yeniden kullanılabilir.
+
+# context: TalkBack action for a long press on the Threads logo in the feed header
+Open HushThreads settings	HushThreads ayarlarını aç
+
+# context: the restart row's title while one change waits for a restart; a tap restarts Threads
+Restart Threads to apply this change	Bu değişikliği uygulamak için Threads'i yeniden başlat
+# context: the same row with several changes waiting; %1$d is how many
+Restart Threads to apply %1$d changes	%1$d değişikliği uygulamak için Threads'i yeniden başlat
+# context: the restart row's summary; the settings screen comes back on the page it was on
+Threads closes and reopens on this page.	Threads kapanır ve bu sayfada yeniden açılır.
+# Copy text on long press (#9): its heading, the heading's line on the main page, the switch and its summary. Copy text is the name of Threads' own menu item for copying a post, so use the name Threads shows in this language.
+Posts	Gönderiler
+Copy text when you hold a post	Bir gönderiye basılı tutunca metni kopyala
+Copy text on long press	Uzun basınca metni kopyala
+Holding a post's text opens Copy text, on an opened post too, so you get the whole post with its links instead of picking out words.	Bir gönderinin metnine basılı tutunca, açtığın bir gönderide de Metni kopyala açılır. Böylece kelime seçmek yerine gönderinin tamamını bağlantılarıyla birlikte alırsın.
+# Show exact post times: the Posts heading's line on the main page when the patch is in the build, the switch and its summary. 3h and 2d stand for the short "how long ago" Threads shows on a post; say it the way this language's Threads does, or describe it.
+Copy text and exact post times	Metin kopyalama ve tam gönderi saatleri
+Show the date and time	Tarihi ve saati göster
+Posts and replies show the date and time they went up instead of 3h or 2d, in your phone's 12 or 24-hour format.	Gönderiler ve yanıtlar, ne kadar önce paylaşıldıkları yerine paylaşıldıkları tarihi ve saati telefonunuzun 12 veya 24 saatlik biçiminde gösterir.
+# Quick setups: the main page row and its summary, the three choices, the toast after one applies (%1$d is how many switches changed). Quiet, Privacy and Back to defaults are names of a set of switches.
+Quick setups	Hızlı kurulumlar
+Quiet	Sessiz
+Hides ads and the cards that suggest accounts to follow.	Reklamları ve takip edilecek hesap öneren kartları gizler.
+Stops most usage reports and takes tracking off the links you share. Threads isn't told about your screenshots either.	Kullanım raporlarının çoğunu durdurur ve paylaştığın bağlantılardan izlemeyi kaldırır. Threads'e ekran görüntülerin de bildirilmez.
+Back to defaults	Varsayılanlara dön
+Puts every feature switch back the way it started.	Her özellik anahtarını başlangıçtaki hâline döndürür.
+Changed %1$d setting	%1$d ayar değiştirildi
+Changed %1$d settings	%1$d ayar değiştirildi
+# Report a problem: the main page row and its summary. A tap opens a new GitHub bug report in the browser.
+Report a problem	Sorun bildir
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Sürümlerin ve ayarların doldurulmuş bir GitHub raporu açar. Ne olduğunu ekle.
+# The Links page's line beside a Meta-signed Instagram (#8): Instagram's own launcher won't hand a post or profile to a patched Threads, and the error is Instagram's.
+Instagram won't open posts here	Instagram burada gönderi açmaz
+Your Instagram is signed by Meta, and it only opens Threads posts and profiles in a Threads signed by Meta. Tapping one in Instagram shows an error saying it couldn't load the website. Posts you open in Threads itself work as usual. Patch Instagram with HushGram, signed with the same key as HushThreads, and it opens them here.	Instagram'ın Meta tarafından imzalı ve Threads gönderilerini ve profillerini yalnızca Meta tarafından imzalanmış bir Threads'te açar. Instagram'da birine dokunmak, web sitesinin yüklenemediğini söyleyen bir hata gösterir. Threads'in kendisinde açtığın gönderiler her zamanki gibi çalışır. Instagram'ı HushGram ile yamalayıp HushThreads ile aynı anahtarla imzalarsan onları burada açar.
+Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Bir grup anahtarı tek dokunuşla aç veya tüm anahtarları başlangıçtaki hâline döndür. Gizlemek için bu satıra basılı tut.
+Quick setups on the home page	Ana sayfada hızlı kurulumlar
+Hidden. Tap to show it again.	Gizli. Yeniden göstermek için dokun.
+Shown. Tap to hide it.	Gösteriliyor. Gizlemek için dokun.
+Quick setups hidden. Bring it back from Pause, backup and diagnostics.	Hızlı kurulumlar gizlendi. Duraklatma, yedekleme ve tanılama sayfasından geri getirebilirsin.
+# Android 9 only, a save without Threads' Storage permission: the toast, then the same advice as the line under a carousel's counts. Storage and Permissions are the names Android's app info screen shows in this language.
+Not saved: Threads needs the Storage permission to save on Android 9. Turn it on in Threads' app info under Permissions, then save again.	Kaydedilmedi: Android 9'da Threads'in kaydetmek için Depolama iznine ihtiyacı var. Threads'in uygulama bilgilerinde İzinler bölümünden bu izni aç, sonra tekrar kaydet.
+Threads needs the Storage permission to save on Android 9. Turn it on in Threads' app info under Permissions, then save again.	Android 9'da Threads'in kaydetmek için Depolama iznine ihtiyacı var. Threads'in uygulama bilgilerinde İzinler bölümünden bu izni aç, sonra tekrar kaydet.
+# A save whose download took longer than its time limit (ten minutes for one file): the toast. The connection is the phone's internet connection. Android 12 and later cut a toast after two lines, so it stays short.
+Not saved: the download was too slow. Try a faster connection.	Kaydedilmedi: İndirme çok yavaştı. Daha hızlı bir bağlantı dene.
+Hide follow suggestions in Search	Aramada takip önerilerini gizle
+Takes the Follow suggestions row off the Search screen. Your searches and topics stay.	Takip önerileri satırını Arama ekranından kaldırır. Aramalarınız ve konularınız kalır.
+Hide suggested threads	Önerilen thread'leri gizle
+Takes the suggested threads off the bottom of a post you open. The post and its replies stay.	Açtığınız bir gönderinin altındaki önerilen thread'leri kaldırır. Gönderi ve yanıtları kalır.
+# A save stopped because a proxy server on the phone's network (Wi-Fi or global proxy setting) asked for a user name and password: the toast. HushThreads never sends one for a download. Android 12 and later cut a toast after two lines, so it stays short.
+Not saved: the proxy wants a password. Try another network.	Kaydedilmedi: Proxy parola istiyor. Başka bir ağ dene.
+# The same, as an extra line under a carousel's 'Saved %1$d. Failed %2$d. Skipped %3$d.' summary. Android 12 and later cut a toast after two lines, so it stays short.
+The proxy wants a password. Try another network.	Proxy parola istiyor. Başka bir ağ dene.
+# The switch on the Pause, backup and diagnostics page that adds or takes away the HushThreads settings shortcut in the menu a long press on Threads' launcher icon shows.
+Settings shortcut on the app icon	Uygulama simgesinde ayarlar kısayolu
+Puts HushThreads settings in the menu you get by holding Threads' icon. Off, it leaves that menu.	Threads simgesine basılı tutunca açılan menüye HushThreads ayarlarını koyar. Kapalıyken bu menüden çıkar.
+# The switches on the same page for the HushThreads row in Threads' own settings and for the long press on the Threads logo, then what a switch says while it's the last way in that's on, which can't be turned off
+Settings row in Threads' settings	Threads ayarlarındaki satır
+Adds a HushThreads row just above More settings in Threads' settings. Off, the row is gone the next time you open Threads' settings.	Threads ayarlarında Diğer ayarlar'ın hemen üstüne bir HushThreads satırı ekler. Kapalıyken satır, Threads ayarlarını bir sonraki açtığında gider.
+Open settings from the logo	Ayarları logodan aç
+A long press on the Threads logo at the top of the feed opens these settings. Off, the long press does nothing.	Akışın üstündeki Threads logosuna basılı tutmak bu ayarları açar. Kapalıyken basılı tutmak hiçbir şey yapmaz.
+Stays on, since it's the only way left into these settings.	Bu ayarlara açılan son yol olduğu için açık kalır.
+# context: the toggle under search that shows every section's rows on one page
+Show all settings as a list	Tüm ayarları liste olarak göster
+# context: the same toggle while the list view shows, back to one button per section
+Show settings by category	Ayarları kategoriye göre göster
+# context: what a screen reader says about a section button that is folded open
+Expanded	Genişletildi
+# context: what a screen reader says about a section button that is folded shut
+Collapsed	Daraltıldı
+# context: the last section button: Report a problem, Restart Threads and the Ko-fi link
+Support	Destek
+# context: the line under the Support section button
+Reports, restart and app information	Raporlar, yeniden başlatma ve uygulama bilgileri
+# context: small heading over Report a problem and Restart Threads in Support
+Help and restart	Yardım ve yeniden başlatma
+# context: small heading over the Ko-fi link in Support
+Support the project	Projeyi destekle
+# context: a row in Support that closes Threads and reopens it on the settings page
+Restart Threads	Threads'i yeniden başlat
+Version %1$s	Sürüm %1$s
+Build %1$s (modified)	Derleme %1$s (değiştirilmiş)
+Build %1$s (source known)	Derleme %1$s (kaynak biliniyor)
+Build %1$s (source unknown)	Derleme %1$s (kaynak bilinmiyor)
+# The Comments page: the section title, Filter comments' switch and summary, and the words and domains row with its dialog text and the Hide comments row.
+Comments	Yorumlar
+Spam replies by words or links	Kelimeye veya bağlantıya göre spam yanıtlar
+Filter comments	Yorumları filtrele
+Replies matching the patterns below are left out of a post's replies, so a spam reply never shows. A reply and the replies shown under it are checked and left out as one. Normal replies keep their order.	Aşağıdaki kalıplarla eşleşen yanıtlar bir gönderinin yanıtlarından çıkarılır, böylece spam bir yanıt hiç görünmez. Bir yanıt ve altında gösterilen yanıtlar birlikte denetlenir ve birlikte çıkarılır. Normal yanıtlar sırasını korur.
+Blocked words and domains	Engellenen sözcükler ve alan adları
+One pattern a line, or separated by commas. A shop's domain such as shopee.vn takes out the replies linking to it.	Her satıra bir kalıp veya virgülle ayırarak. shopee.vn gibi bir mağaza alan adı, ona bağlantı veren yanıtları çıkarır.
+One pattern a line, or separated by commas. Matched whatever the letter case.	Her satıra bir kalıp veya virgülle ayırarak. Büyük-küçük harf ayrımı yapılmadan eşleştirilir.
+Hide comments with links	Bağlantı içeren yorumları gizle
+Replies with a web link are left out, whatever the patterns say. Add a bare site name such as shopee.vn as a pattern.	Web bağlantısı içeren yanıtlar, kalıplar ne derse desin çıkarılır. shopee.vn gibi yalın bir site adını kalıp olarak ekleyin.

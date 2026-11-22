@@ -1,0 +1,191 @@
+/*
+ * Forked from https://github.com/SysAdminDoc/Hushfacebook at c15d4f79 (GPL-3.0),
+ * modified for HushThreads (Threads), 2026.
+ *
+ * Copyright 2026 Hushfacebook contributors
+ * https://github.com/SysAdminDoc/Hushfacebook
+ */
+package app.morphe.extension.hushthreads.settings;
+
+import java.util.Arrays;
+import java.util.TreeMap;
+import app.morphe.extension.shared.Utils;
+import app.morphe.extension.shared.settings.preference.LogBufferManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.verify.domain.DomainVerificationManager;
+import android.content.pm.verify.domain.DomainVerificationUserState;
+import android.net.Uri;
+import android.os.Build;
+
+import androidx.annotation.RequiresApi;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import app.morphe.extension.shared.L10n;
+import app.morphe.extension.shared.Logger;
+
+/**
+ * Which declared Threads post addresses Android sends to this app, read for this app alone.
+ * Only hosts Android reports as declared are considered. Chat and account callback domains stay
+ * in the diagnostic report, but don't decide whether post links open here.
+ *
+ * <p>Android verifies an app's web links against the signing key the site names, so a re-signed
+ * Threads loses Meta's verification and threads.com links can stop opening in it (Morphe Manager
+ * #1028). From Android 12 a person can select the addresses for the app in its Open by default
+ * page, and Android says which are selected. That sends the links here again without making the
+ * build verified. Android 11 and older say nothing about it, so there the row only opens the app's
+ * page.
+ */
+final class SupportedLinks {
+    enum State { VERIFIED, SELECTED, SOME, NONE, DISABLED, UNKNOWN, NOT_REPORTED }
+
+    private static final List<String> POST_HOSTS = Arrays.asList(
+            "threads.com", "www.threads.com", "threads.net", "www.threads.net");
+
+    // Domain diagnostics ported from Hushfacebook 4d1fec1e and c7059151.
+    static final LogBufferManager.ReportSection REPORT = new LogBufferManager.ReportSection() {
+        @Override public String title() { return "SUPPORTED LINKS"; }
+        @Override public List<String> lines() { return reportLines(Utils.getContext()); }
+    };
+
+    private SupportedLinks() {}
+
+    /** What Android says about this app's links, or UNKNOWN when it couldn't be read. */
+    static State read(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return userState(context);
+        return State.NOT_REPORTED;
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private static State userState(Context context) {
+        try {
+            DomainVerificationManager manager = context.getSystemService(DomainVerificationManager.class);
+            if (manager == null) return State.UNKNOWN;
+            DomainVerificationUserState user = manager.getDomainVerificationUserState(context.getPackageName());
+            return user == null ? State.UNKNOWN : state(user.isLinkHandlingAllowed(), user.getHostToStateMap());
+        } catch (PackageManager.NameNotFoundException | RuntimeException unreadable) {
+            Logger.printInfo(() -> "Supported links unreadable: " + unreadable.getClass().getSimpleName());
+            return State.UNKNOWN;
+        }
+    }
+
+    /** Public manifest domains and their per-user states; no visited links or verifier IDs. */
+    static List<String> reportLines(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return Arrays.asList("availability: not_reported (API below 31)",
+                    "link_handling_allowed: not_reported", "domains: not_reported");
+        }
+        try {
+            DomainVerificationManager manager = context == null ? null : context.getSystemService(DomainVerificationManager.class);
+            DomainVerificationUserState user = manager == null ? null : manager.getDomainVerificationUserState(context.getPackageName());
+            if (user != null) {
+                List<String> lines = new ArrayList<>();
+                lines.add("availability: reported");
+                lines.add("link_handling_allowed: " + user.isLinkHandlingAllowed());
+                Map<String, Integer> hosts = user.getHostToStateMap();
+                if (hosts == null) lines.add("domains: unknown");
+                else if (hosts.isEmpty()) lines.add("domains: none_declared");
+                else {
+                    Map<String, String> sorted = new TreeMap<>();
+                    boolean invalid = false;
+                    for (Map.Entry<String, Integer> host : hosts.entrySet()) {
+                        String name = host.getKey();
+                        // Keep Unicode/wildcard manifest hosts, but refuse URLs, userinfo and line injection.
+                        if (name == null || name.isEmpty() || !name.matches("[\\p{L}\\p{M}\\p{N}_.*-]+")) {
+                            invalid = true;
+                            continue;
+                        }
+                        Integer value = host.getValue();
+                        String state = "unknown";
+                        if (value != null) {
+                            switch (value) {
+                                case DomainVerificationUserState.DOMAIN_STATE_VERIFIED: state = "verified"; break;
+                                case DomainVerificationUserState.DOMAIN_STATE_SELECTED: state = "selected"; break;
+                                case DomainVerificationUserState.DOMAIN_STATE_NONE: state = "none"; break;
+                            }
+                        }
+                        sorted.put(name, state);
+                    }
+                    if (invalid) lines.add("domains: unknown (invalid host data)");
+                    for (Map.Entry<String, String> host : sorted.entrySet()) lines.add(host.getKey() + " -> " + host.getValue());
+                }
+                return lines;
+            }
+        } catch (PackageManager.NameNotFoundException | RuntimeException unreadable) {
+            Logger.printInfo(() -> "Supported link report unreadable: " + unreadable.getClass().getSimpleName());
+        }
+        return Arrays.asList("availability: unknown", "link_handling_allowed: unknown", "domains: unknown");
+    }
+
+    /** Declared post hosts only; an unreadable post state is UNKNOWN. Other domains remain in reports. */
+    @RequiresApi(Build.VERSION_CODES.S)
+    private static State state(boolean allowed, Map<String, Integer> hosts) {
+        if (!allowed) return State.DISABLED;
+        if (hosts == null || hosts.isEmpty()) return State.UNKNOWN;
+        int verified = 0;
+        int open = 0;
+        int declared = 0;
+        for (Map.Entry<String, Integer> host : hosts.entrySet()) {
+            if (!POST_HOSTS.contains(host.getKey())) continue;
+            declared++;
+            Integer state = host.getValue();
+            if (state == null) return State.UNKNOWN;
+            switch (state) {
+                case DomainVerificationUserState.DOMAIN_STATE_VERIFIED:
+                    verified++;
+                    open++;
+                    break;
+                case DomainVerificationUserState.DOMAIN_STATE_SELECTED:
+                    open++;
+                    break;
+                case DomainVerificationUserState.DOMAIN_STATE_NONE:
+                    break;
+                default:
+                    return State.UNKNOWN;
+            }
+        }
+        if (declared == 0) return State.UNKNOWN;
+        if (verified == declared) return State.VERIFIED;
+        if (open == declared) return State.SELECTED;
+        return open == 0 ? State.NONE : State.SOME;
+    }
+
+    static String summary(State state) {
+        switch (state) {
+            case VERIFIED:
+                return L10n.t("Android verified this app for Threads' web addresses, so their links open here.");
+            case SELECTED:
+                return L10n.t("Threads' web addresses are selected for this app in Android's settings, so their links open here.");
+            case SOME:
+                return L10n.t("Only some of Threads' web addresses are selected for this app, and links to the rest open "
+                        + "elsewhere. Tap to select them in Android's settings.");
+            case NONE:
+                return L10n.t("None of Threads' web addresses are selected for this app, so their links open elsewhere. "
+                        + "Tap to select them in Android's settings.");
+            case DISABLED:
+                return L10n.t("Opening supported links is off for this app in Android's settings. Tap to turn it on.");
+            case NOT_REPORTED:
+                return L10n.t("Android 11 and older don't say which links open here. Tap to open this app's settings, then Open by default.");
+            default:
+                return L10n.t("Android didn't say which links open here. Tap to check in Android's settings.");
+        }
+    }
+
+    /**
+     * Android's pages for this app's links, to try in order: Open by default from Android 12, and the
+     * app's own page, which leads there, as the fallback and as all older versions have.
+     */
+    static List<Intent> settingsIntents(Context context) {
+        Uri app = Uri.fromParts("package", context.getPackageName(), null);
+        List<Intent> intents = new ArrayList<>(2);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            intents.add(new Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, app));
+        }
+        intents.add(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, app));
+        return intents;
+    }
+}

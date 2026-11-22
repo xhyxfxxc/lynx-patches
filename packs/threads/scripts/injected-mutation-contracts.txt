@@ -1,0 +1,95 @@
+# Call sites a patched Threads must have, checked across every dex of the APK by DexDiff.java.
+#   single-call <method reference> in <caller method name>
+#   first-call <method reference> on <class>
+#   first-call <method reference> on-type-named <type name>
+#   first-call <method reference> outside <package prefix>
+#   start-call <method reference> [in [static|instance] <(parameters)return, * for any run>] holding <string> [<string> ...]
+#   no-call <method reference> outside <package prefix>
+#   next-call <method reference> after <method reference> [in [static|instance] <shape>] holding <string> [<string> ...]
+#   sole-call <method reference> replacing <method reference> [in [static|instance] <shape>] holding <string> [<string> ...]
+#   once-call <method reference> [in [static|instance] <shape>] holding <string> [<string> ...]
+# A start-call, next-call, sole-call or once-call rule picks its method by every string it names
+# and its shape, and exactly one of Threads' methods may answer that; name as much as the patch
+# itself finds the method by. scripts/test-injected-registers.ps1 builds bad fixtures for every
+# rule here, and fails on a rule it has none for. A * in the method a sole-call replaces stands for
+# any run, for the names each of the eleven variants makes up; it may match one call in the method.
+# Strings containing spaces are quoted and matched as one exact string.
+# The settings patch sends each of these ShortcutManager calls to SettingsEntry, which makes the
+# real call and puts the HushThreads shortcut back in front after it. One left in Threads' own code
+# could rank Threads' shortcuts ahead again and push the HushThreads one out of the long-press
+# menu. 450.0.0.51.78 makes pushDynamicShortcut once, addDynamicShortcuts and updateShortcuts
+# twice each, removeAllDynamicShortcuts once and setDynamicShortcuts nowhere; its rule catches a
+# later build that starts making it.
+no-call Landroid/content/pm/ShortcutManager;->pushDynamicShortcut(Landroid/content/pm/ShortcutInfo;)V outside Lapp/morphe/extension/
+no-call Landroid/content/pm/ShortcutManager;->addDynamicShortcuts(Ljava/util/List;)Z outside Lapp/morphe/extension/
+no-call Landroid/content/pm/ShortcutManager;->setDynamicShortcuts(Ljava/util/List;)Z outside Lapp/morphe/extension/
+no-call Landroid/content/pm/ShortcutManager;->updateShortcuts(Ljava/util/List;)Z outside Lapp/morphe/extension/
+no-call Landroid/content/pm/ShortcutManager;->removeAllDynamicShortcuts()V outside Lapp/morphe/extension/
+
+# The main-feed logo keeps all seven original clickable arguments in their original order.
+# A second hook, a leftover stock call or a hook on another argument bank is refused.
+sole-call Lapp/morphe/extension/hushthreads/settings/ThreadsLogo;->clickable(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;Z)Ljava/lang/Object; replacing *->*(*Ljava/lang/String;Lkotlin/jvm/functions/Function0;Z)* in instance (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; holding "com.instagram.barcelona.feed.ui.MainFeedScreen.<anonymous>.<anonymous>.<anonymous>.<anonymous>.<anonymous>.<anonymous> (MainFeedScreen.kt:3006)"
+
+# SoLoader's flags reach the extension before SoLoader reads them, in the one static init holding
+# both of its messages, so a merged build with compressed libraries can start.
+start-call Lapp/morphe/extension/hushthreads/misc/NativeLibraries;->soLoaderFlags(Landroid/content/Context;I)I in static (Landroid/content/Context;*I)V holding "SoLoader already initialized" "Initializing SoLoader: "
+
+# These compare the final host operations and branch graph against the stock fixture. A selected
+# feature's status must agree with the CLI selection when supplied. Omitted families must retain
+# their false accessors and original targets, with no family-specific host calls or raw recorder.
+# Original declaration metadata is preserved. Suggested-card parsed slots and raw type constructor
+# inputs must preserve their exact parsed value or explicit null on every path. Raw constructor
+# input must reach its sole field writer on every path. JSON comparison keys and the wrapper map
+# key must preserve their exact source. A wrapper map key may use an explicit null only on its
+# original Raw-absent branch. Each typed reader is controlled by its expected JSON key's true
+# edge and preserves the original unsafe-parser JSON input. Search's suggestions carousel is asked
+# about once, right past the check that its list isn't empty, and only a false answer leaves, by
+# that check's empty side, in a local nothing reads. The profile's suggested accounts carousel hands
+# its list to the extension right before Threads' own null check and casts the answer back, and its
+# header row asks first thing on its path and leaves by its check's other side through a local
+# nothing reads. Hide ads also hands an opened post's ad list to the extension right before the
+# post's ad fetcher builds its one result from it, every way into that result going through the
+# call; left out, the fetcher stays as it shipped. Analytics checks each address bit.
+# Background-return refresh holds each of its four calls to where Threads makes that check's answer.
+# Video autoplay asks right before each call a feed post, an Instagram post, a trend preview or an
+# ad card makes to PostVideo, on the flag PostVideo plays by. A call whose default mask leaves the
+# flag to PostVideo's default first clears that bit and loads the default into the flag. PostVideo
+# and the viewer stay as they were. The video prefetcher's skip test, the dispatcher's callee that
+# calls Instagram's autoplay-off check, gains skipPrefetch right after the check's move-result: a
+# call on the register the if-nez reads, its answer moved back into that register, and every branch
+# to the if-nez landing on the call. The if-nez and its target, the check, its Olympus sibling,
+# Instagram's legacy checker and the dispatcher stay as they were, and nothing but the skip test
+# calls skipPrefetch, once. Left out, the skip test is as shipped and skipPrefetch is called nowhere.
+# Pure black asks after each #101010 load in the theme and its color helpers, and about each of the
+# dark scheme's #101010 backgrounds right before its constructor, leaving the light scheme alone.
+# Save photos and videos gives Copy link's own path in the post menu a copy of its row call, then
+# SaveMediaRow.add with the lambda and its composer, then a goto past the original call, which other
+# items' branches still reach but nothing inside Copy link's case does; the menu is the only host
+# caller. showRow draws Threads' row from the calls and literals Copy link's is built with, media,
+# activity and dismiss read the menu's fields and close it with Copy link's call, the click is a
+# Function0, and every static InstagramMedia method is a bridge that calls the getter found by its
+# Pando hash, kept name, or for a post's linked and shared posts, by the fields their one serializer
+# reads. Left out, the menu and every one of those stubs stay as they shipped;
+# bundles from before Save had a status are read as leaving it out.
+# The settings row asks once, right before the goto ending the More settings case, on its composer,
+# and showRow calls the Accounts Center row. Copy text on long press comes with it: each override
+# check the clean post row lambdas make gets the patch's hook in front of it, passing the override
+# and its own action to longPress in a free local and casting the answer back, and PostText asks
+# selection() first thing about the boolean its selection check reads (a copy of one parameter, or
+# Compose's 0 or 1 when a caller leaves it out), with no such call elsewhere.
+# Every other patch depends on HushThreads settings.
+threads-feature hideAds
+threads-feature hideSuggestedUsers
+threads-feature sanitizeSharingLinks
+threads-feature openLinksExternally
+threads-feature disableAnalytics
+threads-feature restoreTrust
+threads-feature returnRefresh
+threads-feature disableVideoAutoplay
+threads-feature pureBlack
+threads-feature saveMedia
+# Filter comments hands the reply list the opened post's parser reads to its own filter, once,
+# before Threads parses it, and the four reads the patch writes into the extension answer
+# Threads' own getters: the reply's posts, a post's media, a media's text and its caption.
+threads-feature filterComments
+threads-feature settingsRow

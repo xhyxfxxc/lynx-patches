@@ -1,0 +1,369 @@
+/*
+ * Copyright 2026 HushThreads contributors
+ * https://github.com/SysAdminDoc/HushThreads
+ */
+package app.morphe.patches.threads.misc.theme
+
+import app.morphe.ExtensionDex
+import app.morphe.FixtureDex
+import app.morphe.Fixtures
+import app.morphe.PatchContexts
+import app.morphe.PerBuild
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
+import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
+import app.morphe.patcher.patch.BytecodePatchContext
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.util.smali.ExternalLabel
+import app.morphe.patches.threads.misc.extension.SETTINGS_STATUS
+import app.morphe.util.getReference
+import com.android.tools.smali.dexlib2.AccessFlags
+import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.ClassDef
+import com.android.tools.smali.dexlib2.iface.Method
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
+import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
+import com.android.tools.smali.dexlib2.iface.reference.FieldReference
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+import com.android.tools.smali.dexlib2.iface.reference.TypeReference
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.File
+
+/**
+ * Pure black on 451: the theme copies its Bds background into its inherited palette. The two
+ * dark background arguments ask the extension, while light colors and other scheme arguments
+ * stay unchanged. Constructor slots 6 and 11 are the independently inspected fixture oracle.
+ */
+class PureBlackFixtureTest {
+    private val argb = "$PURE_BLACK->argb(J)J"
+    private val color = "$PURE_BLACK->color(J)J"
+
+    @Test
+    fun `the extension answers with a color for a color`() {
+        for (name in listOf("argb", "color")) {
+            val method = ExtensionDex.classDef(PURE_BLACK).methods.single { it.name == name }
+            assertTrue(name, AccessFlags.STATIC.isSet(method.accessFlags) && AccessFlags.PUBLIC.isSet(method.accessFlags))
+            assertEquals(name, listOf("J"), method.parameterTypes.map { it.toString() })
+            assertEquals(name, "J", method.returnType)
+        }
+    }
+
+    @Test
+    fun `every declared build copies known dark backgrounds from its two static schemes`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            // 451 uses scheme fields, replacing 450's literal-building helper.
+            val loaders = fixture.builders.filter { it.darkLoads().isNotEmpty() }.map { it.signature() }
+            assertTrue(build.name, loaders.isEmpty())
+            assertEquals(build.name, 1, fixture.helpers.size)
+            assertTrue(build.name, fixture.helpers.single().holdsNote(IG_PALETTE_GETTER))
+            assertEquals(build.name, 2, fixture.backgroundReads().size)
+            val scheme = context(fixture).darkScheme(fixture.theme)
+            assertEquals(build.name, fixture.holder, scheme.holder)
+            // Threads 450 passes the gray twice: the screen's background and the feed's.
+            assertEquals(build.name, 2, scheme.registers.size)
+            val body = scheme.initializer.body()
+            val calls = body.indices.filter { body[it].isSchemeCall(fixture.scheme) }
+            assertEquals(build.name, 2, calls.size)
+            // The inspected 451 initializer constructs the light scheme first and the dark one
+            // last. Its two #101010 backgrounds occupy slots 6 and 11. Slot 7 is already black.
+            assertEquals(build.name, calls.last(), scheme.call)
+            val start = (body[calls.last()] as RegisterRangeInstruction).startRegister + 1
+            assertEquals(build.name, listOf(start + 2 * 6, start + 2 * 11), scheme.registers)
+            // The light scheme passes the gray too, as a dark color on light backgrounds. It isn't touched.
+            val light = calls.single { it != scheme.call }
+            val lightRange = (body[light] as RegisterRangeInstruction).let { it.startRegister until it.startRegister + it.registerCount }
+            assertTrue(build.name, body.take(light).any { it.isWide(THREADS_DARK) })
+            assertTrue(build.name, scheme.registers.none { it in lightRange })
+            val darkRange = (body[scheme.call] as RegisterRangeInstruction).let { it.startRegister until it.startRegister + it.registerCount }
+            assertTrue(build.name, scheme.registers.all { it in darkRange && it + 1 in darkRange })
+        }
+    }
+
+    @Test
+    fun `each dark load and each dark background asks the extension, and nothing else changes`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            val context = context(fixture)
+            val scheme = context.darkScheme(fixture.theme)
+            pureBlackPatch.execute(context)
+
+            for (builder in fixture.builders) {
+                val label = "${build.name} ${builder.signature()}"
+                val loads = builder.darkLoads()
+                val before = builder.body()
+                val after = context.method(builder)
+                fun moved(index: Int) = index + 2 * loads.count { it < index }
+                assertEquals(label, before.size + 2 * loads.size, after.size)
+                for (load in loads) {
+                    val register = (before[load] as OneRegisterInstruction).registerA
+                    assertTrue(label, after[moved(load)].isWide(THREADS_DARK))
+                    after[moved(load) + 1].assertAsks(label, argb, register)
+                }
+                val hooks = loads.flatMap { listOf(moved(it) + 1, moved(it) + 2) }.toSet()
+                assertEquals(label, before.map { it.opcode }, after.filterIndexed { i, _ -> i !in hooks }.map { it.opcode })
+            }
+
+            val initializer = scheme.initializer.body()
+            val patched = context.method(scheme.initializer)
+            assertEquals(build.name, initializer.size + 2 * scheme.registers.size, patched.size)
+            assertEquals(build.name, initializer.take(scheme.call).map { it.opcode }, patched.take(scheme.call).map { it.opcode })
+            scheme.registers.forEachIndexed { n, register ->
+                patched[scheme.call + 2 * n].assertAsks(build.name, color, register)
+            }
+            val call = patched[scheme.call + 2 * scheme.registers.size]
+            assertEquals(build.name, initializer[scheme.call].reference(), call.reference())
+            assertEquals(build.name, initializer.drop(scheme.call).map { it.opcode },
+                patched.drop(scheme.call + 2 * scheme.registers.size).map { it.opcode })
+            assertEquals(build.name, 1, status(context))
+        }
+    }
+
+    @Test
+    fun `a theme with no dark gray is refused`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            val context = context(fixture)
+            for (builder in fixture.builders) {
+                val method = context.mutableMethod(builder)
+                for (load in builder.darkLoads()) {
+                    method.replaceInstruction(load, "const-wide v${(method.body()[load] as OneRegisterInstruction).registerA}, 0xff121212L")
+                }
+            }
+            // The inherited palette receives its background from the same dark scheme.
+            // Removing that copy leaves no recognized path, even though the scheme still exists.
+            val theme = context.mutableMethod(fixture.theme)
+            for (index in fixture.backgroundReads()) {
+                val register = (theme.body()[index] as TwoRegisterInstruction).registerA
+                theme.replaceInstruction(index, "const-wide/16 v$register, 0x0")
+            }
+            val error = assertThrows(build.name, PatchException::class.java) { pureBlackPatch.execute(context) }
+            assertTrue(error.message.orEmpty(), error.message.orEmpty().contains("no longer loads #101010"))
+        }
+    }
+
+    @Test
+    fun `a constructor that stores two background arguments in the same field is refused`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            val context = context(fixture)
+            val constructor = context.mutableClassDefBy(fixture.scheme).methods.single { it.name == "<init>" }
+            val (sixth, eleventh) = fixture.backgroundFields()
+            val index = constructor.body().indexOfFirst { it.opcode == Opcode.IPUT_WIDE &&
+                it.getReference<FieldReference>()?.name == eleventh }
+            val store = constructor.body()[index] as TwoRegisterInstruction
+            constructor.replaceInstruction(index, "iput-wide v${store.registerA}, v${store.registerB}, ${fixture.scheme}->$sixth:J")
+            val error = assertThrows(build.name, PatchException::class.java) { pureBlackPatch.execute(context) }
+            assertTrue(error.message.orEmpty(), error.message.orEmpty().contains("copies a known dark background"))
+        }
+    }
+
+    @Test
+    fun `overwriting the high half of the copied background is refused`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            val context = context(fixture)
+            val index = fixture.backgroundReads(fixture.backgroundFields()[1]).single()
+            val register = (fixture.theme.body()[index] as TwoRegisterInstruction).registerA
+            context.mutableMethod(fixture.theme).addInstructions(index + 1, "const/4 v${register + 1}, 0x0")
+            val error = assertThrows(build.name, PatchException::class.java) { pureBlackPatch.execute(context) }
+            assertTrue(error.message.orEmpty(), error.message.orEmpty().contains("copies a known dark background"))
+        }
+    }
+
+    @Test
+    fun `a branch that bypasses one copied background is refused`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            val context = context(fixture)
+            val theme = context.mutableMethod(fixture.theme)
+            val index = fixture.backgroundReads(fixture.backgroundFields()[1]).single()
+            val register = (theme.body()[index] as TwoRegisterInstruction).registerA
+            theme.addInstructionsWithLabels(index, """
+                const-wide/16 v$register, 0x0
+                if-eqz v12, :bypass
+            """, ExternalLabel("bypass", theme.getInstruction(index + 1)))
+            val error = assertThrows(build.name, PatchException::class.java) { pureBlackPatch.execute(context) }
+            assertTrue(error.message.orEmpty(), error.message.orEmpty().contains("copies a known dark background"))
+        }
+    }
+
+    @Test
+    fun `an inherited palette getter without its source anchor is refused`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            val context = context(fixture)
+            val getter = context.mutableMethod(fixture.helpers.single())
+            val index = getter.body().indexOfFirst { it.opcode == Opcode.CONST_STRING }
+            val register = (getter.body()[index] as OneRegisterInstruction).registerA
+            getter.replaceInstruction(index, "const-string v$register, \"unrelated palette\"")
+            val error = assertThrows(build.name, PatchException::class.java) { pureBlackPatch.execute(context) }
+            assertTrue(error.message.orEmpty(), error.message.orEmpty().contains("copies a known dark background"))
+        }
+    }
+
+    @Test
+    fun `a dark scheme with no dark gray where the light one is white is refused`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            val context = context(fixture)
+            val initializer = context.mutableMethod(context.darkScheme(fixture.theme).initializer)
+            initializer.body().withIndex().filter { it.value.isWide(THREADS_DARK) }.forEach { (index, load) ->
+                initializer.replaceInstruction(index, "const-wide v${(load as OneRegisterInstruction).registerA}, 0xff121212L")
+            }
+            val error = assertThrows(build.name, PatchException::class.java) { pureBlackPatch.execute(context) }
+            assertTrue(error.message.orEmpty(), error.message.orEmpty().contains("has no #101010 where its light one has white"))
+        }
+    }
+
+    @Test
+    fun `a dark background read again after the dark scheme is built is refused`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            val context = context(fixture)
+            val scheme = context.darkScheme(fixture.theme)
+            val register = scheme.registers.first()
+            context.mutableMethod(scheme.initializer).addInstructions(scheme.call + 1, "move-wide/from16 v0, v$register")
+            val error = assertThrows(build.name, PatchException::class.java) { pureBlackPatch.execute(context) }
+            assertTrue(error.message.orEmpty(), error.message.orEmpty().contains("reads v$register again after building its dark scheme"))
+        }
+    }
+
+    @Test
+    fun `a theme that reads one scheme for both modes is refused`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            val context = context(fixture)
+            val theme = context.mutableMethod(fixture.theme)
+            val reads = theme.body().withIndex().filter { (_, it) ->
+                it.opcode == Opcode.SGET_OBJECT && it.getReference<FieldReference>()?.type == fixture.scheme
+            }
+            val dark = reads.first().value.getReference<FieldReference>()!!
+            for ((index, read) in reads) {
+                theme.replaceInstruction(index, "sget-object v${(read as OneRegisterInstruction).registerA}, $dark")
+            }
+            val error = assertThrows(build.name, PatchException::class.java) { pureBlackPatch.execute(context) }
+            assertTrue(error.message.orEmpty(), error.message.orEmpty().contains("the class holding Threads' dark and light color schemes"))
+        }
+    }
+
+    @Test
+    fun `before the patch runs, nothing asks and the status says it isn't in`() {
+        for (build in Fixtures.declaredBuilds()) {
+            val fixture = fixture(build)
+            val context = context(fixture)
+            val scheme = context.darkScheme(fixture.theme)
+            for (method in fixture.builders + scheme.initializer) {
+                assertFalse(build.name, context.method(method).any {
+                    (it as? ReferenceInstruction)?.reference?.toString()?.startsWith(PURE_BLACK) == true
+                })
+            }
+            assertEquals(build.name, 0, status(context))
+        }
+    }
+
+    private data class Fixture(
+        val classes: Collection<ClassDef>,
+        val theme: Method,
+        val helpers: List<Method>,
+        val holder: String,
+        val scheme: String,
+    ) {
+        /** The theme and the helpers it builds its colors in. */
+        val builders get() = listOf(theme) + helpers
+
+    }
+
+    /** 451's independently traced Bds background, copied into its inherited color palette. */
+    private fun Fixture.backgroundReads(name: String? = null) = theme.body().withIndex().filter { (_, instruction) ->
+        instruction.opcode == Opcode.IGET_WIDE && instruction.getReference<FieldReference>()?.let {
+            it.definingClass == scheme && it.name in backgroundFields() && (name == null || it.name == name)
+        } == true
+    }.map { it.index }
+
+    /**
+     * The scheme fields its constructor stores slots 6 and 11 in, the two #101010 backgrounds traced
+     * by hand on 451, in slot order. Their names move between builds (455 renamed slot 6's), so
+     * they're read off the constructor.
+     */
+    private fun Fixture.backgroundFields(): List<String> {
+        val constructor = classes.single { it.type == scheme }.methods.single { it.name == "<init>" }
+        val body = constructor.body()
+        val first = constructor.implementation!!.registerCount - 2 * constructor.parameterTypes.size
+        val wideMoves = setOf(Opcode.MOVE_WIDE, Opcode.MOVE_WIDE_FROM16, Opcode.MOVE_WIDE_16)
+        val stores = body.indices.filter { body[it].opcode == Opcode.IPUT_WIDE }.associate { at ->
+            val stored = (body[at] as TwoRegisterInstruction).registerA
+            val copied = body.getOrNull(at - 1)?.takeIf { it.opcode in wideMoves && (it as TwoRegisterInstruction).registerA == stored }
+            val source = (copied as TwoRegisterInstruction?)?.registerB ?: stored
+            (source - first) / 2 to body[at].getReference<FieldReference>()!!.name
+        }
+        return listOf(stores.getValue(6), stores.getValue(11))
+    }
+
+    private fun fixture(build: File): Fixture = fixtures.getOrPut(build) {
+        val themeClasses = FixtureDex.classesWhere(build, { true }) { it.holdsNote(BDS_THEME) }
+        val theme = themeClasses.flatMap { it.methods }.single { it.holdsNote(BDS_THEME) }
+        val helperReferences = theme.themeHelpers()
+        val helperClasses = FixtureDex.classes(build, helperReferences.map { it.definingClass }.toSet())
+        val helpers = helperReferences.mapNotNull { reference ->
+            helperClasses[reference.definingClass]?.methods?.single { it.signature() == reference.toString() }
+        }
+        // Every class the theme reads a static field of, and every type it reads: the scheme
+        // holder and the scheme among them, and the others the patch has to tell apart from them.
+        val fields = theme.body().filter { it.opcode == Opcode.SGET_OBJECT }.mapNotNull { it.getReference<FieldReference>() }
+        val types = (fields.flatMap { listOf(it.definingClass, it.type) } + theme.body()
+            .filter { it.opcode == Opcode.NEW_INSTANCE }.mapNotNull { it.getReference<TypeReference>()?.type })
+            .filter { it.startsWith("L") }.toSet()
+        val read = FixtureDex.classes(build, types)
+        val scheme = fields.map { it.type }.distinct().single { type ->
+            read[type]?.methods?.any { m -> m.name == "<init>" && m.parameterTypes.size >= 20 && m.parameterTypes.all { it.toString() == "J" } } == true
+        }
+        val holder = fields.filter { it.type == scheme }.map { it.definingClass }.distinct().single()
+        Fixture((themeClasses + read.values + helperClasses.values).distinctBy { it.type }, theme, helpers, holder, scheme)
+    }
+
+    private fun Method.signature() = "$definingClass->$name(${parameterTypes.joinToString("")})$returnType"
+
+    private fun context(fixture: Fixture) = PatchContexts.of(ExtensionDex.classes() + fixture.classes)
+
+    private fun Instruction.assertAsks(label: String, method: String, register: Int) {
+        val hook = this as RegisterRangeInstruction
+        assertEquals(label, method, (hook as ReferenceInstruction).reference.toString())
+        assertEquals(label, register, hook.startRegister)
+        assertEquals(label, 2, hook.registerCount)
+    }
+
+    private fun Instruction.isWide(value: Long) = this is WideLiteralInstruction && wideLiteral == value && opcode in
+        setOf(Opcode.CONST_WIDE, Opcode.CONST_WIDE_32, Opcode.CONST_WIDE_16, Opcode.CONST_WIDE_HIGH16)
+
+    private fun Instruction.isSchemeCall(scheme: String) = opcode == Opcode.INVOKE_DIRECT_RANGE &&
+        getReference<MethodReference>()?.let { it.definingClass == scheme && it.name == "<init>" } == true
+
+    private fun Method.body(): List<Instruction> = implementation!!.instructions.toList()
+
+    private fun Instruction.reference() = getReference<MethodReference>()?.toString()
+
+    private fun BytecodePatchContext.mutableMethod(method: Method) = mutableClassDefBy(method.definingClass).methods.single {
+        it.name == method.name && it.parameterTypes == method.parameterTypes && it.returnType == method.returnType
+    }
+
+    private fun BytecodePatchContext.method(method: Method): List<Instruction> = mutableMethod(method).body()
+
+    private fun status(context: BytecodePatchContext) = (context.mutableClassDefBy(SETTINGS_STATUS).methods
+        .single { it.name == "pureBlack" }.implementation!!.instructions.first() as NarrowLiteralInstruction).narrowLiteral
+
+    private companion object {
+        /** One read of each build serves every test; each test patches its own copy. */
+        val fixtures = PerBuild<Fixture>()
+    }
+}

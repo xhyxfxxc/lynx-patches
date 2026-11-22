@@ -1,0 +1,825 @@
+<#
+.SYNOPSIS
+    The advisory gate: what OSV knows about the libraries a release's SBOM lists, and whether the
+    release may go out with them.
+
+.DESCRIPTION
+    Dot-sourced by build-release-receipt.ps1 and validate-release-facts.ps1, beside
+    release-receipt.ps1, whose Read-ReleaseSbom reads the SBOM these functions take.
+
+    Gradle's dependency verification (gradle/verification-metadata.xml) says an artifact is the one
+    somebody checked the hash of. It says nothing about the advisories published against that
+    version since, and the libraries a bundle carries are chosen by conflict resolution several
+    levels down, so nobody reads them one by one. This asks OSV (https://api.osv.dev/v1/query)
+    about every library the SBOM lists, one query per package URL, and refuses a release that
+    carries a high or critical advisory.
+
+    High or critical means OSV's own label says so (the GitHub advisory database's, which every
+    Maven advisory there carries) or a CVSS 3 vector scores 7.0 or more, whichever is worse. An
+    advisory with neither, or with any unsupported or malformed vector, is held until somebody
+    reads it. A lower label can't dismiss a CVSS 4 vector this gate doesn't score. Moderate and
+    low advisories with fully supported severity data are printed and let through.
+
+    An advisory can be accepted in scripts/advisory-exceptions.txt for one package, until a date
+    at most 90 days out, with the reason it doesn't apply to what the bundle does with that
+    library. An exception past its date covers nothing, and one that matches no advisory any more
+    fails the run, as the manifest allowlist does: an exception that outlives its advisory stops
+    being a review.
+
+    OSV has to answer. A query that fails, or an answer this can't read, stops the run rather than
+    reading as no advisories. -SkipAdvisoryCheck is the way through for offline work, and it says
+    so in a warning. The pre-push hook never passes it, so the index push that hands a release to
+    Manager users asks OSV again.
+
+    The plugin classpath that builds and signs the bundle is a second subject, which the SBOM
+    leaves out because the bundle doesn't carry it. settings.gradle.kts writes it down as the
+    build classpath inventory, and build-release-receipt.ps1 puts it to OSV under the same
+    severity rules and exception policy, with its own list (scripts/build-advisory-exceptions.txt)
+    and its own report lines, so build exposure is never counted as carried code or the other way
+    round. An inventory that's missing, malformed, or names a dependency that didn't resolve stops
+    the run, rather than reading as a classpath with no advisories.
+#>
+
+function Read-AdvisoryExceptions {
+    <#
+    .SYNOPSIS
+        The accepted advisories, one per line: "<advisory> <group>:<name> <yyyy-MM-dd> <reason>".
+    .DESCRIPTION
+        The advisory is OSV's id or one of its aliases (a CVE, say). The date is the last day the
+        exception holds on this computer's calendar (-Today defaults to the local date, not UTC's),
+        at most 90 days after -Today, so accepting an advisory means reading it
+        again at least that often. The reason is at least three words: an exception is a claim
+        about how the bundle uses the library, and a claim nobody wrote down can't be checked.
+        Blank lines and # comments are ignored. A line in any other shape stops the run, naming
+        it, rather than being skipped: a skipped exception would fail the release for a reason
+        nobody could see in the file.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [datetime]$Today = [datetime]::Today
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "The advisory exception list is missing: $Path"
+    }
+    $entries = New-Object System.Collections.Generic.List[object]
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $number = 0
+    foreach ($line in Get-Content -LiteralPath $Path) {
+        $number++
+        $text = ([string]$line).Trim()
+        if (-not $text -or $text.StartsWith('#')) { continue }
+        $shape = [regex]::Match($text,
+            '^(?<id>[A-Za-z][A-Za-z0-9]*-[A-Za-z0-9._-]+)\s+(?<package>[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+)\s+(?<until>\S+)\s+(?<reason>.*\S)$')
+        if (-not $shape.Success) {
+            throw ("Line $number of $Path is not ""<advisory> <group>:<name> <yyyy-MM-dd> <reason>"": $text")
+        }
+        $until = [datetime]::MinValue
+        if (-not [datetime]::TryParseExact($shape.Groups['until'].Value, 'yyyy-MM-dd',
+                [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::None, [ref]$until)) {
+            throw "Line $number of $Path gives $($shape.Groups['until'].Value) as the last day, which isn't a yyyy-MM-dd date: $text"
+        }
+        $advisory = $shape.Groups['id'].Value
+        $package = $shape.Groups['package'].Value
+        if ($until -gt $Today.AddDays(90)) {
+            throw ("Line $number of $Path accepts $advisory for $package until $($until.ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)), more than " +
+                "90 days out. Read the advisory again when the date comes, and give it a date within 90 days.")
+        }
+        $reason = $shape.Groups['reason'].Value
+        if (@($reason -split '\s+' | Where-Object { $_ -match '[A-Za-z]' }).Count -lt 3) {
+            throw ("Line $number of $Path accepts $advisory for $package without saying why. Give the reason it " +
+                "doesn't apply to what the bundle does with the library: $text")
+        }
+        if (-not $seen.Add("$advisory $package")) {
+            throw "Line $number of $Path accepts $advisory for $package a second time."
+        }
+        $entries.Add([pscustomobject]@{
+            Advisory = $advisory
+            Package  = $package
+            Until    = $until
+            Reason   = $reason
+            Line     = $number
+            Expired  = $until -lt $Today
+        })
+    }
+    # No comma wrap: an empty list comes back as nothing, and every caller writes @(...).
+    return $entries.ToArray()
+}
+
+function Get-Cvss3BaseScore {
+    <#
+    .SYNOPSIS
+        The base score of a CVSS 3.0 or 3.1 vector, or $null for anything else.
+    .DESCRIPTION
+        The formula and the rounding the CVSS 3.1 specification gives, which 3.0 vectors score the
+        same way to one decimal. Temporal and environmental metrics after the base ones are
+        ignored, as the base score ignores them. A vector missing a base metric, or with a value
+        the specification doesn't define, has no score here rather than a guessed one.
+    #>
+    param([string]$Vector)
+
+    if ("$Vector" -notmatch '^CVSS:3\.[01]/') { return $null }
+    $metrics = @{}
+    foreach ($part in @($Vector -split '/' | Select-Object -Skip 1)) {
+        if ($part -cnotmatch '^[A-Z]{1,3}:[A-Z]$') { return $null }
+        $pair = $part -split ':', 2
+        if ($metrics.ContainsKey($pair[0])) { return $null }
+        $metrics[$pair[0]] = $pair[1]
+    }
+    # A metric the vector leaves out reads as '', which neither check below lets through.
+    $scopeChanged = $metrics['S'] -ceq 'C'
+    if (-not $scopeChanged -and $metrics['S'] -cne 'U') { return $null }
+    $weights = @{
+        AV = @{ N = 0.85; A = 0.62; L = 0.55; P = 0.2 }
+        AC = @{ L = 0.77; H = 0.44 }
+        PR = if ($scopeChanged) { @{ N = 0.85; L = 0.68; H = 0.5 } } else { @{ N = 0.85; L = 0.62; H = 0.27 } }
+        UI = @{ N = 0.85; R = 0.62 }
+        C  = @{ H = 0.56; L = 0.22; N = 0.0 }
+        I  = @{ H = 0.56; L = 0.22; N = 0.0 }
+        A  = @{ H = 0.56; L = 0.22; N = 0.0 }
+    }
+    # Optional temporal/environmental metrics don't change the base score, but still have to
+    # be valid CVSS 3 metrics. Otherwise the gate would rate a malformed vector as trustworthy.
+    $optional = @{
+        E = 'XUPFH'; RL = 'XOTWU'; RC = 'XURC'; CR = 'XHML'; IR = 'XHML'; AR = 'XHML'
+        MAV = 'XNALP'; MAC = 'XLH'; MPR = 'XNLH'; MUI = 'XNR'; MS = 'XUC'
+        MC = 'XHLN'; MI = 'XHLN'; MA = 'XHLN'
+    }
+    foreach ($name in $metrics.Keys) {
+        if ($name -ceq 'S' -or $weights.ContainsKey($name)) { continue }
+        if (-not $optional.ContainsKey($name) -or $optional[$name].IndexOf([string]$metrics[$name]) -lt 0) {
+            return $null
+        }
+    }
+    $value = @{}
+    foreach ($name in $weights.Keys) {
+        $letter = [string]$metrics[$name]
+        # Case matters in a vector, and a hashtable's keys don't.
+        if ($letter -cnotmatch '^[A-Z]$' -or -not $weights[$name].ContainsKey($letter)) { return $null }
+        $value[$name] = [double]$weights[$name][$letter]
+    }
+
+    $iss = 1 - ((1 - $value['C']) * (1 - $value['I']) * (1 - $value['A']))
+    $impact = if ($scopeChanged) {
+        7.52 * ($iss - 0.029) - 3.25 * [Math]::Pow($iss - 0.02, 15)
+    } else {
+        6.42 * $iss
+    }
+    if ($impact -le 0) { return 0.0 }
+    $exploitability = 8.22 * $value['AV'] * $value['AC'] * $value['PR'] * $value['UI']
+    $raw = if ($scopeChanged) { [Math]::Min(1.08 * ($impact + $exploitability), 10) } else {
+        [Math]::Min($impact + $exploitability, 10)
+    }
+    # Roundup as 3.1 defines it: through an integer, so 4.000000001 doesn't become 4.1.
+    $scaled = [long][Math]::Round($raw * 100000, [MidpointRounding]::AwayFromZero)
+    if ($scaled % 10000 -eq 0) { return $scaled / 100000.0 }
+    return ([Math]::Floor($scaled / 10000) + 1) / 10.0
+}
+
+function Test-AdvisoryObject {
+    param($Value)
+    return ($Value -is [System.Collections.IDictionary] -or $Value -is [System.Management.Automation.PSCustomObject])
+}
+
+function Test-AdvisoryField {
+    param($Value, [string]$Name)
+    if ($Value -is [System.Collections.IDictionary]) { return $Value.Contains($Name) }
+    if ($Value -is [System.Management.Automation.PSCustomObject]) { return $null -ne $Value.PSObject.Properties[$Name] }
+    return $false
+}
+
+function Get-AdvisorySeverity {
+    <#
+    .SYNOPSIS
+        How serious an OSV advisory is: @{ Level; Serious; Why }.
+    .DESCRIPTION
+        The worse of OSV's own label (database_specific.severity) and the level each applicable CVSS 3 vector
+        scores to: CRITICAL from 9.0, HIGH from 7.0, MODERATE from 4.0, LOW above 0. Serious is
+        HIGH or CRITICAL, or UNRATED for incomplete severity data. Any unsupported or malformed
+        vector requires review even beside a LOW/MODERATE label or a lower supported vector.
+        CVSS 4 isn't sent to the CVSS 3 calculator.
+    #>
+    param([Parameter(Mandatory = $true)]$Advisory, $Library)
+
+    $rank = @{ NONE = 0; LOW = 1; MODERATE = 2; HIGH = 3; CRITICAL = 4 }
+    $level = $null
+    $why = $null
+    $review = $false
+    if (-not (Test-AdvisoryObject $Advisory)) { $review = $true }
+    $label = ''
+    if (Test-AdvisoryField $Advisory 'database_specific') {
+        $database = $Advisory.database_specific
+        if (-not (Test-AdvisoryObject $database)) { $review = $true }
+        elseif (Test-AdvisoryField $database 'severity') {
+            if ($database.severity -is [string]) { $label = $database.severity.Trim().ToUpperInvariant() }
+            if (-not $label) { $review = $true }
+        }
+    }
+    if ($label -eq 'MEDIUM') { $label = 'MODERATE' }
+    if ($label -and $rank.ContainsKey($label)) {
+        $level = $label
+        $why = "OSV rates it $label"
+    } elseif ($label) {
+        $review = $true
+    }
+    $scopes = New-Object System.Collections.Generic.List[object]
+    $scopes.Add($Advisory)
+    $hasAffected = Test-AdvisoryField $Advisory 'affected'
+    if ($hasAffected -and $Advisory.affected -isnot [array]) { $review = $true }
+    foreach ($affected in $Advisory.affected) {
+        if (-not (Test-AdvisoryObject $affected)) { $review = $true; continue }
+        $hasSeverity = Test-AdvisoryField $affected 'severity'
+        if ($null -eq $Library -or -not (Test-AdvisoryObject $affected.package) -or
+                $affected.package.ecosystem -isnot [string] -or $affected.package.name -isnot [string] -or
+                [string]::IsNullOrWhiteSpace($affected.package.ecosystem) -or
+                [string]::IsNullOrWhiteSpace($affected.package.name)) { $review = $true; continue }
+        # OSV identifies Maven packages by their case-sensitive ecosystem and group:name.
+        if ($affected.package.name -cne "$($Library.Group):$($Library.Name)" -and $affected.package.name -cne '*') { continue }
+        if ($affected.package.ecosystem -cne 'Maven') {
+            # The SBOM has no repository identity to prove a Maven:<repository> scope unrelated.
+            if ($affected.package.ecosystem.StartsWith('Maven:', [StringComparison]::Ordinal)) { $review = $true }
+            continue
+        }
+        $rangeApplies = $false
+        $rangeReview = $false
+        $hasVersions = Test-AdvisoryField $affected 'versions'
+        $hasRanges = Test-AdvisoryField $affected 'ranges'
+        if (-not $hasVersions -and -not $hasRanges) { $rangeReview = $true }
+        if ($hasVersions) {
+            if ($affected.versions -isnot [array]) { $rangeReview = $true }
+            else {
+                foreach ($listed in $affected.versions) {
+                    if ($listed -isnot [string] -or [string]::IsNullOrWhiteSpace($listed) -or $listed -match '\s|\p{Cc}') {
+                        $rangeReview = $true
+                    } elseif ($listed -ceq $Library.Version) { $rangeApplies = $true }
+                }
+            }
+        }
+        $protocol = New-Object System.Collections.Generic.List[string]
+        $protocol.Add([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Library.Version)))
+        $ranges = @()
+        if ($hasRanges -and $affected.ranges -isnot [array]) { $rangeReview = $true }
+        elseif ($affected.ranges -is [array]) { $ranges = $affected.ranges }
+        foreach ($range in $ranges) {
+            if (-not (Test-AdvisoryObject $range) -or
+                    $range.type -isnot [string] -or $range.type -cne 'ECOSYSTEM' -or
+                    $range.events -isnot [array] -or $range.events.Count -eq 0) { $rangeReview = $true; continue }
+            $events = New-Object System.Collections.Generic.List[string]
+            $kinds = @()
+            $invalid = $false
+            foreach ($event in $range.events) {
+                if ($event -is [System.Collections.IDictionary]) { $names = @($event.Keys) }
+                elseif ($event -is [System.Management.Automation.PSCustomObject]) { $names = @($event.PSObject.Properties.Name) }
+                else { $invalid = $true; continue }
+                if ($names.Count -ne 1 -or $names[0] -cnotin @('introduced', 'fixed', 'last_affected', 'limit')) {
+                    $invalid = $true; continue
+                }
+                $kind = [string]$names[0]
+                $value = $event.$kind
+                if ($value -isnot [string] -or [string]::IsNullOrWhiteSpace($value) -or $value -match '\s|\p{Cc}' -or
+                        ($kind -cne 'limit' -and $value.Contains('*'))) { $invalid = $true; continue }
+                $kinds += $kind
+                $events.Add($kind + ' ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($value)))
+            }
+            if ($invalid -or $kinds -cnotcontains 'introduced' -or
+                    ($kinds -ccontains 'fixed' -and $kinds -ccontains 'last_affected')) { $rangeReview = $true; continue }
+            $protocol.AddRange($events)
+            $protocol.Add('.')
+        }
+        if ($protocol.Count -gt 1) {
+            $jar = Join-Path $PSScriptRoot '../build/advisory-tool/maven-artifact.jar'
+            if (-not (Test-Path -LiteralPath $jar -PathType Leaf)) {
+                throw 'The Maven advisory comparator is missing. Run ./gradlew prepareAdvisoryTool before the release checks.'
+            }
+            . (Join-Path $PSScriptRoot 'Resolve-Java.ps1')
+            $java = Resolve-Java
+            $answer = @($protocol | & $java '--class-path' $jar (Join-Path $PSScriptRoot 'MavenAdvisoryRanges.java'))
+            if ($LASTEXITCODE -ne 0 -or $answer.Count -ne 1 -or $answer[0] -cnotin @('true', 'false')) {
+                throw 'The Maven advisory comparator did not return a readable range result.'
+            }
+            if ($answer[0] -ceq 'true') { $rangeApplies = $true }
+        }
+        if ($rangeReview) { $review = $true }
+        if (-not $rangeApplies) { continue }
+        if ($hasSeverity) { $scopes.Add($affected) }
+    }
+    foreach ($scope in $scopes) {
+        if (-not (Test-AdvisoryObject $scope)) { $review = $true; continue }
+        $hasSeverity = Test-AdvisoryField $scope 'severity'
+        if ($hasSeverity -and $scope.severity -isnot [array]) { $review = $true }
+        foreach ($entry in $scope.severity) {
+            if (-not (Test-AdvisoryObject $entry) -or
+                    $entry.type -isnot [string] -or $entry.score -isnot [string]) { $review = $true; continue }
+            $vector = $entry.score
+            if ("$($entry.type)" -cne 'CVSS_V3' -or $vector -cnotmatch '^CVSS:3\.[01]/') {
+                $review = $true
+                continue
+            }
+            $score = Get-Cvss3BaseScore -Vector $vector
+            if ($null -eq $score) { $review = $true; continue }
+            $scored = if ($score -ge 9.0) { 'CRITICAL' } elseif ($score -ge 7.0) { 'HIGH' } elseif ($score -ge 4.0) {
+                'MODERATE' } elseif ($score -gt 0) { 'LOW' } else { 'NONE' }
+            if ($null -eq $level -or $rank[$scored] -gt $rank[$level]) {
+                $level = $scored
+                $why = "its CVSS 3 vector scores $score"
+            }
+        }
+    }
+    if ($review) {
+        $held = if ($null -ne $level -and $rank[$level] -ge 3) { $level } else { 'UNRATED' }
+        return [pscustomobject]@{ Level = $held; Serious = $true
+            Why = 'OSV gives it no severity this check can fully read. An unsupported or malformed label/vector or version range requires review' }
+    }
+    if ($null -eq $level) {
+        return [pscustomobject]@{ Level = 'UNRATED'; Serious = $true
+            Why = 'OSV gives it no severity this check can read, so it counts as serious until somebody reads it' }
+    }
+    return [pscustomobject]@{ Level = $level; Serious = $rank[$level] -ge 3; Why = $why }
+}
+
+function Invoke-OsvQuery {
+    <#
+    .SYNOPSIS
+        Every advisory OSV has for one package URL, following its pages.
+    .DESCRIPTION
+        OSV answers {} for a package it knows nothing about, and for a package URL it can't read
+        at all, which is why Read-ReleaseSbom refuses a malformed one before it gets here. Anything
+        that isn't a query result throws, and so does a failed request: the gate fails closed.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Purl,
+        [string]$Endpoint = 'https://api.osv.dev/v1/query'
+    )
+
+    $found = New-Object System.Collections.Generic.List[object]
+    # Preserve JSON strings before validating their types. Invoke-RestMethod converts date-like
+    # strings on PowerShell 7, including summaries and IDs as well as withdrawal timestamps.
+    $jsonArguments = @{ ErrorAction = 'Stop' }
+    if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('DateKind')) {
+        $jsonArguments['DateKind'] = 'String'
+    } elseif ($PSVersionTable.PSVersion.Major -ge 6) {
+        throw 'The advisory check needs PowerShell 7.5 or newer, or Windows PowerShell 5.1, to preserve JSON string types.'
+    }
+    $token = $null
+    for ($page = 0; $page -lt 20; $page++) {
+        $query = [ordered]@{ package = [ordered]@{ purl = $Purl } }
+        if ($token) { $query['page_token'] = $token }
+        try {
+            $body = [Text.Encoding]::UTF8.GetBytes(($query | ConvertTo-Json -Compress -Depth 4))
+            $response = Invoke-WebRequest -UseBasicParsing -Uri $Endpoint -Method Post -ContentType 'application/json; charset=utf-8' `
+                -Body $body -TimeoutSec 60
+        } catch {
+            throw ("OSV could not be asked about ${Purl}: $($_.Exception.Message). The advisory check fails " +
+                'closed, so nothing goes out on a check that did not run. Check the connection to api.osv.dev ' +
+                'and run it again, or pass -SkipAdvisoryCheck to work offline: the index push asks OSV again.')
+        }
+        try {
+            # Windows PowerShell otherwise assumes Latin-1 when application/json has no charset.
+            if ($response.RawContentStream -is [IO.Stream]) {
+                $bytes = [IO.MemoryStream]::new()
+                try {
+                    if ($response.RawContentStream.CanSeek) { [void]$response.RawContentStream.Seek(0, [IO.SeekOrigin]::Begin) }
+                    $response.RawContentStream.CopyTo($bytes)
+                    $content = [Text.UTF8Encoding]::new($false, $true).GetString($bytes.ToArray())
+                } finally {
+                    $bytes.Dispose()
+                    $response.RawContentStream.Dispose()
+                }
+            } elseif ($response.Content -is [byte[]]) {
+                $content = [Text.UTF8Encoding]::new($false, $true).GetString($response.Content)
+            } else { $content = $response.Content }
+            # ConvertFrom-Json may enumerate a root array into a single object on the pipeline.
+            if ($content -isnot [string] -or -not $content.TrimStart().StartsWith('{')) { throw 'Expected a JSON object.' }
+            $answer = $content | ConvertFrom-Json @jsonArguments
+        } catch {
+            throw "OSV answered the query about $Purl with something that isn't a query result: $($_.Exception.Message)"
+        }
+        if ($answer -isnot [System.Management.Automation.PSCustomObject]) {
+            throw "OSV answered the query about $Purl with something that isn't a query result: $answer"
+        }
+        if ((Test-AdvisoryField $answer 'vulns') -and $answer.vulns -isnot [array]) {
+            throw "OSV answered the query about $Purl with a malformed vulnerability list."
+        }
+        foreach ($advisory in $answer.vulns) {
+            if (-not (Test-AdvisoryObject $advisory)) {
+                throw "OSV answered the query about $Purl with a malformed advisory object."
+            }
+            if ($advisory.id -isnot [string] -or [string]::IsNullOrWhiteSpace($advisory.id)) {
+                throw "OSV answered the query about $Purl with an advisory that has no id."
+            }
+            if (Test-AdvisoryField $advisory 'aliases') {
+                if ($advisory.aliases -isnot [array]) {
+                    throw "OSV answered the query about $Purl with malformed advisory aliases."
+                }
+                foreach ($alias in $advisory.aliases) {
+                    if ($alias -isnot [string] -or [string]::IsNullOrWhiteSpace($alias)) {
+                        throw "OSV answered the query about $Purl with a malformed advisory alias."
+                    }
+                }
+            }
+            if ((Test-AdvisoryField $advisory 'summary') -and $advisory.summary -isnot [string]) {
+                throw "OSV answered the query about $Purl with a malformed advisory summary."
+            }
+            # A withdrawn advisory is one its publisher took back.
+            if (Test-AdvisoryField $advisory 'withdrawn') {
+                $withdrawn = $advisory.withdrawn
+                if ($withdrawn -isnot [string] -or $withdrawn -cnotmatch
+                        '\A[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])[Tt](?:[01][0-9]|2[0-3]):[0-5][0-9]:(?:[0-5][0-9]|60)(?:\.[0-9]+)?[Zz]\z') {
+                    throw "OSV answered the query about $Purl with a malformed withdrawn timestamp."
+                }
+                $year = [int]$withdrawn.Substring(0, 4)
+                $month = [int]$withdrawn.Substring(5, 2)
+                $day = [int]$withdrawn.Substring(8, 2)
+                # The proleptic Gregorian year 0000 is a leap year, while DateTime starts at 1.
+                $calendarYear = if ($year -eq 0) { 400 } else { $year }
+                if ($day -gt [datetime]::DaysInMonth($calendarYear, $month) -or
+                        ($withdrawn.Substring(17, 2) -eq '60' -and
+                        ($withdrawn.Substring(11, 5) -ne '23:59' -or
+                        -not (($month -eq 6 -and $day -eq 30) -or ($month -eq 12 -and $day -eq 31))))) {
+                    throw "OSV answered the query about $Purl with a malformed withdrawn timestamp."
+                }
+                continue
+            }
+            $found.Add($advisory)
+        }
+        if ((Test-AdvisoryField $answer 'next_page_token') -and $answer.next_page_token -isnot [string]) {
+            throw "OSV answered the query about $Purl with a malformed page token."
+        }
+        $token = $answer.next_page_token
+        if (-not $token) { return $found.ToArray() }
+    }
+    throw "OSV was still paging its answer about $Purl after 20 pages."
+}
+
+function Get-SbomAdvisories {
+    <#
+    .SYNOPSIS
+        One finding per advisory OSV has for a library the SBOM lists.
+    .DESCRIPTION
+        Each: @{ Package; Version; Purl; Advisory; Aliases; Summary; Severity }. First-party
+        components carry no package URL and have nothing to ask about.
+    #>
+    param([Parameter(Mandatory = $true)]$Sbom)
+
+    $findings = New-Object System.Collections.Generic.List[object]
+    foreach ($library in @($Sbom.Libraries)) {
+        foreach ($advisory in @(Invoke-OsvQuery -Purl $library.Purl)) {
+            $findings.Add([pscustomobject]@{
+                Package  = "$($library.Group):$($library.Name)"
+                Version  = $library.Version
+                Purl     = $library.Purl
+                Advisory = [string]$advisory.id
+                Aliases  = @($advisory.aliases | Where-Object { $_ } | ForEach-Object { [string]$_ })
+                Summary  = "$($advisory.summary)".Trim()
+                Severity = Get-AdvisorySeverity -Advisory $advisory -Library $library
+            })
+        }
+    }
+    return $findings.ToArray()
+}
+
+function Test-AdvisoryFindings {
+    <#
+    .SYNOPSIS
+        Whether a release may go out with these findings and these exceptions.
+    .DESCRIPTION
+        Answers @{ Valid; Reason; Refused; Excused; Minor; Stale }, the last four as the lines to
+        print. A serious finding needs an exception naming its advisory, or one of the advisory's
+        aliases, and its package, dated today or later. An exception that matches no finding at
+        all, of any severity, is stale and refused too. -Subject and -ExceptionList name what was
+        asked about and the list the exceptions came from, in the reason.
+    #>
+    param(
+        [object[]]$Findings = @(),
+        [object[]]$Exceptions = @(),
+        [string]$Subject = 'what the bundle carries',
+        [string]$ExceptionList = 'scripts/advisory-exceptions.txt'
+    )
+
+    $findingsIn = @(@($Findings) | Where-Object { $null -ne $_ })
+    $exceptionsIn = @(@($Exceptions) | Where-Object { $null -ne $_ })
+    $refused = New-Object System.Collections.Generic.List[string]
+    $excused = New-Object System.Collections.Generic.List[string]
+    $minor = New-Object System.Collections.Generic.List[string]
+    # By advisory and package, which the reader holds to one line each.
+    $used = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+    foreach ($finding in $findingsIn) {
+        $names = @(@($finding.Advisory) + @($finding.Aliases))
+        $matching = @($exceptionsIn | Where-Object {
+            $exception = $_
+            [string]::Equals($exception.Package, $finding.Package, [System.StringComparison]::OrdinalIgnoreCase) -and
+                @($names | Where-Object { [string]::Equals($_, $exception.Advisory, [System.StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+        })
+        foreach ($exception in $matching) { [void]$used.Add("$($exception.Advisory) $($exception.Package)") }
+        $aliases = if (@($finding.Aliases).Count -gt 0) { ", $(@($finding.Aliases) -join ', ')" } else { '' }
+        $described = ("$($finding.Advisory) ($($finding.Severity.Level)$aliases) in $($finding.Package) " +
+            "$($finding.Version): $($finding.Summary)")
+        if (-not $finding.Severity.Serious) {
+            $minor.Add("$described; $($finding.Severity.Why)")
+            continue
+        }
+        $current = @($matching | Where-Object { -not $_.Expired })
+        if ($current.Count -gt 0) {
+            $excused.Add("$described; accepted until $($current[0].Until.ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)): $($current[0].Reason)")
+            continue
+        }
+        $lapsed = @($matching | Where-Object { $_.Expired })
+        if ($lapsed.Count -gt 0) {
+            $refused.Add("$described; $($finding.Severity.Why), and its exception ran out on $($lapsed[0].Until.ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture))")
+        } else {
+            $refused.Add("$described; $($finding.Severity.Why)")
+        }
+    }
+    $stale = New-Object System.Collections.Generic.List[string]
+    foreach ($exception in $exceptionsIn) {
+        if (-not $used.Contains("$($exception.Advisory) $($exception.Package)")) {
+            $stale.Add("$($exception.Advisory) for $($exception.Package) (line $($exception.Line))")
+        }
+    }
+
+    $reasons = @()
+    if ($refused.Count -gt 0) {
+        $reasons += ("OSV reports high or critical advisories for ${Subject}: " + ($refused -join '; ') +
+            ". Move to a version without them, or accept one in $ExceptionList with the reason " +
+            'it does not apply and a date within 90 days.')
+    }
+    if ($stale.Count -gt 0) {
+        $reasons += ("$ExceptionList accepts advisories OSV no longer reports for ${Subject}: " +
+            ($stale -join '; ') + '. Take them out.')
+    }
+    return [pscustomobject]@{
+        Valid   = $reasons.Count -eq 0
+        Reason  = if ($reasons.Count -gt 0) { $reasons -join ' ' } else { $null }
+        Refused = $refused.ToArray()
+        Excused = $excused.ToArray()
+        Minor   = $minor.ToArray()
+        Stale   = $stale.ToArray()
+    }
+}
+
+function Invoke-ReleaseAdvisoryGate {
+    <#
+    .SYNOPSIS
+        Asks OSV about an SBOM's libraries, prints what it said, and throws when the release may
+        not go out.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]$Sbom,
+        [Parameter(Mandatory = $true)][string]$ExceptionsPath,
+        [switch]$SkipAdvisoryCheck,
+        [datetime]$Today = [datetime]::Today
+    )
+
+    $libraries = @($Sbom.Libraries)
+    $sbomName = Split-Path -Leaf $Sbom.Path
+    # Read even when OSV isn't asked: a malformed or overlong exception is wrong offline too.
+    $exceptions = @(Read-AdvisoryExceptions -Path $ExceptionsPath -Today $Today)
+    if ($SkipAdvisoryCheck) {
+        Write-Warning ("-SkipAdvisoryCheck: OSV was not asked about the libraries $sbomName lists, so nothing " +
+            'here says they have no serious advisory. The index push asks OSV again.')
+        return
+    }
+    if ($libraries.Count -eq 0) {
+        Write-Host "[advisories] $sbomName lists no library to ask OSV about"
+        return
+    }
+    $findings = @(Get-SbomAdvisories -Sbom $Sbom)
+    $verdict = Test-AdvisoryFindings -Findings $findings -Exceptions $exceptions
+    foreach ($line in @($verdict.Minor)) { Write-Host "[advisories] below high, let through: $line" }
+    foreach ($line in @($verdict.Excused)) { Write-Host "[advisories] accepted: $line" }
+    if (-not $verdict.Valid) { throw $verdict.Reason }
+    $packages = @($libraries | ForEach-Object { "$($_.Name) $($_.Version)" }) -join ', '
+    $said = if ($findings.Count -eq 0) { 'no advisory' } else { "$($findings.Count) advisories, none refused" }
+    Write-Host "[advisories] OSV has $said for the libraries $sbomName lists: $packages"
+}
+
+function Test-InventoryText {
+    # One coordinate or package URL as the inventory writes it: a bounded string with no spaces.
+    param($Value)
+    return ($Value -is [string] -and $Value.Length -gt 0 -and $Value.Length -le 400 -and $Value -notmatch '\s|\p{Cc}')
+}
+
+function Read-BuildClasspathInventory {
+    <#
+    .SYNOPSIS
+        The build classpath inventory settings.gradle.kts writes (:buildClasspathInventory), read
+        into what the build advisory gate needs.
+    .DESCRIPTION
+        Answers @{ Path; Sha256; Gradle; Libraries; Conflicts; Graphs }. Libraries are the components the
+        plugin classpaths resolved, one per package URL with the classpaths that hold it, in the
+        shape Get-SbomAdvisories reads. Conflicts are the requests Gradle answered with another
+        version: what was asked for, what resolved, and Gradle's reasons. A version that was only
+        asked for isn't on the classpath, so it's reported and never put to OSV.
+
+        Held to the shape the task writes, within bounds, and refused where it differs: a missing
+        or unreadable inventory, one written for another settings.gradle.kts, patches/build.gradle.kts,
+        gradle/libs.versions.toml or gradle/verification-metadata.xml (judged by the hash of each, in the
+        directory that holds the settings script), one with no settings
+        classpath component, a component whose package URL doesn't name it, and a dependency that
+        didn't resolve, whose version nobody knows. None of those reads as a classpath with no
+        advisories.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        # The settings.gradle.kts the inventory has to have been written for.
+        [string]$SettingsScript
+    )
+
+    $Path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw ("There is no build classpath inventory at $Path, so nothing says what the plugin classpath holds. " +
+            ':patches:buildAndroid ends by writing it (:buildClasspathInventory), so build again.')
+    }
+    $name = Split-Path -Leaf $Path
+    $limitBytes = 8MB
+    $limitEntries = 4000
+    if ((Get-Item -LiteralPath $Path).Length -gt $limitBytes) {
+        throw "$name is larger than the $($limitBytes / 1MB) MB a build classpath inventory may be."
+    }
+    # As in Invoke-OsvQuery: PowerShell 7 would turn a date-like string into a DateTime.
+    $jsonArguments = @{ ErrorAction = 'Stop' }
+    if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('DateKind')) { $jsonArguments['DateKind'] = 'String' }
+    try {
+        $text = [IO.File]::ReadAllText($Path, [Text.UTF8Encoding]::new($false, $true))
+        if (-not $text.TrimStart().StartsWith('{')) { throw 'Expected a JSON object.' }
+        $document = $text | ConvertFrom-Json @jsonArguments
+    } catch {
+        throw "$name is not a build classpath inventory: $($_.Exception.Message)"
+    }
+    if ($document -isnot [System.Management.Automation.PSCustomObject] -or $document.schema -isnot [string] -or
+            $document.schema -cne 'hushthreads-build-classpath-1') {
+        throw "$name is not a build classpath inventory this script reads (schema hushthreads-build-classpath-1)."
+    }
+    if (-not (Test-InventoryText $document.gradle) -or $document.gradle -cnotmatch '^[0-9]{1,4}\.[0-9]{1,4}(\.[0-9]{1,4})?$') {
+        throw "$name doesn't name a stable Gradle distribution version. Build again with the supported wrapper."
+    }
+    $recorded = $document.settingsScript
+    if (-not (Test-AdvisoryObject $recorded) -or $recorded.sha256 -isnot [string] -or $recorded.sha256 -cnotmatch '^[0-9a-f]{64}$') {
+        throw "$name doesn't say which settings.gradle.kts it was written for."
+    }
+    if ($SettingsScript) {
+        if (-not (Test-Path -LiteralPath $SettingsScript -PathType Leaf)) {
+            throw "There is no $SettingsScript to hold $name to."
+        }
+        $current = (Get-FileHash -LiteralPath $SettingsScript -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($current -cne $recorded.sha256) {
+            throw ("$name was written for another settings.gradle.kts than $SettingsScript, so it may not be the " +
+                'classpath this build resolved. Build again.')
+        }
+    }
+    if ($SettingsScript) {
+        # The other build files the plugin classpath depends on, beside the settings script. Each is
+        # recorded as the lowercase hex SHA-256 of its raw bytes, which Get-FileHash answers too.
+        $projectRoot = Split-Path -Parent $SettingsScript
+        $inputs = $document.buildInputs
+        foreach ($relative in @('settings.gradle.kts', 'patches/build.gradle.kts', 'gradle/libs.versions.toml', 'gradle/verification-metadata.xml')) {
+            $property = if (Test-AdvisoryObject $inputs) { $inputs.PSObject.Properties[$relative] } else { $null }
+            if ($null -eq $property -or $property.Value -isnot [string] -or $property.Value -cnotmatch '^[0-9a-f]{64}$') {
+                throw "$name doesn't say which $relative it was written for. Build again."
+            }
+            $inputPath = Join-Path $projectRoot $relative
+            if (-not (Test-Path -LiteralPath $inputPath -PathType Leaf)) {
+                throw "There is no $inputPath to hold $name to."
+            }
+            if ((Get-FileHash -LiteralPath $inputPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $property.Value) {
+                throw ("$name was written for another $relative than $inputPath, so it may not be the " +
+                    'classpath this build resolved. Build again.')
+            }
+        }
+    }
+    if ($document.graphs -isnot [array] -or $document.graphs.Count -eq 0) { throw "$name lists no classpath." }
+
+    $libraries = [ordered]@{}
+    $conflicts = New-Object System.Collections.Generic.List[object]
+    $unresolved = New-Object System.Collections.Generic.List[string]
+    $graphNames = New-Object System.Collections.Generic.List[string]
+    foreach ($graph in $document.graphs) {
+        if (-not (Test-AdvisoryObject $graph) -or $graph.name -isnot [string] -or [string]::IsNullOrWhiteSpace($graph.name) -or
+                $graph.name.Length -gt 400 -or $graph.components -isnot [array] -or $graph.conflicts -isnot [array] -or
+                $graph.unresolved -isnot [array]) {
+            throw "$name lists a classpath without a name, components, conflicts and an unresolved list."
+        }
+        if ($graphNames -ccontains $graph.name) { throw "$name lists the $($graph.name) twice." }
+        $graphNames.Add($graph.name)
+        foreach ($component in $graph.components) {
+            if (-not (Test-AdvisoryObject $component) -or -not (Test-InventoryText $component.group) -or
+                    -not (Test-InventoryText $component.name) -or -not (Test-InventoryText $component.version) -or
+                    -not (Test-InventoryText $component.purl)) {
+                throw "$name lists a component of the $($graph.name) without a group, name, version and package URL."
+            }
+            $purl = [regex]::Match($component.purl, '^pkg:maven/([^/@?#]+)/([^/@?#]+)@([^/@?#]+)$')
+            if (-not $purl.Success -or [Uri]::UnescapeDataString($purl.Groups[1].Value) -cne $component.group -or
+                    [Uri]::UnescapeDataString($purl.Groups[2].Value) -cne $component.name -or
+                    [Uri]::UnescapeDataString($purl.Groups[3].Value) -cne $component.version) {
+                throw ("$name lists $($component.group):$($component.name):$($component.version) with the package URL " +
+                    "$($component.purl), which doesn't name it, so OSV couldn't be asked about it.")
+            }
+            if (-not $libraries.Contains($component.purl)) {
+                if ($libraries.Count -ge $limitEntries) { throw "$name lists more than $limitEntries components." }
+                $libraries[$component.purl] = [pscustomobject]@{ Group = $component.group; Name = $component.name
+                    Version = $component.version; Purl = $component.purl
+                    Graphs = (New-Object System.Collections.Generic.List[string]) }
+            }
+            $libraries[$component.purl].Graphs.Add($graph.name)
+        }
+        foreach ($conflict in $graph.conflicts) {
+            if (-not (Test-AdvisoryObject $conflict) -or -not (Test-InventoryText $conflict.requested) -or
+                    -not (Test-InventoryText $conflict.resolved) -or $conflict.reasons -isnot [array] -or
+                    @($conflict.reasons | Where-Object { $_ -isnot [string] -or $_.Length -gt 400 }).Count -gt 0) {
+                throw "$name lists a conflict in the $($graph.name) without what was asked for, what resolved and why."
+            }
+            if ($conflicts.Count -ge $limitEntries) { throw "$name lists more than $limitEntries conflicts." }
+            $conflicts.Add([pscustomobject]@{ Graph = $graph.name; Requested = $conflict.requested
+                Resolved = $conflict.resolved; Reasons = @($conflict.reasons) })
+        }
+        foreach ($missing in $graph.unresolved) {
+            $what = if ((Test-AdvisoryObject $missing) -and (Test-InventoryText $missing.requested)) { $missing.requested } else { 'an entry it can''t name' }
+            $why = if ((Test-AdvisoryObject $missing) -and $missing.failure -is [string] -and $missing.failure) {
+                " ($($missing.failure.Substring(0, [Math]::Min(300, $missing.failure.Length))))" } else { '' }
+            $unresolved.Add("$what in the $($graph.name)$why")
+        }
+    }
+    if ($unresolved.Count -gt 0) {
+        throw ("$name lists dependencies that didn't resolve: " + (@($unresolved | Select-Object -First 10) -join '; ') +
+            '. Nobody knows their versions, so OSV can''t be asked about them, and the inventory isn''t read as clean.')
+    }
+    $settingsLibraries = @($libraries.Values | Where-Object { $_.Graphs -ccontains 'settings classpath' })
+    if ($settingsLibraries.Count -eq 0) {
+        throw "$name lists no settings classpath component, so it isn't the classpath the plugins load from."
+    }
+    return [pscustomobject]@{
+        Path      = $Path
+        Sha256    = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+        Gradle    = $document.gradle
+        Libraries = @($libraries.Values)
+        Conflicts = $conflicts.ToArray()
+        Graphs    = $graphNames.ToArray()
+    }
+}
+
+function Invoke-BuildClasspathAdvisoryGate {
+    <#
+    .SYNOPSIS
+        Asks OSV about what the build classpath inventory lists, prints what it said apart from
+        the bundle's own advisories, and throws when the release may not go out.
+    .DESCRIPTION
+        Build exposure: code that runs while the bundle is built and signed, which the bundle
+        doesn't carry. It's held to the rules the bundle's libraries are (high, critical and
+        unrated advisories are refused unless accepted until a date), with its own exception list,
+        so neither list can excuse the other's advisories or go stale on them. Each conflict is
+        printed as asked for and resolved. A version that was only asked for isn't on the
+        classpath, and isn't put to OSV.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]$Inventory,
+        [Parameter(Mandatory = $true)][string]$ExceptionsPath,
+        [switch]$SkipAdvisoryCheck,
+        [datetime]$Today = [datetime]::Today
+    )
+
+    $libraries = @($Inventory.Libraries)
+    $inventoryName = Split-Path -Leaf $Inventory.Path
+    # Read even when OSV isn't asked, as the bundle's list is.
+    $exceptions = @(Read-AdvisoryExceptions -Path $ExceptionsPath -Today $Today)
+    # The distribution isn't a Maven component. These maintainer records (2026-10-07) cover
+    # daemon deserialization and SSL repository fallback; OSV component results don't cover it.
+    # https://github.com/gradle/gradle/security/advisories/GHSA-xwqc-3h47-hg64
+    # https://github.com/gradle/gradle/security/advisories/GHSA-mvvg-497x-hmj8
+    # https://github.com/gradle/gradle/security/advisories/GHSA-j5m7-59rp-24f5
+    # The public fixes are 8.14.6/9.8.1. The table also names subscription backports on 7.6
+    # and 9.1 through 9.7, which must not be mistaken for affected distributions.
+    if (-not (Test-InventoryText $Inventory.Gradle) -or $Inventory.Gradle -cnotmatch '^[0-9]{1,4}\.[0-9]{1,4}(\.[0-9]{1,4})?$') {
+        throw "$inventoryName doesn't name a stable Gradle distribution version. Build again with the supported wrapper."
+    }
+    $gradle = [version]$Inventory.Gradle
+    $backport = ($gradle.Major -eq 7 -and $gradle.Minor -eq 6 -and $gradle.Build -ge 7) -or
+        ($gradle.Major -eq 9 -and $gradle.Minor -ge 1 -and $gradle.Minor -le 7 -and $gradle.Build -ge 2)
+    if (-not $backport -and ($gradle -lt [version]'8.14.6' -or
+            ($gradle -ge [version]'9.0' -and $gradle -lt [version]'9.8.1'))) {
+        throw ("Gradle $($Inventory.Gradle) is affected by High distribution advisories GHSA-xwqc-3h47-hg64, " +
+            'GHSA-mvvg-497x-hmj8 and GHSA-j5m7-59rp-24f5. Use the supported wrapper with public Gradle 9.8.1. ' +
+            'Component OSV results and dependency checksums do not fix daemon deserialization.')
+    }
+    Write-Host ("[build advisories] Gradle $($Inventory.Gradle) is outside the affected versions in the three " +
+        'maintainer distribution advisories dated 2026-10-07. Component results are separate.')
+    foreach ($conflict in @($Inventory.Conflicts)) {
+        $why = if (@($conflict.Reasons).Count -gt 0) { " ($(@($conflict.Reasons) -join ', '))" } else { '' }
+        Write-Host "[build advisories] the $($conflict.Graph) asked for $($conflict.Requested) and resolved $($conflict.Resolved)$why"
+    }
+    if ($SkipAdvisoryCheck) {
+        Write-Warning ("-SkipAdvisoryCheck: OSV was not asked about the $($libraries.Count) components $inventoryName lists, " +
+            'so nothing here says the build classpath has no serious advisory.')
+        return
+    }
+    if ($libraries.Count -eq 0) { throw "$inventoryName lists no component to ask OSV about." }
+    $findings = @(Get-SbomAdvisories -Sbom $Inventory)
+    $verdict = Test-AdvisoryFindings -Findings $findings -Exceptions $exceptions -Subject 'the build classpath' `
+        -ExceptionList ('scripts/' + (Split-Path -Leaf $ExceptionsPath))
+    foreach ($line in @($verdict.Minor)) { Write-Host "[build advisories] below high, let through: $line" }
+    foreach ($line in @($verdict.Excused)) { Write-Host "[build advisories] accepted: $line" }
+    if (-not $verdict.Valid) { throw $verdict.Reason }
+    $said = if ($findings.Count -eq 0) { 'no advisory' } else { "$($findings.Count) advisories, none refused" }
+    Write-Host ("[build advisories] OSV has $said for the $($libraries.Count) components $inventoryName lists. " +
+        'They build the bundle, and the bundle doesn''t carry them.')
+}

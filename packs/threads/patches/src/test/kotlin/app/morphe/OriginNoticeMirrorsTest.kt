@@ -1,0 +1,85 @@
+/*
+ * Forked from https://github.com/SysAdminDoc/Hushfacebook at c15d4f79 (GPL-3.0),
+ * modified for HushThreads (Threads), 2026.
+ *
+ * Modified for Hushfacebook (Facebook), 2026.
+ * Copyright 2026 Hushfeed contributors
+ * https://github.com/SysAdminDoc/hushfeed
+ */
+package app.morphe
+
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Every mirror URL in a source notice answers.
+ *
+ * <p>The notices that cite `github.com/ReVanced/revanced-patches` point at a repository GitHub
+ * has blocked under a DMCA notice since 2026-03-24, and their headers keep those lines as the
+ * record of which revision the code came from. The line beside each is the GitLab mirror, which
+ * is the one a reader can open. This fetches each distinct mirror once, so the next takedown is
+ * found by the suite rather than by a reader, and it is the only test here that needs the
+ * network: a machine with none fails it by name rather than passing over it.
+ */
+class OriginNoticeMirrorsTest {
+    @Test
+    fun `every mirror cited by a source notice answers 200`() {
+        val root = RepoFiles.root
+        val mirrors = listOf(File(root, "extensions"), File(root, "patches/src")).asSequence()
+            .flatMap { tree -> tree.walkTopDown().onEnter { it.name != "build" } }
+            .filter { it.isFile && (it.extension == "java" || it.extension == "kt") }
+            .flatMap { file -> MIRROR.findAll(file.readText()).map { it.value } }
+            .toSortedSet()
+        assertTrue("no source notice cites a mirror, so the block has nothing beside it", mirrors.isNotEmpty())
+
+        val failures = mirrors.mapIndexedNotNull { index, mirror ->
+            // Spaced out, so this run alone never trips GitLab's limit.
+            if (index > 0) Thread.sleep(REQUEST_GAP_MS)
+            val status = runCatching { settled(mirror) }.getOrElse { error -> "no answer: ${error.message}" }
+            if (status == "200") null else "$status  $mirror"
+        }
+        assertTrue("mirrors that do not answer 200:\n" + failures.joinToString("\n"), failures.isEmpty())
+    }
+
+    /**
+     * The mirror's answer once GitLab stops limiting this address. A 429 says nothing about the
+     * file, and other repositories run this same check from the same machine, so it gets waited
+     * out. One that lasts past the tries still fails by name, as a machine with no network does.
+     */
+    private fun settled(url: String): String {
+        var answer = status(url)
+        var tries = 1
+        while (answer.first == RATE_LIMITED && tries < RATE_LIMIT_TRIES) {
+            Thread.sleep(answer.second.coerceIn(5L, RATE_LIMIT_MAX_WAIT_SECONDS) * 1000)
+            answer = status(url)
+            tries++
+        }
+        return answer.first
+    }
+
+    /** The status code and the seconds Retry-After asks for, or 0 when it asks for none. */
+    private fun status(url: String): Pair<String, Long> {
+        val connection = URL(url).openConnection() as HttpURLConnection
+        connection.requestMethod = "HEAD"
+        connection.instanceFollowRedirects = true
+        connection.connectTimeout = 20_000
+        connection.readTimeout = 20_000
+        connection.setRequestProperty("User-Agent", "hushthreads-origin-notice-check")
+        return try {
+            connection.responseCode.toString() to (connection.getHeaderField("Retry-After")?.toLongOrNull() ?: 0L)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private companion object {
+        val MIRROR = Regex("""https://gitlab\.com/ReVanced/revanced-patches/[^\s"]+""")
+        const val RATE_LIMITED = "429"
+        const val RATE_LIMIT_TRIES = 4
+        const val RATE_LIMIT_MAX_WAIT_SECONDS = 60L
+        const val REQUEST_GAP_MS = 400L
+    }
+}
