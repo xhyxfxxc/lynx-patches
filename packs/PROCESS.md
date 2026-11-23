@@ -258,8 +258,8 @@ can also be set in the app (Scheduled, the task, Edit).
 7. End. `git status --short` and `git log origin/main..main --oneline` are empty. PROGRESS.md has a section
    "SCHEDULED CHECK <date>" with one line per pack and one per Amazon source. The final message is the
    plain-words summary of step B13 for every published pack, then the parked packs with what each needs, then
-   Amazon (what was published, what waits for the owner's pick). It always says that signed-in screens were
-   not tested. When nothing happened it is one line.
+   Amazon (what was published, what is parked, what upstream changed in its code). It always says that signed-in
+   screens were not tested. When nothing happened it is one line.
 
 ### The emulator start-up test
 
