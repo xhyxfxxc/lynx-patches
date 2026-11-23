@@ -29,7 +29,7 @@
         ".github/**",
         "concepts/**"
       ],
-      "version": "0.0.21-lynx.1",
+      "version": "0.0.22-lynx.1",
       "build": {
         "java": "21",
         "tasks": ":patches:generatePatchesList :patches:buildAndroid",
