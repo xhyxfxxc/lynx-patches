@@ -1,0 +1,36 @@
+{
+  "ports": {
+    "amazon": {
+      "title": "Amazon Shopping",
+      "ours": [
+        "patches/src/main/kotlin/app/amazon",
+        "extensions/extension/src/main/java/app/amazon",
+        "extensions/extension/src/test/java/app/amazon"
+      ],
+      "sources": {
+        "morphe-patches": {
+          "upstream": "https://github.com/rushiranpise/morphe-patches",
+          "reviewed": "v1.23.1",
+          "paths": [
+            "patches/src/main/kotlin/app/template/patches/amazon/**",
+            "extensions/extension/src/main/java/app/template/extension/extension/Amazon*.java",
+            "extensions/extension/src/test/java/app/template/extension/extension/Amazon*.java",
+            "**/*amazon*",
+            "**/*amazon*/**",
+            "**/*Amazon*",
+            "**/*Amazon*/**"
+          ]
+        },
+        "amznkiller": {
+          "upstream": "https://github.com/hxreborn/amznkiller",
+          "reviewed": "v2.6.0",
+          "paths": [
+            "lists/static.txt",
+            "lists/static_denylist.txt",
+            "app/src/main/resources/payload/**"
+          ]
+        }
+      }
+    }
+  }
+}
