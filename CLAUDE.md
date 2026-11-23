@@ -101,6 +101,13 @@ manifest permissions, price history card), so never copy their files over ours.
 - Roles for this work: the main session (Claude Fable 5.2 or Claude Opus 5.5) plans, reads the build files,
   re-checks review claims in the code, decides, tests on the phone and runs the releases; Sonnet 5.5 sub-sessions
   do all bulk reading and every change to files in the repo. Commit trailers name the model that wrote the commit.
+- Scheduled check (owner decisions 2026-11-23): every second day at 03:00 the desktop-app scheduled task
+  `lynx-pack-upstream-check` runs `python tools/pack_sync.py check` and, for a pack whose upstream has a new stable
+  release that is at least 24 hours old, section E of `packs/PROCESS.md`. An unattended run publishes by itself only
+  when the update is clean (nothing risky in the review, no new Lynx change needed, every check passes); anything
+  else is prepared and parked for the owner. It never downloads, never uses a phone (the emulator start-up test
+  `tools/emu_smoke.py` stands in, so signed-in screens stay untested) and takes no pre-releases. Lynx's own
+  upstream (Loki Patches) is not part of it: still on demand only.
 
 ## Branches, commits, releases
 
