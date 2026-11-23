@@ -55,10 +55,12 @@ never copy their files over ours: an upstream change is read and rewritten by ha
 2026-11-23: these two sources are checked by the scheduled run ("check Amazon Shopping in the same way
 (cyber, bug fix, publish etc)"). `python tools/port_watch.py check` compares the newest stable release of
 each source with the one recorded as reviewed in `tools/port_watch.json`; the order of work is section F
-of `packs/PROCESS.md`. An unattended run publishes by itself only an update of the ad-hiding rule list
-(`AD_SELECTORS` in `AmazonHelper.java`, every entry checked by `tools/audit.py`); a change to code is
-reviewed and parked until the owner picks what to port. An Amazon release is a Lynx bundle release
-(`fix(amazon):` or `feat(amazon):`).
+of `packs/PROCESS.md`. Only updates of the ad-hiding rule list are taken from upstream, and a scheduled
+run may publish those by itself (`AD_SELECTORS` in `AmazonHelper.java`, every entry checked by
+`tools/audit.py`). Upstream code is not ported: its changes are only noted in the port log. Owner decision
+2026-11-23: "given the code for amazon is our own, we will just keep it that way. next time if an update
+is required, we will do our own code upgrade with a newer version app." An Amazon release is a Lynx bundle
+release (`fix(amazon):` or `feat(amazon):`).
 
 ## Packs: other authors' patch packs, published as separate sources (owner decision 2026-11-23)
 
