@@ -108,15 +108,15 @@ class RuleProblemsTests(AuditCase):
             (".a(", "do not pair up"),
             (".a[(])", "do not pair up"),
             (".a(x]", "do not pair up"),
-            ("div", "whole element type"),
-            ("*", "whole element type"),
-            ("body", "whole element type"),
-            ("html", "whole element type"),
-            (".a > div", "whole element type"),
-            (".ok, span", "whole element type"),
-            (".a,", "whole element type"),
-            (", .a", "whole element type"),
-            (".a >", "whole element type"),
+            ("div", "names no class, id or attribute of its own"),
+            ("*", "names no class, id or attribute of its own"),
+            ("body", "whole page"),
+            ("html", "whole page"),
+            (".a > div", "names no class, id or attribute of its own"),
+            (".ok, span", "names no class, id or attribute of its own"),
+            (".a,", "names no class, id or attribute of its own"),
+            (", .a", "names no class, id or attribute of its own"),
+            (".a >", "names no class, id or attribute of its own"),
             ("body.foo", "whole page"),
             ("BODY.foo", "whole page"),
             ("html[lang]", "whole page"),
@@ -133,6 +133,20 @@ class RuleProblemsTests(AuditCase):
                 problems = audit.rule_problems(selector)
                 self.assertTrue(problems, "the selector was accepted")
                 self.assertIn(expected, " ".join(problems))
+
+    def test_a_pseudo_class_or_what_is_inside_parentheses_is_no_mark_of_its_own(self):
+        refused = ["div:has(.x)", "div:not(.x)", "*:not(.a)", ":is(div)", ":where(.a)", "span:hover",
+                   ".a > div:has(.b)", 'div:has([data-x="a.b#c"])', 'div:lang("a.b")']
+        for selector in refused:
+            with self.subTest(selector):
+                self.assertEqual(audit.rule_problems(selector),
+                                 [f"part '{selector.split(' > ')[-1]}' names no class, id or attribute of its own"])
+        accepted = ["div.a:has(.b)", "#x:not(.y)", "[data-ad-id]", "div:has(.b).a", 'div[x=":is(a)"]',
+                    'li.gwm-window-tile:has(div[data-csa-c-painter="single-video-card"] [data-ad-feedback-label-id])',
+                    ".a-carousel-card:has(.p13n-sc-sponsored-label)"]
+        for selector in accepted:
+            with self.subTest(selector):
+                self.assertEqual(audit.rule_problems(selector), [])
 
     def test_problems_are_printable_ascii(self):
         for selector in (".a\u00e9, \u00e9", ".a\x01"):
@@ -170,7 +184,7 @@ class AmazonRulesTests(AuditCase):
         self.assertEqual([f[0] for f in failures], ["amazon rules"] * 4)
         self.assertEqual({f[1] for f in failures}, {"AmazonHelper.java"})
         details = [f[2] for f in failures]
-        self.assertEqual(details[0], "body -> part 'body' would hide a whole element type")
+        self.assertEqual(details[0], "body -> part 'body' would hide the whole page")
         self.assertTrue(details[1].startswith(".b{x} -> contains '{'"), details[1])
         self.assertEqual(details[2:], [".a -> listed more than once", ".c -> listed more than once"])
 

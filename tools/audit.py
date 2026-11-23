@@ -334,12 +334,29 @@ def last_compounds(selector):
     return parts + [compound]
 
 
+def has_own_mark(compound):
+    """A class, an id or an attribute test of its own: a . # or [ outside any parentheses and quoted strings."""
+    depth, quote = 0, None
+    for ch in compound:
+        if quote:
+            quote = None if ch == quote else quote
+        elif ch in "\"'":
+            quote = ch
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif depth == 0 and ch in ".#[":
+            return True
+    return False
+
+
 def compound_problems(compound):
-    if not any(ch in compound for ch in ".#[:"):
-        return [f"part '{shown(compound, 40)}' would hide a whole element type"]
     tag = re.match(r"[A-Za-z][A-Za-z0-9-]*", compound)
     if (tag and tag.group(0).lower() in ("html", "body")) or re.match(r":root(?![\w-])", compound, re.I):
         return [f"part '{shown(compound, 40)}' would hide the whole page"]
+    if not has_own_mark(compound):
+        return [f"part '{shown(compound, 40)}' names no class, id or attribute of its own"]
     return []
 
 
