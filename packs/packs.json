@@ -10,7 +10,7 @@
         "patches-bundle.json",
         ".github/**"
       ],
-      "version": "0.23.0-lynx.1",
+      "version": "0.24.0-lynx.1",
       "build": {
         "java": "21",
         "tasks": ":patches:generatePatchesList :patches:buildAndroid",
