@@ -73,7 +73,11 @@ on by default) all 193 default ones applied, 0 failed, one warning (a Clean up R
 Against the 0.0.21-lynx.1 build exactly the 11 new patches were added and none lost; the patched app's manifest
 is identical (permissions, components, exported values) and the bundle names no new web host. This proves the
 patches fit this build, not that every feature works on a phone.
-Phone test: PENDING
+Emulator test (2026-11-23, Android 15 emulator, not signed in): the original Instagram and this patched build
+both install and start on the sign-in screen, the patch code loads, and there is no crash, no "not responding"
+report and no class-loading error. Signed-in test on a phone: NOT run for this release (the emulator apps are
+not signed in and the test phone was locked), so feeds, HushGram's own settings and the upstream reports below
+are untested by Lynx on 0.0.22.
 
 ## Upstream documentation that does not apply to this build
 
