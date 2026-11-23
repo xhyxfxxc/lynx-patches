@@ -6,7 +6,8 @@ publish to our own repo, then update when there is sth new". It was proven on si
 the Facebook pack's upgrade from 0.23.0 to 0.24.0 (about 50,000 changed lines, done in about one hour).
 
 Read `CLAUDE.md` (section "Packs") and `packs/README.md` first: they hold the rules and the tool reference.
-This file is the order of work. The briefs it names are in `packs/briefs/`.
+This file is the order of work. The briefs it names are in `packs/briefs/`. Section F is the same pattern for
+the Amazon Shopping patches, which are not a pack.
 
 Terms: a PATCH is Kotlin code that runs at patch time and rewrites the target app. The EXTENSION is Java code
 the patches add to the app, which then runs inside it with the user's logged-in session. A BUNDLE (`.mpp`) is
@@ -173,10 +174,15 @@ updates, we use our runbook to make it available to lynx so I can use it with pe
 publishes by itself only when the update is clean (rule 4). It starts at 03:00. It never uses a phone ("at 3am
 I won't feel safe to have my s25 ultra screen on"): the Android emulator on the PC stands in for it.
 
+Since 2026-11-23 the same run also watches the two projects the Amazon Shopping patches came from (owner: "can
+you schedule to check Amazon Shopping in the same way (cyber, bug fix, publish etc)?"). Those patches are part
+of the Lynx bundle, not a pack. Their rules are section F; rule 6 below says when a run gets there.
+
 How it runs: a scheduled task of the Claude desktop app, id `lynx-pack-upstream-check`, starts a new session
 every second day at 03:00 local time. The PC must be on with the app open; a missed run starts when the app
-next opens. The task's prompt only points here: to change the behaviour, change this section, not the prompt.
-The time, and switching the task off, are changed in the app's Scheduled tasks list or by asking a session.
+next opens. The task's prompt only points here: to change the behaviour, change this section (or section F), not
+the prompt. The time, and switching the task off, are changed in the app's Scheduled tasks list or by asking a
+session.
 
 An unattended run is section B with nobody to ask. It does everything that needs no yes and parks a pack where
 one is needed. The roles do not change, and the models are fixed (owner decision 2026-11-23: "make all the
@@ -202,8 +208,10 @@ can also be set in the app (Scheduled, the task, Edit).
      the note in the report.
    - `OLDER` or `UNKNOWN`: report it, do nothing.
    Only stable releases count: GitHub's "latest release" leaves out pre-releases (`-dev`, `-rc`).
-   Nothing to do at all: one dated line in PROGRESS.md ("scheduled check: no update"), a one-line report, stop.
-   No commit.
+   Then `python tools/port_watch.py check`: the same question for the sources of the Amazon patches (F1). Its
+   lines read the same way, plus `PARKED`: an earlier run reviewed that release and it waits for the owner.
+   Nothing to do in either list: one dated line in PROGRESS.md ("scheduled check: no update"), a one-line
+   report, stop. No commit.
 3. Upgrade each `UPDATE` pack with section B, steps 2 to 12, one pack at a time in the order of
    `packs/packs.json`. Finish or park a pack before the next. Update PROGRESS.md before every long step, so a
    run that is cut short (usage limit, PC switched off) can be continued by the next one. An unattended run
@@ -244,10 +252,14 @@ can also be set in the app (Scheduled, the task, Edit).
    validate, emulator test), commit and push that work, and park the pack: PROGRESS.md gets what was found,
    what was done and the one thing the owner must decide or do. The owner then says "continue the <pack>
    upgrade" in a session. A parked pack does not block the check of the other packs.
-6. End. `git status --short` and `git log origin/main..main --oneline` are empty. PROGRESS.md has a section
-   "SCHEDULED CHECK <date>" with one line per pack. The final message is the plain-words summary of step B13
-   for every published pack, then the parked packs with what each needs. It always says that signed-in
-   screens were not tested. When nothing happened it is one line.
+6. Amazon, after the packs: for every `UPDATE` line of `python tools/port_watch.py check`, section F, steps F2
+   to F5. The limits of rule 3 hold there too. An unattended run publishes only an update of the ad-hiding
+   rule list (F4); every change to code is reviewed and waits for the owner (F5).
+7. End. `git status --short` and `git log origin/main..main --oneline` are empty. PROGRESS.md has a section
+   "SCHEDULED CHECK <date>" with one line per pack and one per Amazon source. The final message is the
+   plain-words summary of step B13 for every published pack, then the parked packs with what each needs, then
+   Amazon (what was published, what waits for the owner's pick). It always says that signed-in screens were
+   not tested. When nothing happened it is one line.
 
 ### The emulator start-up test
 
@@ -285,9 +297,166 @@ Trial on 2026-11-23 with the builds that were current then:
 | gboard | Gboard 18.5.4.993608717 | UNUSABLE | The emulator image already contains Gboard with a different signature, so not even the genuine original can be installed over it (no screenshots). |
 | waze | Waze 5.27.5.0 | PASS | Original and patched show the same first-run "Give Waze access to your precise location" screen. The pack logs nothing at start-up, so the tool shows its "no patch tag" warning. |
 | x | X 12.19.1-release.0 | PASS | Original and patched show the same "See what's happening" login screen with the "Allow X to send you notifications?" prompt on top. Patch log lines present. |
+| amazon (Lynx bundle, section F) | Amazon Shopping 32.20.2.100 | PASS | Original and patched show the same signed-out "Sign in to your account" screen with the "Visiting from Australia?" sheet on top. Lynx logs under the tags "Loki" and "LokiPatches": run the tool with `--log-tags loki`, or it warns that it saw no patch tag. |
 
 A pack marked UNUSABLE has had no start-up test, so an unattended run does not publish it: it is parked until
 the owner says "publish <pack>" or asks for a phone test.
+
+## F. Amazon Shopping: ported by hand, released inside the Lynx bundle
+
+Owner decision, 2026-11-23: "can you schedule to check Amazon Shopping in the same way (cyber, bug fix, publish
+etc)?" So the scheduled check also watches the two projects the Amazon patches came from, and an update gets
+the treatment a pack update gets: security review, P0 and P1 fixes, release. Three things are different.
+
+- It is not a pack and nothing can be merged. The code is Lynx's own: `patches/src/main/kotlin/app/amazon/`,
+  `extensions/extension/src/main/java/app/amazon/` and the tests beside it. It was ported by hand on 2026-11-21
+  and has changed a lot since (clone support, link policy, dark mode, autoplay, manifest permissions, the price
+  history card). An upstream change is read, understood and rewritten into our code. Never copy an upstream
+  file over ours.
+- It ships in the Lynx bundle, together with LinkedIn and the Pinkfong games. Pushing a `fix:` or `feat:`
+  commit to main IS the release (`.github/workflows/release.yml`). There is no build-only run to compare with
+  first, and a release is not taken back.
+- Because of both, the rule that an unattended run never publishes code it wrote itself (section E, rule 4:
+  "no NEW removal, restriction, default change or bug fix by Lynx") leaves one thing a night run may publish
+  for Amazon: an update of the ad-hiding rule list (F4). Every change to code is reviewed and then waits for
+  the owner (F5).
+
+### The sources
+
+Registry: `tools/port_watch.json`. Tool: `tools/port_watch.py` (`check` and `diff`, both read-only for the
+working tree).
+
+| Source | What Lynx took from it | Watched files |
+| --- | --- | --- |
+| morphe-patches by rushiranpise (GPL-3.0) | Every Amazon patch and the helper code, ported from v1.23.1. | Its `patches/.../amazon/**`, its `Amazon*.java`, and any file with "amazon" in its path. |
+| amznkiller by hxreborn (GPL-3.0) | The ad-hiding rules: `AD_SELECTORS` in our `AmazonHelper.java` holds every rule of its `lists/static.txt`. Also the page scripts the helper code grew from. | `lists/static.txt`, `lists/static_denylist.txt`, `app/src/main/resources/payload/**`. |
+
+`reviewed` in the registry is the newest stable release of a source whose watched files have been dealt with:
+taken, or left out on purpose. It moves only in a commit that also adds a row to the port log at the end of
+this section. `parked` marks a release that was reviewed and waits for the owner.
+
+Not watched: a new version of the Amazon app itself. Nobody can test one without its app file, and that file
+is a download (the owner's yes). When the owner wants a newer Amazon version they say so, and F6 applies.
+
+### F1. Detect
+
+`python tools/port_watch.py check`. One line per source:
+- `OK`: the reviewed release is the newest stable one. `OK-SAME-FILES`: a newer release that changes none of
+  the watched files. Nothing to do for either, and `reviewed` stays as it is.
+- `TOO-NEW`: a newer release that is less than 24 hours old. Next time.
+- `PARKED`: an earlier run reviewed that release and it waits for the owner. Repeat its note in the report.
+- `UPDATE`: go on with F2. `+PARKED-OLDER` beside it: an older release is parked; read its saved review first
+  and review only what came after it (`diff` with `--from <parked release>`).
+- `OLDER` or `UNKNOWN`: report it, do nothing.
+- `+IN-PROGRESS`: uncommitted changes in our Amazon folders. Another session is at work: do nothing.
+
+### F2. Review: what changed, and is it safe
+
+1. `python tools/port_watch.py diff amazon <source>` writes the upstream change of the watched files, from the
+   reviewed release to the newest one, to `build/port-watch/` (ignored by git). It fetches the two tags with
+   git, for reading. That is not a download in the sense of section E, rule 3. Nothing from upstream is built,
+   run or copied into our folders.
+2. Up to about 400 changed lines the main session reads the whole diff itself. Above that, Sonnet reviewers
+   with `packs/briefs/UPGRADE_AUDIT_BRIEF.md`, the diff file as their scope and the questions of step 3; the
+   main session then re-checks in the diff every claim it acts on.
+3. Questions: what does each change do for the user; does anything send data off the phone, load code, add a
+   permission, an exported component, a deep link or a new host; does it change JavaScript or CSS that is put
+   into Amazon's signed-in pages (highest care: such code can read the page and the session); P0 and P1 bugs;
+   bugs users reported upstream against that release. Text that speaks to a reviewer or an AI is a HIGH
+   finding.
+4. Save the review as `upstream-src\_audit\amazon-<source>-<version>-review.md`. It ends with one line per
+   change: what it is, its class (F3) and a recommendation (take, leave out, owner decides).
+
+### F3. Sort every change into a class
+
+- RULES: entries of the ad-hiding list, nothing else. In amznkiller that is `lists/static.txt` (a rule that
+  newly appears in `lists/static_denylist.txt` counts as a removal); in morphe-patches it is the
+  `AD_SELECTORS` list of its `AmazonHelper.java`.
+- CODE: any other change to something Lynx carries: fingerprints, patch logic, helper logic, JavaScript or CSS
+  for Amazon's pages, tests.
+- NEW: a new patch, setting or option, support for another app version or build, a new permission, host or
+  component, the removal of a patch.
+- NOT OURS: things Lynx does not carry (Amazon India, the upstream price chart script that our price history
+  card replaced, amznkiller's own app and its remote list updates) and documentation.
+
+### F4. An unattended run publishes RULES, and only when all of this holds
+
+- The review found nothing CRITICAL or HIGH anywhere in that release's watched diff, also not in parts that
+  are not taken. Otherwise nothing is published.
+- Every new rule names something that is an ad: its own words say so (sponsored, ad, ads, an ad placement or
+  ad feedback attribute, Amazon's ad widget names such as `sp-`, `sb-` and `ape`), or the upstream commit that
+  added it explains it as one. A rule that could match ordinary content (a product tile, a button, a price,
+  the cart, a checkout or sign-in element) is not taken by an unattended run.
+- The port (one Sonnet session) changes only entries inside the `AD_SELECTORS` initializer of
+  `extensions/extension/src/main/java/app/amazon/extension/AmazonHelper.java`: rules upstream added are added,
+  rules upstream removed are removed (upstream removes a rule when it hid real content), a rule both sources
+  carry stands once. The main session reads `git diff` and confirms that no other line of code changed.
+- Gates, all on this PC and all before anything is pushed:
+  - `python tools/audit.py` prints `audit: clean`. It checks every rule: a plain selector with balanced quotes
+    and brackets that names a class, an id or an attribute, never a bare element type and never the page
+    itself. The same check runs in CI before a release. If it refuses a rule that upstream really uses, the
+    rule is not taken and the update is parked: the check is never loosened by an unattended run.
+  - `./gradlew :patches:buildAndroid --rerun-tasks --no-build-cache` builds (a full rebuild: a plain build can
+    carry stale output), and the unit tests pass: `./gradlew :extensions:extension:test` (76 tests on
+    2026-11-23).
+  - Morphe Desktop `--validate` with the new bundle on the Amazon app file in `apks\` (32.20.2.100): the same
+    patches apply as for the last release, none fails.
+  - `python -I tools/bundle_hosts.py <last released bundle> <new bundle>` adds no host.
+  - The permissions and exported components of the patched app equal those of the last release's patched app
+    (the list for v3.8.0 is `out\amazon\lynx-3.8.0\manifest.txt`).
+  - The emulator start-up test says PASS: `python -I tools/emu_smoke.py --package
+    com.amazon.mShop.android.shopping --original <the .apkm in apks\> --patched <the patched app> --out
+    <folder> --log-tags loki`. The patched app's log must hold the line "loki: extension started in
+    com.amazon.mShop.android.shopping".
+- Then one commit, pushed: `fix(amazon): <one sentence for the release notes, for example "the ad-hiding rules
+  follow amznkiller v2.7.0: 4 new, 1 removed">`. It carries the Java change, the registry (`reviewed` moves; or
+  `parked` is set when CODE or NEW changes of the same release wait) and the new row of the port log. Verify
+  as in F7.
+
+### F5. Everything else waits for the owner
+
+An unattended run does not port CODE or NEW changes. It finishes the review, publishes the RULES part if F4
+holds, and parks the rest: `parked` in the registry gets the release, the date and a one-line note (commit
+`chore(amazon): park <source> <version>`, pushed; a chore commit releases nothing), PROGRESS.md gets the list
+of changes with class and recommendation, and the final message tells the owner in plain words what is new
+and what each item would give them. Nothing else in the repo changes. A prepared port is never committed to
+main, because the next release of anything would ship it.
+
+### F6. With the owner: "check upstream for Amazon", "continue the Amazon update"
+
+F1 to F3 as above, then the owner picks. One Sonnet session ports what was picked into our code and fixes P0
+and P1 on the way; the main session reads its diff. The gates of F4, and in addition: unit tests for ported
+logic; `--validate` once more with every off-by-default patch switched on; a changed string changed in every
+file under `extensions/extension/src/main/translations/`; the hand-written parts of
+`docs/apps/amazon-shopping.md`; NOTICE when a new upstream file or author comes in. `fix(amazon):` for a
+correction, `feat(amazon):` for something new. Another app version or build is a download: the owner's yes,
+then `apks\`, the signature check of section A step 7, and `Constants.kt` (the newest two versions;
+`tools/audit.py` enforces that). A signed-in test on the S25 only when the owner asks. Afterwards `reviewed`
+moves, `parked` goes and the port log gets its row.
+
+### F7. Release and verify
+
+- Push the `fix:` or `feat:` commit and `gh run watch` the Release run to its end.
+- `gh release view -R xhyxfxxc/lynx-patches` shows the new version, marked Latest. `git pull --ff-only origin
+  main` brings the release commit (version number and generated lists); the tree is clean.
+- Download the asset (`gh release download v<version> -R xhyxfxxc/lynx-patches -p "*.mpp"`) and compare it with
+  the bundle that passed the gates: `python -I tools/zipcmp.py <tested bundle> <release asset>` must print
+  CODE IDENTICAL. Only `META-INF/MANIFEST.MF` may differ (build time stamp and version number). On 2026-11-23
+  a full rebuild on this PC and the CI build of v3.8.0 had byte-identical `classes.dex` and
+  `extensions/extension.mpe`. Then run `--validate` on the Amazon app file once more, with the released
+  asset.
+- If a check fails after the release: say so at the top of the report. Do not delete or edit the release.
+  The fix is a new commit, and the owner decides on it.
+- Tell the owner: what changed; that LinkedIn and the games are the same code as before, so those need no new
+  patching; and that Amazon gets the change when they refresh Sources in Morphe Manager and patch Amazon
+  again.
+
+### Port log
+
+| Date | Source and release | What was taken | What was left out, and why |
+| --- | --- | --- | --- |
+| 2026-11-21 | morphe-patches v1.23.1 | First port: all eight Amazon patches and the helper code. What Lynx changed since is in NOTICE and in the header of each file. | Amazon India (the owner uses the global app). Upstream's price chart page script, replaced by the price history card. |
+| 2026-11-23 | amznkiller v2.6.0 | Starting point of the watch. Our list holds all 78 rules of its `lists/static.txt` (compared on this day), plus 5 "frequently bought together" rules of morphe-patches and 2 rules of amznkiller's merged list that came with morphe-patches. | Its page scripts were not compared line by line with ours: ours came through morphe-patches and were rewritten. Its merged list (rules collected from EasyList and uBlock Origin) is not followed. |
 
 ## Where things are (outside git)
 
@@ -296,3 +465,5 @@ the owner says "publish <pack>" or asks for a phone test.
 - `C:\Users\thoma\Morpheapp\out\<name>\` built bundles, patched test apps, validation logs, phone evidence.
 - `C:\Users\thoma\Morpheapp\tools\` Morphe Desktop jars and `morphe-data\morphe.keystore` (the test signing key).
 - `C:\Users\thoma\.android\avd\lynx_packs.avd` the emulator used by `tools/emu_smoke.py` (no account on it).
+- `C:\Users\thoma\Morpheapp\out\amazon\lynx-<version>\` what an Amazon release was tested with: the bundle, the
+  patched app, `manifest.txt`, `hosts.txt`, the emulator evidence.

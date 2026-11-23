@@ -46,13 +46,19 @@ Lynx is for the owner's own use. Never sync upstream automatically. When the own
 3. Merge or cherry-pick (`git cherry-pick -x`) only what the owner picks, rebrand per the rules
    above, build, run `tools/audit.py`, then commit and push.
 
-Amazon Shopping has a second source: its patches were ported by hand on 2026-11-21 from
-rushiranpise/morphe-patches v1.23.1 (GPL-3.0; credited in NOTICE and the in-app Credits), into
-`app/amazon/patches/` and `app/amazon/extension/`. It is not a git remote (different layout). On
-"check upstream" for Amazon, diff that repo's `patches/src/main/kotlin/app/template/patches/amazon/`
-and `extensions/.../AmazonHelper.java` / `AmazonUrls.java` since v1.23.1 and port by hand what the
-owner picks. Our Amazon code has since diverged (clone support, link policy, dark mode, autoplay,
-manifest permissions, price history card), so never copy their files over ours.
+Amazon Shopping has two sources of its own. Its patches were ported by hand on 2026-11-21 from
+rushiranpise/morphe-patches v1.23.1 (GPL-3.0; credited in NOTICE and the in-app Credits) into
+`app/amazon/patches/` and `app/amazon/extension/`, and its ad-hiding rules follow `lists/static.txt` of
+hxreborn/amznkiller (GPL-3.0). Neither is a git remote (different layout). Our Amazon code has since
+diverged (clone support, link policy, dark mode, autoplay, manifest permissions, price history card), so
+never copy their files over ours: an upstream change is read and rewritten by hand. Owner decision
+2026-11-23: these two sources are checked by the scheduled run ("check Amazon Shopping in the same way
+(cyber, bug fix, publish etc)"). `python tools/port_watch.py check` compares the newest stable release of
+each source with the one recorded as reviewed in `tools/port_watch.json`; the order of work is section F
+of `packs/PROCESS.md`. An unattended run publishes by itself only an update of the ad-hiding rule list
+(`AD_SELECTORS` in `AmazonHelper.java`, every entry checked by `tools/audit.py`); a change to code is
+reviewed and parked until the owner picks what to port. An Amazon release is a Lynx bundle release
+(`fix(amazon):` or `feat(amazon):`).
 
 ## Packs: other authors' patch packs, published as separate sources (owner decision 2026-11-23)
 
@@ -108,8 +114,10 @@ manifest permissions, price history card), so never copy their files over ours.
   clean (nothing risky in the review, no new Lynx change needed, every check passes); anything else is prepared
   and parked for the owner. It never downloads, never uses a phone (the emulator start-up test
   `tools/emu_smoke.py` stands in) and takes no pre-releases. Signed-in screens are not tested for any pack
-  upgrade: the owner tries new versions on the daily phone and problems are fixed when they report them. Lynx's
-  own upstream (Loki Patches) is not part of it: still on demand only.
+  upgrade: the owner tries new versions on the daily phone and problems are fixed when they report them. The same run
+  also watches the two sources of the Amazon Shopping patches, which are part of the Lynx bundle and not a pack
+  (`python tools/port_watch.py check`, section F of `packs/PROCESS.md`). Lynx's own upstream (Loki Patches) is not
+  part of it: still on demand only.
 
 ## Branches, commits, releases
 
@@ -129,8 +137,13 @@ In Git Bash from the repo root:
 export JAVA_HOME="C:/Users/thoma/.jdks/temurin-21.0.13" ANDROID_HOME="C:/Users/thoma/Android/Sdk"
 export GITHUB_ACTOR=xhyxfxxc GITHUB_TOKEN="$(gh auth token)"
 ./gradlew :patches:buildAndroid   # output: patches/build/libs/patches-*.mpp
+./gradlew :extensions:extension:test   # the extension's unit tests (plain JVM tests)
 python tools/audit.py             # the same audit CI runs before a release
 ```
+
+Before a local bundle is compared with a release asset (`python -I tools/zipcmp.py`), build it with
+`--rerun-tasks --no-build-cache`: a plain build can carry stale output folders. A full rebuild on this PC
+and the CI build of the same commit have byte-identical code (checked for v3.8.0 on 2026-11-23).
 
 Apply with Morphe Desktop, check fingerprints with `--validate`. Original APKs live in
 `C:\Users\thoma\Morpheapp\apks\` (outside the repo); never commit APKs.
