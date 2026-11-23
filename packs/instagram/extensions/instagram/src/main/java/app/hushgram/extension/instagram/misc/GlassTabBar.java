@@ -363,20 +363,23 @@ public final class GlassTabBar {
     /**
      * Gives [view], a reel's video or cover, the bottom margin {@link #reelsMediaMargin} works out for its
      * parent's room, on top of the margin it had before this gave it one, which [given] remembers. Says
-     * whether that changed it.
+     * whether that changed it. [given] is keyed by the layout params, not the view: Instagram's reel binder
+     * hands the video and its cover one params object, so a margin kept per view read the half slot the
+     * video just got as the cover's own and gave it again, a whole slot that put the reel up at the top (#763).
      */
-    static boolean placeReelMedia(View view, boolean keep, boolean behind, int slot, Map<View, Integer> given) {
+    static boolean placeReelMedia(View view, boolean keep, boolean behind, int slot,
+                                  Map<ViewGroup.LayoutParams, Integer> given) {
         if (!(view.getLayoutParams() instanceof FrameLayout.LayoutParams) || !(view.getParent() instanceof View)) {
             return false;
         }
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) view.getLayoutParams();
         View parent = (View) view.getParent();
-        Integer before = given.get(view);
+        Integer before = given.get(params);
         int own = before != null ? before : params.bottomMargin;
         int room = parent.getHeight() - parent.getPaddingTop() - parent.getPaddingBottom();
         int margin = parent.getHeight() <= 0 ? 0 : reelsMediaMargin(keep, behind, slot, room, params.height, params.gravity);
-        if (margin == 0) given.remove(view);
-        else given.put(view, own);
+        if (margin == 0) given.remove(params);
+        else given.put(params, own);
         if (params.bottomMargin == own + margin) return false;
         params.bottomMargin = own + margin;
         view.setLayoutParams(params);
@@ -390,6 +393,18 @@ public final class GlassTabBar {
     static int intoTheNavigationBar(int bottom, int window, int nav) {
         if (nav <= 0 || window <= 0) return 0;
         return Math.max(0, Math.min(nav, bottom - (window - nav)));
+    }
+
+    /**
+     * {@link #intoTheNavigationBar} for the strip a reel's seek bar is kept out of ({@link ReelSeekRoom#strip}):
+     * the navigation bar [nav] or the system's gesture area [gestures], whichever is taller, or [unreported]
+     * where the phone reports neither. Lifted only past the navigation bar, a seek bar on a reel with the pill
+     * away still reached into the gesture area, and the seek bar's room put its own lift on top of the pill's.
+     * During a drag each took the other's for Instagram's and let go, and the bar was left over the caption
+     * (#450).
+     */
+    static int intoTheSeekBarsStrip(int bottom, int window, int nav, int gestures, int unreported) {
+        return intoTheNavigationBar(bottom, window, ReelSeekRoom.strip(nav, gestures, unreported));
     }
 
     private static int liftReels(View view, View bar, int id, int wanted, java.util.Map<View, Integer> given,
@@ -496,6 +511,38 @@ public final class GlassTabBar {
     static boolean othersScroll(View view, @Nullable Integer ours) {
         int now = view.getScrollY();
         return ours == null ? now != 0 && !ReelSeekRoom.scrollsUp(view) : now != ours;
+    }
+
+    /**
+     * Puts back at 0 each view under [band], [depth] levels down at most, that Litho left translated against
+     * [band]'s own translation, and says how many. Litho ends an animation of one of its views by putting it
+     * where its layout says inside the LithoView, counting the translations of the views it's in but not their
+     * scrolls (#221). A seek bar row has less room over its seek bar than the pill's lift, so the rest of the
+     * lift is a translation, and the animation Litho runs as the window grows back from picture in picture
+     * left the seek bar's holder that much lower, on top of the pill (#450). Such a view's own translation and
+     * those of the views between it and [band] add up to the opposite of [band]'s. Any other translation, a
+     * slide still under way included, is left as it is.
+     */
+    static int keepUnderTheLift(View band, int depth) {
+        float lift = band.getTranslationY();
+        if (lift == 0f || !(band instanceof ViewGroup)) return 0;
+        return putBackUnder((ViewGroup) band, lift, depth);
+    }
+
+    private static int putBackUnder(ViewGroup group, float above, int depth) {
+        if (depth <= 0) return 0;
+        int fixed = 0;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+            float own = child.getTranslationY();
+            if (own != 0f && own + above == 0f) {
+                child.setTranslationY(0f);
+                own = 0f;
+                fixed++;
+            }
+            if (child instanceof ViewGroup) fixed += putBackUnder((ViewGroup) child, above + own, depth - 1);
+        }
+        return fixed;
     }
 
     /**
@@ -658,6 +705,30 @@ public final class GlassTabBar {
             ring.setCallback(callback);
         }
         return false;
+    }
+
+    /**
+     * Puts back the liquid look's shift ([shifted]), fade ([faded]) and tuck ([tucked]) on every tab that is no
+     * longer in [bar], wherever nothing else changed it since, and forgets that tab. Unfolding a foldable has
+     * Instagram move the bar's own tabs into its side rail, and the tabs took their shifts along: out of line
+     * there, or off the rail altogether (#764). Folding moves them back, and the look arranges them again.
+     * Returns how many tabs it let go.
+     */
+    static int tabsThatLeft(ViewGroup bar, Map<View, Float> shifted, Map<View, Float> faded,
+                            Map<View, Boolean> tucked) {
+        if (shifted.isEmpty() && faded.isEmpty() && tucked.isEmpty()) return 0;
+        java.util.Set<View> gone = new java.util.HashSet<>();
+        for (View tab : shifted.keySet()) if (tab != null && tab.getParent() != bar) gone.add(tab);
+        for (View tab : faded.keySet()) if (tab != null && tab.getParent() != bar) gone.add(tab);
+        for (View tab : tucked.keySet()) if (tab != null && tab.getParent() != bar) gone.add(tab);
+        for (View tab : gone) {
+            Float shift = shifted.remove(tab);
+            if (shift != null && tab.getTranslationX() == shift) tab.setTranslationX(0f);
+            Float alpha = faded.remove(tab);
+            if (alpha != null && tab.getAlpha() == alpha) tab.setAlpha(1f);
+            if (tucked.remove(tab) != null && tab.getVisibility() == View.INVISIBLE) tab.setVisibility(View.VISIBLE);
+        }
+        return gone.size();
     }
 
     /** Whether [drawable] is a ripple with nothing in it but its mask: a touch's feedback, which draws nothing at rest. */
@@ -962,6 +1033,12 @@ public final class GlassTabBar {
             this.name = name;
         }
 
+        /** Has the next look go ahead when [root] holds the screen at all, as a layout may just have put it up (#751). */
+        void laidOut(View root) {
+            int id = id(root.getContext(), name);
+            if (id != 0 && root.findViewById(id) != null) lookedAt = -SHEET_LOOK_MS;
+        }
+
         /** Whether the screen shows {@link #onTop on top} in [root]'s window. */
         boolean in(View root) {
             return shownIn(root) != null;
@@ -1070,6 +1147,10 @@ public final class GlassTabBar {
     static final String COUNT_REEL_RAISED = "Reel's caption or seek bar raised over its footer";
     /** What a reel's video or cover moved up to where the slot would put it, with the reel behind the pill, is counted under (#450). */
     static final String COUNT_REEL_MEDIA_PLACED = "Reel behind the pill placed as over the slot";
+    /** Counted each time a view Litho put back down under a raised reel band is lifted with the band again (#450). */
+    static final String COUNT_LITHO_PUT_BACK = "Reel's seek bar kept up after Litho put it back";
+    /** How many levels under a raised reel band are looked at for a view Litho put back down ({@link #keepUnderTheLift}). */
+    static final int PUT_BACK_DEPTH = 3;
     /** Counted each time a footer under a reel is laid over the reel instead of shrinking it (#260). */
     static final String COUNT_FOOTER_OVERLAID = "Footer laid over the reel";
     /**
@@ -1100,6 +1181,8 @@ public final class GlassTabBar {
     static final String COUNT_CHAT_ASIDE = "Bar hidden over a chat";
     /** Counted once for each bar whose Search tab the liquid look puts in a circle of its own (#65). */
     static final String COUNT_SEARCH_APART = "Search put in its own circle";
+    /** Counted each time tabs Instagram moved out of the bar, as into a foldable's side rail, are put back (#764). */
+    static final String COUNT_TABS_LEFT = "Tabs out of the bar put back";
     /** Counted each time a tab badge's ring, new to the glass, is made clear (#315). */
     static final String COUNT_BADGE_RING = "Tab badge's ring made clear";
 
@@ -1853,8 +1936,11 @@ public final class GlassTabBar {
         private final WeakHashMap<View, View> bands = new WeakHashMap<>();
         /** The footers laid over a reel's bottom (#260), each with the top margin it was given. */
         private final WeakHashMap<View, Integer> overlapped = new WeakHashMap<>();
-        /** The reel videos and covers moved up for a reel behind the pill (#450), each with the margin it had before. */
-        private final WeakHashMap<View, Integer> mediaMargins = new WeakHashMap<>();
+        /**
+         * The layout params of the reel videos and covers moved up for a reel behind the pill (#450), each
+         * with the margin it had before. A video and its cover share one (#763).
+         */
+        private final WeakHashMap<ViewGroup.LayoutParams, Integer> mediaMargins = new WeakHashMap<>();
         private final java.util.ArrayList<View> media = new java.util.ArrayList<>();
         private final java.util.ArrayList<View> anchors = new java.util.ArrayList<>();
         private final java.util.ArrayList<View> footerViews = new java.util.ArrayList<>();
@@ -2130,6 +2216,10 @@ public final class GlassTabBar {
          * moved goes back.
          */
         private void arrangeTabs() {
+            if (tabsThatLeft(bar, shifted, faded, tucked) > 0) {
+                HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_TABS_LEFT);
+                diagnose("tabs moved out of the bar, put back as Instagram had them", null);
+            }
             if (!liquidNow() || !pill.pillBounds(whole)) {
                 if (!shifted.isEmpty() || !faded.isEmpty() || !tucked.isEmpty()) putTabsBack();
                 return;
@@ -2338,17 +2428,23 @@ public final class GlassTabBar {
         /**
          * Sends the window's insets round again when this floating pill shows or hides in front, or its
          * activity came back, so Instagram reads the navigation bar's height again ({@link #navBarHeight}).
-         * A bottom sheet coming up over it or going changes nothing Instagram reads (#222).
+         * A bottom sheet coming up over it or going changes nothing Instagram reads (#222). When the pill
+         * stops showing in front, as Instagram hides its bar for a story, the screens get the bar's real
+         * height at once ({@link FullScreenBars#giveNavBarHeightNow}). Told only after that pass, a story
+         * opening under the pill showed down to the bottom edge for a frame and then jumped up (#618).
+         * True when they were told now, so this frame waits for their new layout.
          */
-        private void askForInsetsWhenShownChanges() {
-            if (!floating) return;
+        private boolean askForInsetsWhenShownChanges() {
+            if (!floating) return false;
             Activity now = front.get();
             boolean shown = now != null && !HushgramPause.isPaused() && floatsShownIn(now);
-            if (insetsShown != null && insetsShown == shown) return;
+            if (insetsShown != null && insetsShown == shown) return false;
+            boolean wentAway = Boolean.TRUE.equals(insetsShown) && now != null;
             insetsShown = shown;
             View root = bar.getRootView();
             root.post(root::requestApplyInsets);
             HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_INSETS_AGAIN);
+            return wentAway && FullScreenBars.giveNavBarHeightNow();
         }
 
         /** The clear space above and under the pill. */
@@ -2579,8 +2675,11 @@ public final class GlassTabBar {
                         if (band == null) continue;
                         bands.put(anchor, band);
                     }
-                    if (raisedNow.add(band) && lift(band, -footer)) {
-                        HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_REEL_RAISED);
+                    if (!raisedNow.add(band)) continue;
+                    if (lift(band, -footer)) HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_REEL_RAISED);
+                    Float ours = raised.get(band);
+                    if (ours != null && ours == band.getTranslationY() && keepUnderTheLift(band, PUT_BACK_DEPTH) > 0) {
+                        HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_LITHO_PUT_BACK);
                     }
                 }
             }
@@ -2597,8 +2696,8 @@ public final class GlassTabBar {
         }
 
         /**
-         * How far [viewer] reaches into the navigation bar at its window's foot ({@link #intoTheNavigationBar}).
-         * The bar counts at its full height whether it shows or Full screen Reels hides it, since a swipe up
+         * How far [viewer] reaches into the navigation bar, or the taller gesture area, at its window's foot
+         * ({@link #intoTheSeekBarsStrip}). The bar counts at its full height whether it shows or Full screen Reels hides it, since a swipe up
          * from that strip still leaves the app. Measured on the viewer, since what Instagram was last told
          * about the bar says nothing once Full screen Reels hides it as the reel opens (#450). Without the
          * window's insets, the height Instagram was answered 0 for ({@link #navUnpadded}), and where the phone
@@ -2609,12 +2708,13 @@ public final class GlassTabBar {
             WindowInsets insets = viewer.getRootWindowInsets();
             View root = viewer.getRootView();
             if (insets == null || root == null) return navUnpadded();
-            int nav = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                    ? insets.getInsetsIgnoringVisibility(WindowInsets.Type.navigationBars()).bottom
+            boolean r = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R;
+            int nav = r ? insets.getInsetsIgnoringVisibility(WindowInsets.Type.navigationBars()).bottom
                     : insets.getStableInsetBottom();
-            if (nav <= 0) nav = FullScreenBars.unreportedNavHeight();
+            int gestures = r ? insets.getInsetsIgnoringVisibility(WindowInsets.Type.mandatorySystemGestures()).bottom : 0;
             viewer.getLocationInWindow(viewerAt);
-            return intoTheNavigationBar(viewerAt[1] + viewer.getHeight(), root.getHeight(), nav);
+            return intoTheSeekBarsStrip(viewerAt[1] + viewer.getHeight(), root.getHeight(), nav, gestures,
+                    FullScreenBars.unreportedNavHeight());
         }
 
         /**
@@ -2810,7 +2910,8 @@ public final class GlassTabBar {
                 }
                 // A Reels viewer laid out at a size it's about to lose isn't shown at it either.
                 if (reelsMoved) layOutAgain = true;
-                askForInsetsWhenShownChanges();
+                // Screens given the navigation bar's height as the pill went hold the frame too (#618).
+                if (askForInsetsWhenShownChanges()) layOutAgain = true;
                 // Moved sheets hold the frame back for their new layout too, so a sheet never shows on the
                 // navigation bar first. They move once when the holder first turns up and when the room changes.
                 if (liftSheets()) layOutAgain = true;

@@ -71,5 +71,21 @@ final class EntryCategory {
             return true;
         });
         entry.addPreference(black);
+        SwitchPreference light = toggle(context, Settings.SETTINGS_LIGHT_LOOK, L10n.t("Light settings page"),
+                L10n.t("White rows and dialogs, with HushGram's name at the top. Takes the place of Black settings page while it's on."));
+        light.setOnPreferenceChangeListener((preference, value) -> {
+            // Posted, so the page redraws with the value this change saves.
+            Utils.runOnMainThread(page::applyLook);
+            return true;
+        });
+        entry.addPreference(light);
+        SwitchPreference instagram = toggle(context, Settings.SETTINGS_INSTAGRAM_LOOK, L10n.t("Instagram settings page"),
+                L10n.t("Plain rows, switches and colors like Instagram's own settings, dark or light as Instagram is. Takes the place of Black and Light settings page while it's on."));
+        instagram.setOnPreferenceChangeListener((preference, value) -> {
+            // Posted, so the page redraws with the value this change saves.
+            Utils.runOnMainThread(page::applyLook);
+            return true;
+        });
+        entry.addPreference(instagram);
     }
 }

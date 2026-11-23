@@ -63,6 +63,7 @@ public final class ChatPager {
     private static final int ACTION_FIRST = 0;
     private static final int ACTION_DATE = 1;
     private static final int ACTION_EXPORT = 2;
+    private static final int ACTION_SELECT = 3;
     /** How often the list is scrolled to its old end and looked at again. */
     static final long TICK_MS = 450;
     /** Looks with nothing new in a row before the chat counts as fully loaded. A page can take seconds to come. */
@@ -89,6 +90,7 @@ public final class ChatPager {
     static final String[] FIRST_ICONS = {"instagram_history_pano_outline_24", "instagram_history_outline_24"};
     static final String[] DATE_ICONS = {"instagram_calendar_pano_outline_24", "instagram_calendar_outline_24"};
     static final String[] EXPORT_ICONS = {"instagram_download_pano_outline_24", "instagram_download_outline_24"};
+    static final String[] SELECT_ICONS = {"instagram_circle_check_pano_outline_24", "instagram_circle_check_outline_24"};
     /** Instagram's row at a chat's old end: a page loading, Load more, Retry, or nothing more to load. */
     static final String LOAD_MORE = "com.instagram.ui.widget.loadmore.LoadMoreButton";
     /** What that row shows, by the child it displays. {@link #END_NONE} when none is on screen. */
@@ -475,12 +477,14 @@ public final class ChatPager {
         String description = jumpWanted() ? L10n.t("Jump to the first message or a date") : L10n.t("Export chat");
         ImageView made = addHeaderButton(row, glyph, description, BUTTON_TAG, TAP, KEEP);
         button = new WeakReference<>(made);
+        ChatHeaderFit.show(made, true);
         return made;
     }
 
     /**
      * Makes a button showing [glyph] the way the header's call buttons in [row] look and puts it first
-     * in the row, tagged [tag] so it can be found again.
+     * in the row, tagged [tag] so it can be found again. The row is fitted from then on, so the buttons
+     * don't crowd the chat's name or push a call button off the bar ({@link ChatHeaderFit}, #802).
      */
     static ImageView addHeaderButton(LinearLayout row, Drawable glyph, String description, String tag,
                                      View.OnClickListener tap, View.OnAttachStateChangeListener keep) {
@@ -516,6 +520,7 @@ public final class ChatPager {
         made.setOnClickListener(tap);
         made.addOnAttachStateChangeListener(keep);
         row.addView(made, 0, params);
+        ChatHeaderFit.watch(row);
         return made;
     }
 
@@ -581,16 +586,7 @@ public final class ChatPager {
             }
             final List<String> labels = new ArrayList<>();
             final List<Integer> actions = new ArrayList<>();
-            if (jumpWanted()) {
-                labels.add(L10n.t("Jump to the first message"));
-                actions.add(ACTION_FIRST);
-                labels.add(L10n.t("Jump to a date"));
-                actions.add(ACTION_DATE);
-            }
-            if (exportWanted()) {
-                labels.add(L10n.t("Export chat"));
-                actions.add(ACTION_EXPORT);
-            }
+            lines(labels, actions);
             if (labels.isEmpty()) return false;
             final String name = nameIn(root);
             try {
@@ -613,6 +609,59 @@ public final class ChatPager {
         }
     }
 
+    /** The menu's lines and what each does, as the switches say. */
+    private static void lines(List<String> labels, List<Integer> actions) {
+        if (jumpWanted()) {
+            labels.add(L10n.t("Jump to the first message"));
+            actions.add(ACTION_FIRST);
+            labels.add(L10n.t("Jump to a date"));
+            actions.add(ACTION_DATE);
+        }
+        if (exportWanted()) {
+            labels.add(L10n.t("Export chat"));
+            actions.add(ACTION_EXPORT);
+            labels.add(L10n.t("Select messages"));
+            actions.add(ACTION_SELECT);
+        }
+    }
+
+    private static String[] iconsFor(int action) {
+        return action == ACTION_FIRST ? FIRST_ICONS : action == ACTION_DATE ? DATE_ICONS
+                : action == ACTION_SELECT ? SELECT_ICONS : EXPORT_ICONS;
+    }
+
+    /**
+     * Adds the menu's lines to [menu] in [group], for More when the header's buttons are folded (#802).
+     * Each item's id is its place in [actions], which gets what the line does. Adds nothing while no chat,
+     * chat view or activity is there.
+     */
+    static void addLines(View pressed, Menu menu, int group, final List<Runnable> actions) {
+        Object fragment = screen.get();
+        if (fragment == null || !wanted()) return;
+        final Activity activity = TextGrab.ownerOf(pressed, null);
+        final View root = viewOf(fragment);
+        if (activity == null || root == null) {
+            log("no lines for More: " + (activity == null ? "no activity" : "the chat has no view"));
+            return;
+        }
+        final String name = nameIn(root);
+        List<String> labels = new ArrayList<>();
+        List<Integer> lines = new ArrayList<>();
+        lines(labels, lines);
+        int color = FeedDownloadButton.iconColor(activity);
+        for (int i = 0; i < labels.size(); i++) {
+            final int action = lines.get(i);
+            int id = actions.size();
+            MenuItem item = menu.add(group, id, id, labels.get(i));
+            actions.add(() -> act(activity, root, name, action));
+            Drawable glyph = icon(activity, iconsFor(action));
+            if (glyph != null) {
+                glyph.setTintList(ColorStateList.valueOf(color));
+                item.setIcon(glyph);
+            }
+        }
+    }
+
     /** The menu as a popup under what was pressed, each line with Instagram's glyph for it (#453). */
     private static void popup(final Activity activity, View pressed, final View root, final String name, List<String> labels,
                               List<Integer> actions) {
@@ -622,7 +671,7 @@ public final class ChatPager {
         for (int i = 0; i < labels.size(); i++) {
             int action = actions.get(i);
             MenuItem item = items.add(Menu.NONE, action, i, labels.get(i));
-            Drawable glyph = icon(activity, action == ACTION_FIRST ? FIRST_ICONS : action == ACTION_DATE ? DATE_ICONS : EXPORT_ICONS);
+            Drawable glyph = icon(activity, iconsFor(action));
             if (glyph != null) {
                 glyph.setTintList(ColorStateList.valueOf(color));
                 item.setIcon(glyph);
@@ -641,7 +690,21 @@ public final class ChatPager {
     private static void act(Activity activity, View root, String name, int action) {
         if (action == ACTION_FIRST) start(activity, root, 0, null);
         else if (action == ACTION_DATE) pickDate(activity, root);
+        else if (action == ACTION_SELECT) select(activity, root, name);
         else start(activity, root, 0, name);
+    }
+
+    /** Opens the picker over the messages the chat has loaded (#778). Nothing older is asked for. */
+    private static void select(Activity activity, View root, String name) {
+        View list = ListSource.find(root);
+        List<ChatHistory.Entry> entries = list == null ? null : new ListSource(list).entries();
+        if (entries == null || entries.isEmpty()) {
+            log("no picker: " + (list == null ? "no list" : "no messages read"));
+            Utils.showToastShort(L10n.t("Couldn't find this chat's messages."));
+            return;
+        }
+        log("picker opened over " + entries.size() + " messages");
+        ChatSelect.show(activity, name, entries);
     }
 
     private static void pickDate(final Activity activity, final View root) {
@@ -769,7 +832,11 @@ public final class ChatPager {
             Utils.showToastShort(L10n.t("No messages found to save."));
             return;
         }
-        final String text = ChatHistory.document(entries, title, L10n.t("You"));
+        save(context, title, ChatHistory.document(entries, title, L10n.t("You")));
+    }
+
+    /** Writes [text], a chat's export, as a file named for [title], off the main thread, and says where it went. */
+    static void save(final Context context, String title, final String text) {
         final String name = ChatExport.fileName(title, System.currentTimeMillis());
         Utils.runOnBackgroundThread(new Runnable() {
             @Override public void run() {

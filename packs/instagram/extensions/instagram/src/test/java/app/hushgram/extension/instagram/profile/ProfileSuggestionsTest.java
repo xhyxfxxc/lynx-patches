@@ -60,6 +60,8 @@ public class ProfileSuggestionsTest {
         BaseSettings.PAUSED.save(false);
         PauseForTests.resume();
         Settings.HIDE_PROFILE_SUGGESTIONS.save(true);
+        context.getSharedPreferences(NotificationKinds.STORE, Context.MODE_PRIVATE).edit().clear().commit();
+        NotificationKinds.forgetForTests();
         HookStatus.clear();
         FeedFilterCounters.clear();
     }
@@ -73,6 +75,9 @@ public class ProfileSuggestionsTest {
         Settings.HIDE_NOTIFICATION_SUGGESTIONS.resetToDefault();
         Settings.HIDE_NOTIFICATION_FEATURED.resetToDefault();
         Settings.HIDE_NOTIFICATION_CHANNEL_INVITES.resetToDefault();
+        Settings.HIDDEN_NOTIFICATION_KINDS.resetToDefault();
+        context.getSharedPreferences(NotificationKinds.STORE, Context.MODE_PRIVATE).edit().clear().commit();
+        NotificationKinds.forgetForTests();
         BaseSettings.PAUSED.save(false);
         PauseForTests.resume();
         HookStatus.clear();
@@ -460,6 +465,77 @@ public class ProfileSuggestionsTest {
         assertFalse("a throwing switch keeps the flag", ProfileSuggestions.excludeRequestSuggestions(0, THROWS));
         String missing = HookStatus.missing(FamilyNames.PROFILE_SUGGESTIONS).toString();
         assertTrue(missing, missing.contains("'" + ProfileSuggestions.FOLLOW_REQUESTS + "'"));
+    }
+
+    /**
+     * The Suggested for you section under the follow requests goes with the same switch even when the
+     * reply carries suggested people: on, the list reads as empty and the hook counts it; off, paused or
+     * unready, the list's own answer stands, and a list already empty stays empty (#814).
+     */
+    @Test
+    public void theFollowRequestsSectionGoesWithTheFollowListSwitch() {
+        assertFalse("off to start", ProfileSuggestions.requestSuggestionsEmpty(0));
+        assertTrue("an empty list stays empty", ProfileSuggestions.requestSuggestionsEmpty(1));
+
+        Settings.HIDE_FOLLOW_LIST_SUGGESTIONS.save(true);
+        assertTrue(ProfileSuggestions.requestSuggestionsEmpty(0));
+        String report = FeedFilterCounters.report().toString();
+        assertTrue(report, report.contains(ProfileSuggestions.REQUEST_SECTION));
+        assertTrue(report, report.contains("1 removed"));
+
+        BaseSettings.PAUSED.save(true);
+        PauseForTests.pause(HushgramPause.Reason.SWITCH);
+        assertFalse("paused", ProfileSuggestions.requestSuggestionsEmpty(0));
+        BaseSettings.PAUSED.save(false);
+        PauseForTests.resume();
+        SettingsContextRule.withoutContext(() -> assertFalse("unready", ProfileSuggestions.requestSuggestionsEmpty(0)));
+
+        Settings.HIDE_FOLLOW_LIST_SUGGESTIONS.save(false);
+        assertFalse("off", ProfileSuggestions.requestSuggestionsEmpty(0));
+        assertFalse("a throwing switch keeps the list", ProfileSuggestions.requestSuggestionsEmpty(0, THROWS));
+        String missing = HookStatus.missing(FamilyNames.PROFILE_SUGGESTIONS).toString();
+        assertTrue(missing, missing.contains("'" + ProfileSuggestions.REQUEST_SECTION + "'"));
+    }
+
+    /**
+     * On the Follow requests page a notification opens, the switch turns every suggestion unit's name
+     * into one the list doesn't know, so it skips them, and leaves the requests' own unit. Discover
+     * people keeps its units, and off, paused, unready or throwing, every unit keeps its name (#814).
+     */
+    @Test
+    public void theFollowRequestsPageDropsItsSuggestionUnits() {
+        String requests = ProfileSuggestions.REQUESTS_PAGE;
+        ProfileSuggestions.friendingCenterMode(requests);
+        assertEquals("off to start", "suggested_users", ProfileSuggestions.friendingUnit("suggested_users"));
+
+        Settings.HIDE_FOLLOW_LIST_SUGGESTIONS.save(true);
+        assertEquals(ProfileSuggestions.UNKNOWN_UNIT, ProfileSuggestions.friendingUnit("suggested_users"));
+        assertEquals(ProfileSuggestions.UNKNOWN_UNIT, ProfileSuggestions.friendingUnit("follow_back"));
+        assertEquals("the requests stay", requests, ProfileSuggestions.friendingUnit(requests));
+        assertNull("no name stays no name", ProfileSuggestions.friendingUnit(null));
+        String report = FeedFilterCounters.report().toString();
+        assertTrue(report, report.contains(ProfileSuggestions.FRIENDING_REQUESTS));
+        assertTrue(report, report.contains("2 removed"));
+
+        ProfileSuggestions.friendingCenterMode("discover_people");
+        assertEquals("Discover people keeps its suggestions", "suggested_users", ProfileSuggestions.friendingUnit("suggested_users"));
+        ProfileSuggestions.friendingCenterMode(null);
+        assertEquals("no page read yet", "suggested_users", ProfileSuggestions.friendingUnit("suggested_users"));
+
+        ProfileSuggestions.friendingCenterMode(requests);
+        BaseSettings.PAUSED.save(true);
+        PauseForTests.pause(HushgramPause.Reason.SWITCH);
+        assertEquals("paused", "suggested_users", ProfileSuggestions.friendingUnit("suggested_users"));
+        BaseSettings.PAUSED.save(false);
+        PauseForTests.resume();
+        SettingsContextRule.withoutContext(() -> assertEquals("unready", "suggested_users", ProfileSuggestions.friendingUnit("suggested_users")));
+
+        Settings.HIDE_FOLLOW_LIST_SUGGESTIONS.save(false);
+        assertEquals("off", "suggested_users", ProfileSuggestions.friendingUnit("suggested_users"));
+        assertEquals("a throwing switch keeps the unit", "suggested_users", ProfileSuggestions.friendingUnit("suggested_users", THROWS));
+        String missing = HookStatus.missing(FamilyNames.PROFILE_SUGGESTIONS).toString();
+        assertTrue(missing, missing.contains("'" + ProfileSuggestions.FRIENDING_REQUESTS + "'"));
+        ProfileSuggestions.friendingCenterMode(null);
     }
 
     /** A follow list switch that throws leaves the list's answer and says which hook threw. */
@@ -1000,6 +1076,41 @@ public class ProfileSuggestionsTest {
         Settings.HIDE_NOTIFICATION_CHANNEL_INVITES.save(false);
         ProfileSuggestions.notificationParsed(invite, "igd_broadcast_chat_creation");
         assertSame("off", invite, ProfileSuggestions.keepNotification(invite));
+    }
+
+    /**
+     * #756: a row of a kind ticked under Hide notifications by type leaves the list with every switch
+     * off, other kinds stay, and paused or unticked it's back. Each kind parsed is kept for the list.
+     */
+    @Test
+    public void aKindTickedUnderHideByTypeLeavesTheList() {
+        Object mention = new Object();
+        Object follow = new Object();
+        ProfileSuggestions.notificationParsed(mention, "mentioned_comment");
+        assertSame("nothing ticked", mention, ProfileSuggestions.keepNotification(mention));
+
+        Settings.HIDDEN_NOTIFICATION_KINDS.save("mentioned_comment");
+        ProfileSuggestions.notificationParsed(mention, "mentioned_comment");
+        assertNull(ProfileSuggestions.keepNotification(mention));
+        ProfileSuggestions.notificationParsed(follow, "user_followed");
+        assertSame(follow, ProfileSuggestions.keepNotification(follow));
+        String report = FeedFilterCounters.report().toString();
+        assertTrue(report, report.contains(ProfileSuggestions.CHOSEN_KINDS + " 1"));
+
+        java.util.List<String[]> kept = NotificationKinds.offered(context, java.util.Collections.emptySet());
+        assertEquals(2, kept.size());
+        assertEquals("mentioned_comment", kept.get(0)[0]);
+        assertEquals("user_followed", kept.get(1)[0]);
+
+        BaseSettings.PAUSED.save(true);
+        PauseForTests.pause(HushgramPause.Reason.SWITCH);
+        ProfileSuggestions.notificationParsed(mention, "mentioned_comment");
+        assertSame("paused", mention, ProfileSuggestions.keepNotification(mention));
+        BaseSettings.PAUSED.save(false);
+        PauseForTests.resume();
+        Settings.HIDDEN_NOTIFICATION_KINDS.save("");
+        ProfileSuggestions.notificationParsed(mention, "mentioned_comment");
+        assertSame("unticked", mention, ProfileSuggestions.keepNotification(mention));
     }
 
     /** #259: the list builder skips a row tagged priority_stories only while the Featured switch is on. */

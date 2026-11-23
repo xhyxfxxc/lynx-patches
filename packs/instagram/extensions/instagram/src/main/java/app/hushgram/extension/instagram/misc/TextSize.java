@@ -30,9 +30,21 @@ import app.hushgram.extension.shared.Utils;
  * the saved share. A change of the phone's settings puts the phone's scale back, so it's set again
  * then and as each screen comes back. The share is read once per process, so a change shows after a
  * restart. At 100%, while paused and on any failure, nothing is touched.
+ *
+ * <p>The resources the application and each screen hand out are Instagram's own, which keep a
+ * configuration of their own. A change of the phone's settings, turning the phone among them, has
+ * Instagram copy the phone's configuration into them again after this class has sized them, and the
+ * captions it lays out next come back at the phone's size (#782). The Font patch hands every
+ * configuration they take to {@link #sized} first.
+ *
+ * <p>Bigger text made a chat's message box taller (#806). {@link ComposerFit} keeps it the height
+ * it has at the phone's own size.
  */
 public final class TextSize {
     private static volatile boolean registered;
+
+    /** The share text draws at once installed, 1 before and when it's the phone's own. */
+    private static volatile float active = 1f;
 
     /** Whether a test says the patch is in this build, instead of asking {@link PatchFamily}. */
     @Nullable
@@ -44,7 +56,9 @@ public final class TextSize {
     /** Lets a test's next application install again. */
     static void resetForTests() {
         registered = false;
+        active = 1f;
         inBuildForTests = null;
+        ComposerFit.resetForTests();
     }
 
     private static boolean inBuild() {
@@ -64,9 +78,31 @@ public final class TextSize {
             apply(application.getResources(), scale);
             application.registerActivityLifecycleCallbacks(new Watcher(scale));
             application.registerComponentCallbacks(new PhoneChanges(application, scale));
+            active = scale;
             Logger.printDebug(() -> "Text size: text draws at " + Settings.TEXT_SIZE.get() + "%");
         } catch (Throwable failure) {
             Logger.printException(() -> "Text size: could not size Instagram's text", failure);
+        }
+    }
+
+    /**
+     * Called by Instagram's own resources with each configuration they're about to take. Once
+     * installed, answers a copy whose font scale is the phone's times the saved share, unless it's
+     * that already. Before that, at 100%, for null and on any failure, answers {@code config} itself.
+     * Never changes {@code config}, which can be the phone's own.
+     */
+    public static Configuration sized(@Nullable Configuration config) {
+        float scale = active;
+        if (config == null || scale == 1f) return config;
+        try {
+            float wanted = Resources.getSystem().getConfiguration().fontScale * scale;
+            if (Math.abs(config.fontScale - wanted) < 0.001f) return config;
+            Configuration sized = new Configuration(config);
+            sized.fontScale = wanted;
+            return sized;
+        } catch (Throwable failure) {
+            Logger.printException(() -> "Text size: could not size Instagram's resources", failure);
+            return config;
         }
     }
 
@@ -120,10 +156,15 @@ public final class TextSize {
         @Override
         public void onActivityResumed(@NonNull Activity activity) {
             apply(activity.getResources(), scale);
+            ComposerFit.follow(activity, scale);
+        }
+
+        @Override
+        public void onActivityPaused(@NonNull Activity activity) {
+            ComposerFit.unfollow(activity);
         }
 
         @Override public void onActivityStarted(@NonNull Activity activity) { }
-        @Override public void onActivityPaused(@NonNull Activity activity) { }
         @Override public void onActivityStopped(@NonNull Activity activity) { }
         @Override public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle state) { }
         @Override public void onActivityDestroyed(@NonNull Activity activity) { }

@@ -30,7 +30,8 @@ import app.hushgram.extension.shared.diagnostics.HookStatus;
  *
  * <p>A collection is known by the name its page shows, since nothing else of it is on screen. The
  * list is {@link Settings#LOCKED_COLLECTIONS}, in {@link ChatList}'s lines with the name as the id
- * too, so a collection renamed in Instagram leaves the list under its old name. HushGram settings add
+ * too, so a collection renamed in Instagram leaves the list under its old name. A long press on its
+ * tile in Saved locks it or takes the lock off ({@link CollectionLockMenu}), and HushGram settings add
  * the collection you opened last and take one off, for the account in front ({@link ChatAccounts})
  * and no other. With none on any list and no lock on, a collection's name is looked for only once
  * that list has been opened, so a screen with nothing locked isn't walked for it.
@@ -92,12 +93,19 @@ public final class CollectionLocks {
         return null;
     }
 
-    private static String text(TextView view) {
+    /** The collection [view] names, cut to the length the list keeps, or null when it names none. */
+    @Nullable
+    static String text(TextView view) {
         CharSequence text = view.getText();
-        if (text == null) return null;
-        String name = ChatList.clean(text.toString());
-        if (ChatList.standsIn(name)) return null;
-        return name.length() > NAME_LENGTH ? name.substring(0, NAME_LENGTH) : name;
+        return text == null ? null : kept(text.toString());
+    }
+
+    /** [name] as the list keeps a collection's name, cut to its length, or null when it isn't a name. */
+    @Nullable
+    static String kept(@Nullable String name) {
+        String clean = ChatList.clean(name);
+        if (ChatList.standsIn(clean)) return null;
+        return clean.length() > NAME_LENGTH ? clean.substring(0, NAME_LENGTH) : clean;
     }
 
     /** The collection called [name] showed, for the account in front. */
@@ -150,7 +158,9 @@ public final class CollectionLocks {
     public static boolean add(@Nullable String account, @Nullable String name) {
         if (empty(account) || empty(name)) return false;
         String kept = ChatList.clean(name);
-        return change(rows -> ChatList.added(rows, account, kept, kept));
+        boolean added = change(rows -> ChatList.added(rows, account, kept, kept));
+        if (added) LockedCollectionItems.locked(kept);
+        return added;
     }
 
     /**
@@ -206,5 +216,6 @@ public final class CollectionLocks {
         wanted = false;
         parsedRaw = null;
         parsedRows = Collections.emptyList();
+        LockedCollectionItems.resetForTests();
     }
 }

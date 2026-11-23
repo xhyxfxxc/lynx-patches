@@ -65,6 +65,9 @@ public class ChildControlAvailabilityTest {
         Settings.DOWNLOAD_REELS.resetToDefault();
         Settings.SHOW_STORY_TIME.resetToDefault();
         Settings.STORY_TIME_MODE.resetToDefault();
+        Settings.FULL_SCREEN_REELS.resetToDefault();
+        Settings.FILL_REEL_SCREEN.resetToDefault();
+        Settings.FIT_REEL_SCREEN.resetToDefault();
     }
 
     @Test public void followingKeepsItsSavedChoiceAcrossParentChanges() {
@@ -172,10 +175,74 @@ public class ChildControlAvailabilityTest {
         }
     }
 
+    @Test public void captionLinesKeepItsSavedChoiceAcrossParentChanges() {
+        Settings.CAPTION_LINES.save(app.hushgram.extension.instagram.feed.CaptionLines.FOUR);
+        try {
+            checkParent(Settings.EXPAND_CAPTIONS, Settings.CAPTION_LINES, PatchFamily.EXPAND_CAPTIONS,
+                    "Turn on Expand captions to use this choice.", "FOUR");
+        } finally {
+            Settings.EXPAND_CAPTIONS.resetToDefault();
+            Settings.CAPTION_LINES.resetToDefault();
+        }
+    }
+
+    @Test public void captionLinesSummaryNamesThePickedCount() {
+        // Every count shares one explanation, so without the count the row never said which one was picked (#771).
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.EXPAND_CAPTIONS);
+        Settings.EXPAND_CAPTIONS.save(true);
+        Settings.CAPTION_LINES.save(app.hushgram.extension.instagram.feed.CaptionLines.FOUR);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushgramPreferenceFragment page = DownloadSettingsTest.pageIn(controller);
+            ListPreference row = (ListPreference) page.findPreference(Settings.CAPTION_LINES.key);
+            assertNotNull(row);
+            String cut = L10n.t("Captions longer than that end with \"more\", which opens the rest.");
+            assertEquals(L10n.t("4 lines") + "\n" + cut, String.valueOf(row.getSummary()));
+            row.setValue("TEN");
+            assertEquals(L10n.t("10 lines") + "\n" + cut, String.valueOf(row.getSummary()));
+            row.setValue("WHOLE");
+            assertEquals(L10n.t("The whole caption shows, with no \"more\" to tap."), String.valueOf(row.getSummary()));
+        } finally {
+            Settings.EXPAND_CAPTIONS.resetToDefault();
+            Settings.CAPTION_LINES.resetToDefault();
+        }
+    }
+
     @Test public void playbackKeepsItsSavedChoiceAcrossParentChanges() {
         Settings.PLAYBACK_QUALITY.save(PlaybackQuality.HIGHEST);
         checkParent(Settings.DEFAULT_PLAYBACK_QUALITY, Settings.PLAYBACK_QUALITY, PatchFamily.PLAYBACK_QUALITY,
                 "Turn on Default playback quality to use this choice.", "HIGHEST");
+    }
+
+    @Test public void fillTheScreenRestsWhileShowTheWholeReelIsOn() {
+        // Show the whole reel wins over Fill the screen, so with both on Fill did nothing and nothing said why (#755).
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.FULL_SCREEN_BARS);
+        Settings.FULL_SCREEN_REELS.save(true);
+        Settings.FILL_REEL_SCREEN.save(true);
+        Settings.FIT_REEL_SCREEN.save(true);
+        String reason = L10n.t("Turn off Show the whole reel to use this choice.");
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushgramPreferenceFragment page = DownloadSettingsTest.pageIn(controller);
+            SwitchPreference fill = (SwitchPreference) page.findPreference(Settings.FILL_REEL_SCREEN.key);
+            SwitchPreference fit = (SwitchPreference) page.findPreference(Settings.FIT_REEL_SCREEN.key);
+            assertNotNull(fill);
+            assertFalse(fill.isEnabled());
+            assertEquals(reason, String.valueOf(fill.getSummary()));
+            assertTrue(fill.isChecked());
+            fit.setChecked(false);
+            ShadowLooper.idleMainLooper();
+            assertTrue(fill.isEnabled());
+            assertEquals(ReelsCategory.fillSummary(), String.valueOf(fill.getSummary()));
+            assertTrue(Settings.FILL_REEL_SCREEN.savedValue());
+            fit.setChecked(true);
+            ShadowLooper.idleMainLooper();
+            assertFalse(fill.isEnabled());
+            assertEquals(reason, String.valueOf(fill.getSummary()));
+            assertTrue(Settings.FILL_REEL_SCREEN.savedValue());
+            ((SwitchPreference) page.findPreference(Settings.FULL_SCREEN_REELS.key)).setChecked(false);
+            fit.setChecked(false);
+            ShadowLooper.idleMainLooper();
+            assertFalse(fill.isEnabled());
+        }
     }
 
     @Test @Config(qualifiers = "es")

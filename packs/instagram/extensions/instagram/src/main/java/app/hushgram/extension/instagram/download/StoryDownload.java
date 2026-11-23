@@ -18,9 +18,13 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
+import app.hushgram.extension.instagram.feed.MenuItems;
 import app.hushgram.extension.instagram.settings.FamilyNames;
 import app.hushgram.extension.instagram.settings.Settings;
+import app.hushgram.extension.instagram.stories.StoryCopyText;
+import app.hushgram.extension.instagram.stories.StoryListHold;
 import app.hushgram.extension.instagram.stories.StoryLoop;
 import app.hushgram.extension.instagram.stories.StoryPriority;
 import app.hushgram.extension.instagram.stories.StorySpeed;
@@ -57,6 +61,10 @@ import app.hushgram.extension.shared.diagnostics.HookStatus;
  * <p>With Speed in the story menu on, a video story's menu also gets Playback speed after that,
  * whatever the Download switch says, and a tap on it opens the speeds through {@link StorySpeed}
  * (#621). The story stays paused until that list closes.
+ *
+ * <p>With Copy text in the story menu on, the menu of a story whose Media it can read gets Copy text
+ * after that, whatever the Download switch says, and a tap on it copies the words Instagram read in
+ * the story, or opens Google Lens on it, through {@link StoryCopyText} (#789).
  *
  * <p>With Stories priority in the build, the menu of a story whose account it can read gets Add to
  * Stories priority last, whatever the switches say, and a tap on it puts that account on the list
@@ -135,15 +143,15 @@ public final class StoryDownload {
      * The labels [labels] of a story's menu, with HushGram's rows at the end when the switch is on:
      * Download, Download as video and Download as photo for a photo story with music, or Download
      * and Download as photo for a filmed video. Loop this story goes after them when the story gets
-     * it ({@link #loopLabel}), then Playback speed ({@link #speedLabel}), and Add to Stories priority
-     * last ({@link #priorityLabel}). A menu that has the rows already is left alone. Never throws.
+     * it ({@link #loopLabel}), then Playback speed ({@link #speedLabel}), then Copy text
+     * ({@link #copyTextLabel}), and Add to Stories priority last ({@link #priorityLabel}). A menu that has the rows already is left alone. Never throws.
      */
     public static CharSequence[] labels(CharSequence[] labels) {
         try {
             HookStatus.invoked(FamilyNames.STORY_DOWNLOAD);
             if (labels == null) return labels;
             Object menu = building.get();
-            return withPriority(withSpeed(withLoop(on() ? labels(labels, rows(menu)) : labels, menu), menu), menu);
+            return withPriority(withCopyText(withSpeed(withLoop(on() ? labels(labels, rows(menu)) : labels, menu), menu), menu), menu);
         } catch (Throwable t) {
             HookStatus.threw(FamilyNames.STORY_DOWNLOAD, "story menu", t);
             return labels;
@@ -153,21 +161,28 @@ public final class StoryDownload {
     /** [labels] with Loop this story at the end when the story [menu] is open on gets it. */
     private static CharSequence[] withLoop(CharSequence[] labels, Object menu) {
         String loop = loopLabel(menu);
-        if (loop == null || hasLoop(Arrays.asList(labels))) return labels;
+        if (loop == null || MenuItems.hidesOwn("STORY_LOOP") || hasLoop(Arrays.asList(labels))) return labels;
         return plus(labels, loop);
     }
 
     /** [labels] with Playback speed at the end when the story [menu] is open on gets it. */
     private static CharSequence[] withSpeed(CharSequence[] labels, Object menu) {
         String speed = speedLabel(menu);
-        if (speed == null || hasSpeed(Arrays.asList(labels))) return labels;
+        if (speed == null || MenuItems.hidesOwn("PLAYBACK_SPEED") || hasSpeed(Arrays.asList(labels))) return labels;
         return plus(labels, speed);
+    }
+
+    /** [labels] with Copy text at the end when the story [menu] is open on gets it. */
+    private static CharSequence[] withCopyText(CharSequence[] labels, Object menu) {
+        String copy = copyTextLabel(menu);
+        if (copy == null || hasCopyText(Arrays.asList(labels))) return labels;
+        return plus(labels, copy);
     }
 
     /** [labels] with Add to Stories priority at the end when the story [menu] is open on gets it. */
     private static CharSequence[] withPriority(CharSequence[] labels, Object menu) {
         String priority = priorityLabel(menu);
-        if (priority == null || hasPriority(Arrays.asList(labels))) return labels;
+        if (priority == null || MenuItems.hidesOwn("PRIORITY") || hasPriority(Arrays.asList(labels))) return labels;
         return plus(labels, priority);
     }
 
@@ -178,14 +193,26 @@ public final class StoryDownload {
     }
 
     static CharSequence[] labels(CharSequence[] labels, Rows which) {
-        String[] rows = new String[which.choices.length];
-        for (int i = 0; i < rows.length; i++) rows[i] = label(which.choices[i]);
-        for (CharSequence label : labels) {
-            if (label != null && rows[0].contentEquals(label)) return labels;
+        List<String> rows = new ArrayList<>(which.choices.length);
+        for (Choice choice : which.choices) {
+            if (!MenuItems.hidesOwn(menuItem(choice))) rows.add(label(choice));
         }
-        CharSequence[] more = Arrays.copyOf(labels, labels.length + rows.length);
-        System.arraycopy(rows, 0, more, labels.length, rows.length);
+        if (rows.isEmpty()) return labels;
+        for (CharSequence label : labels) {
+            if (label != null && rows.get(0).contentEquals(label)) return labels;
+        }
+        CharSequence[] more = Arrays.copyOf(labels, labels.length + rows.size());
+        for (int i = 0; i < rows.size(); i++) more[labels.length + i] = rows.get(i);
         return more;
+    }
+
+    /** The item of Items in the three-dot menus that leaves the row for [choice] out (#707). */
+    static String menuItem(Choice choice) {
+        switch (choice) {
+            case VIDEO: return "DOWNLOAD_VIDEO";
+            case PHOTO: return "DOWNLOAD_PHOTO";
+            default: return "DOWNLOAD";
+        }
     }
 
     /**
@@ -203,6 +230,8 @@ public final class StoryDownload {
             if (loop != null && !hasLoop(labels)) labels.add(loop);
             String speed = speedLabel(menu);
             if (speed != null && !hasSpeed(labels)) labels.add(speed);
+            String copy = copyTextLabel(menu);
+            if (copy != null && !hasCopyText(labels)) labels.add(copy);
         } catch (Throwable t) {
             HookStatus.threw(FamilyNames.STORY_DOWNLOAD, "story menu", t);
         }
@@ -262,6 +291,25 @@ public final class StoryDownload {
     private static boolean hasSpeed(List<?> labels) {
         for (Object label : labels) {
             if (label instanceof CharSequence && StorySpeed.isMenuLabel((CharSequence) label)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Copy text for the story [menu] is open on, or null when its menu doesn't get the row: Copy text
+     * in the story menu is off, or the story's Media can't be read.
+     */
+    @Nullable
+    static String copyTextLabel(Object menu) {
+        if (menu == null || !StoryCopyText.offersRow()) return null;
+        if (InstagramMedia.storyMedia(menu) == null) return null;
+        return StoryCopyText.menuLabel();
+    }
+
+    /** Whether [labels] has Copy text already. */
+    private static boolean hasCopyText(List<?> labels) {
+        for (Object label : labels) {
+            if (label instanceof CharSequence && StoryCopyText.isMenuLabel((CharSequence) label)) return true;
         }
         return false;
     }
@@ -363,6 +411,10 @@ public final class StoryDownload {
                 togglePriority(menu);
                 return true;
             }
+            if (StoryCopyText.offersRow() && StoryCopyText.isMenuLabel(label)) {
+                StoryCopyText.copy(InstagramMedia.storyMedia(menu));
+                return true;
+            }
             if (!on()) return false;
             Choice choice = choice(label);
             if (choice == null) return false;
@@ -407,7 +459,8 @@ public final class StoryDownload {
      * The story button's tap (#400): the save the menu's Download row runs, for [media], the story's
      * Media, whatever the Download on stories switch says. A photo story with music, which the menu
      * gives Download as video and Download as photo, gets the same two in a list under [button]
-     * first, and the one picked saves that story (#726). A save that can't start says so. Never throws.
+     * first, and the one picked saves that story (#726). The story holds still while the list is
+     * open. A save that can't start says so. Never throws.
      */
     public static void saveStory(@Nullable View button, Object media) {
         try {
@@ -425,6 +478,7 @@ public final class StoryDownload {
                 return true;
             });
             list.show();
+            StoryListHold.over(list);
         } catch (Throwable t) {
             HookStatus.threw(FamilyNames.STORY_DOWNLOAD, "story button", t);
         }
@@ -432,6 +486,82 @@ public final class StoryDownload {
 
     /** What's counted when the story button asks whether to save a photo story with music as a video or a photo (#726). */
     static final String BUTTON_ASKED = "story button asked video or photo";
+
+    /**
+     * The story button's press and hold on a reel with more than one story (#745): a list under
+     * [button] with Download, which saves [media] as a tap does, and Save all, which saves [stories],
+     * the Media of each story of the reel in order. The story holds still while the list is open, so
+     * Download saves the one on screen. Never throws.
+     */
+    public static void askStories(View button, Object media, List<Object> stories) {
+        ask(button, media, stories, StoryDownload::saveStories);
+    }
+
+    static void ask(View button, Object media, List<?> stories, Consumer<List<?>> all) {
+        try {
+            if (!button.isAttachedToWindow()) {
+                saveStory(button, media);
+                return;
+            }
+            PopupMenu list = new PopupMenu(button.getContext(), button);
+            list.getMenu().add(0, 0, 0, L10n.t("Download"));
+            list.getMenu().add(0, 1, 1, L10n.t("Save all"));
+            list.setOnMenuItemClickListener(row -> {
+                if (row.getItemId() == 0) saveStory(button, media);
+                else all.accept(stories);
+                return true;
+            });
+            list.show();
+            StoryListHold.over(list);
+        } catch (Throwable t) {
+            HookStatus.threw(FamilyNames.STORY_DOWNLOAD, "story button", t);
+        }
+    }
+
+    /** Saves each of [stories] in order, as a carousel's pages are. A save that can't start says so. Never throws. */
+    private static void saveStories(List<?> stories) {
+        Context context = Utils.getContext().getApplicationContext();
+        try {
+            boolean started = true;
+            for (List<MediaSave.Item> batch : batches(stories)) {
+                started &= MediaSave.saveBatch(context, batch, null);
+            }
+            if (!started) Feedback.show(context, L10n.t(context, "Download failed"), true);
+        } catch (Throwable t) {
+            HookStatus.threw(FamilyNames.STORY_DOWNLOAD, "story save all", t);
+            Feedback.show(context, L10n.t(context, "Download failed"), true);
+        }
+    }
+
+    /**
+     * Plain values from each of [stories], read now on the tap, cut into batches the saver takes: a
+     * reel can hold more stories than one batch has room for.
+     */
+    static List<List<MediaSave.Item>> batches(List<?> stories) {
+        List<List<MediaSave.Item>> batches = new ArrayList<>();
+        List<MediaSave.Item> batch = null;
+        for (Object media : stories) {
+            if (batch == null || batch.size() == MediaSave.MAX_BATCH_PAGES) {
+                batch = new ArrayList<>();
+                batches.add(batch);
+            }
+            batch.add(item(media));
+        }
+        return batches;
+    }
+
+    /** What's saved for [media]: its video when it has one, else its picture. One that can't be read fails on the worker. */
+    private static MediaSave.Item item(Object media) {
+        try {
+            List<MediaSave.Rendition> videos = ReelDownload.renditions(media);
+            String manifest = InstagramMedia.dashManifest(media);
+            if (!videos.isEmpty() || manifest != null) return new MediaSave.Item(true, videos, manifest, details(media));
+            return new MediaSave.Item(false, pictures(media), null, details(media));
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.STORY_DOWNLOAD, "story save all", failure);
+            return new MediaSave.Item(true, null, null, null);
+        }
+    }
 
     /** A row picked in the story button's list: saves [media] as [choice] says. Never throws. */
     private static void picked(Choice choice, Object media) {

@@ -4,16 +4,28 @@
  */
 package app.hushgram.extension.instagram.reels;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
 import android.graphics.Rect;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.MotionEvent;
@@ -61,6 +73,14 @@ import app.hushgram.extension.shared.diagnostics.HookStatus;
  * (UserDetailFragment, found up the grid's parent fragments): the first screen a grid resumes in is
  * taken as the profile's, a grid in another is left alone, and the id is dropped once that screen
  * is gone.
+ *
+ * <p>A reel in the feed opens its author's profile from the post's header instead, which never
+ * reaches navigateToNormalProfile, so nothing was held (#795). The patch calls
+ * {@link #openingFromFeed} as the header tap reads the post's media, and a video is held the same
+ * way. The main feed puts that profile on its own tab, in the activity already there, so when no
+ * activity comes, the first grid or Reels tab resumed in a profile's screen within the window
+ * gives the profile's activity and screen, as {@link #profileOnTab} does. Other feeds open it in an
+ * activity of its own, taken as above.
  *
  * <p>The patch also calls {@link #reelsTabResumed} first in the onResume of a profile's Reels tab
  * (ClipsProfileTabFragment). When that tab is in the profile's activity and shows the reel's author
@@ -121,6 +141,8 @@ public final class ReelOrigin {
     /** Instagram's media types of a photo and of a carousel, the two a photo reel comes as. */
     static final int PHOTO = 1;
     static final int CAROUSEL = 8;
+    /** Instagram's media type of a video, which every reel in the feed is. */
+    static final int VIDEO = 2;
     /** The type of the Reels tab's one grid field, and the posts grid's. */
     static final String GRID_TYPE = "androidx.recyclerview.widget.RecyclerView";
 
@@ -132,6 +154,9 @@ public final class ReelOrigin {
     static final String LOOK = "looking for the reel";
     static final String WATCH = "profile screen watched";
     static final String ON_TAB = "profile opened on the tab";
+    static final String FEED = "profile opened from a feed reel";
+    /** Counted when a profile opened from a feed reel is taken as the one on the feed's tab. */
+    static final String FEED_ON_TAB = "feed reel's profile on the tab";
     /** Counted when a reel's id is held, found in the grid, not found, and when the tab was left first. */
     static final String REMEMBERED = "reel remembered";
     static final String FOUND = "reel found";
@@ -200,8 +225,9 @@ public final class ReelOrigin {
     static final int DRAG_MOVES = 8;
     static final long MOVE_MS = 10;
     static final long HOLD_MS = 100;
-    /** How long the found tile stays outlined. */
-    static final long OUTLINE_MS = 1500;
+    /** How long the found tile stays marked, and how long the mark then takes to fade. */
+    static final long OUTLINE_MS = 5000;
+    static final long FADE_MS = 400;
     /** How far above the bottom of the profile's screen, past the navigation bar, the button sits, clear of a tab bar. */
     static final int BUTTON_ABOVE_DP = 72;
 
@@ -222,6 +248,8 @@ public final class ReelOrigin {
      */
     private static boolean onTab;
     private static WeakReference<Object> tabProfile;
+    /** Whether the reel held was tapped in the feed, whose profile may open on the feed's own tab. */
+    private static boolean fromFeed;
     /** Where the watcher is registered while an id is held. */
     private static Application watched;
     /** The search running, at most one. */
@@ -251,9 +279,29 @@ public final class ReelOrigin {
 
     /** [type] reads the media's type and [trial] whether it's a trial reel, each null when it can't be told. */
     static void opening(Object media, BooleanSupplier on, Function<Object, Integer> type, Function<Object, Boolean> trial) {
+        hold(media, on, type, trial, false);
+    }
+
+    /**
+     * Called in a feed post's header tap as it reads the post's media, before the author's profile
+     * opens (#795). Only a video, which is what a reel in the feed is, is held: a photo post was never
+     * a reel to go back to. The main feed puts the profile on its own tab, in the activity already
+     * there, so that profile is taken at its first grid's resume instead. Never throws.
+     */
+    public static void openingFromFeed(Object media) {
+        openingFromFeed(media, ReelOrigin::switchedOn, InstagramMedia::mediaType, InstagramMedia::activeTrial);
+    }
+
+    static void openingFromFeed(Object media, BooleanSupplier on, Function<Object, Integer> type, Function<Object, Boolean> trial) {
+        hold(media, on, type, trial, true);
+    }
+
+    private static void hold(Object media, BooleanSupplier on, Function<Object, Integer> type, Function<Object, Boolean> trial, boolean feed) {
         try {
             HookStatus.invoked(FamilyNames.REEL_ORIGIN);
             if (media == null || !on.getAsBoolean()) return;
+            Integer kind = type.apply(media);
+            if (feed && (kind == null || kind != VIDEO)) return;
             String id = mediaId(media);
             if (id == null || id.isEmpty()) return;
             if (isTrial(media, trial)) {
@@ -262,7 +310,6 @@ public final class ReelOrigin {
                 Utils.showToastShort(L10n.t("That's a trial reel, so it isn't on their profile"));
                 return;
             }
-            Integer kind = type.apply(media);
             boolean photo = kind != null && (kind == PHOTO || kind == CAROUSEL);
             Application application = application();
             if (application == null) return;
@@ -275,6 +322,7 @@ public final class ReelOrigin {
                 postsGrid = null;
                 onTab = false;
                 tabProfile = null;
+                fromFeed = feed;
                 if (watched == null) {
                     application.registerActivityLifecycleCallbacks(WATCHER);
                     watched = application;
@@ -282,9 +330,33 @@ public final class ReelOrigin {
             }
             HookStatus.counted(FamilyNames.REEL_ORIGIN, REMEMBERED);
         } catch (Throwable failure) {
-            HookStatus.threw(FamilyNames.REEL_ORIGIN, OPENING, failure);
+            HookStatus.threw(FamilyNames.REEL_ORIGIN, feed ? FEED : OPENING, failure);
             forget();
         }
+    }
+
+    /**
+     * A profile opened from a feed reel that no new activity came for went onto the feed's tab, so
+     * the activity of [fragment], its first grid or Reels tab resumed within the window, is taken as
+     * the profile's, with the profile's screen [fragment] sits in (#795). A fragment in no profile's
+     * screen takes nothing.
+     */
+    private static void adoptFeedProfile(Object fragment) throws ReflectiveOperationException {
+        synchronized (LOCK) {
+            if (held == null || host != null || !fromFeed || SystemClock.uptimeMillis() - heldAt > HOST_WINDOW_MS) return;
+        }
+        Object screen = profileScreen(fragment);
+        if (screen == null) return;
+        Method activity = method(fragment, "getActivity");
+        Object found = activity == null ? null : activity.invoke(fragment);
+        if (!(found instanceof Activity)) return;
+        synchronized (LOCK) {
+            if (held == null || host != null || !fromFeed) return;
+            host = new WeakReference<>((Activity) found);
+            onTab = true;
+            tabProfile = new WeakReference<>(screen);
+        }
+        HookStatus.counted(FamilyNames.REEL_ORIGIN, FEED_ON_TAB);
     }
 
     /**
@@ -372,6 +444,7 @@ public final class ReelOrigin {
         try {
             HookStatus.invoked(FamilyNames.REEL_ORIGIN);
             if (tab == null || !on.getAsBoolean()) return;
+            adoptFeedProfile(tab);
             String id;
             Activity profile;
             boolean photo;
@@ -415,6 +488,7 @@ public final class ReelOrigin {
         try {
             HookStatus.invoked(FamilyNames.REEL_ORIGIN);
             if (grid == null || !on.getAsBoolean()) return;
+            adoptFeedProfile(grid);
             String id;
             Activity profile;
             boolean photo;
@@ -553,6 +627,7 @@ public final class ReelOrigin {
             postsGrid = null;
             onTab = false;
             tabProfile = null;
+            fromFeed = false;
             stopLooking();
             synchronized (TILE_IDS) {
                 TILE_IDS.clear();
@@ -1029,16 +1104,133 @@ public final class ReelOrigin {
         return Math.round(BUTTON_ABOVE_DP * content.getResources().getDisplayMetrics().density) + bar;
     }
 
-    /** Brings [tile] fully on screen, the header folding away if it must, and outlines it for a moment. */
+    /**
+     * Brings [tile] fully on screen, the header folding away if it must, and marks it for a few
+     * seconds: dimmed, edged in HushGram's accent and labelled You just watched, so it stands out on a
+     * pale thumbnail too (#781).
+     */
     static void show(View tile) {
         tile.requestRectangleOnScreen(new Rect(0, 0, tile.getWidth(), tile.getHeight()), false);
-        float density = tile.getResources().getDisplayMetrics().density;
-        GradientDrawable outline = new GradientDrawable();
-        outline.setColor(0x33FFFFFF);
-        outline.setStroke(Math.max(1, Math.round(3 * density)), Color.WHITE);
-        outline.setBounds(0, 0, tile.getWidth(), tile.getHeight());
-        tile.getOverlay().add(outline);
-        main().postDelayed(() -> tile.getOverlay().remove(outline), OUTLINE_MS);
+        Mark mark = new Mark(tile, L10n.t(tile.getContext(), "You just watched"), ScreenColors.current().accent);
+        mark.setBounds(0, 0, tile.getWidth(), tile.getHeight());
+        tile.getOverlay().add(mark);
+        tile.addOnAttachStateChangeListener(mark);
+        main().postDelayed(mark::fade, OUTLINE_MS);
+    }
+
+    /**
+     * The found tile's mark: a dim layer, an accent edge and a centered label that wraps to the tile.
+     * It goes early when the tile leaves the window, and draws nothing once Instagram binds the tile
+     * to another reel, so it never labels the wrong one.
+     */
+    static final class Mark extends Drawable implements View.OnAttachStateChangeListener {
+        /** The dim layer's black, at 45%, so white text reads on a white thumbnail. */
+        static final int DIM = 0x73000000;
+        final View tile;
+        final String reel;
+        final String label;
+        final int accent;
+        private final Paint dim = new Paint();
+        private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final TextPaint text = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        private final float density;
+        private final int padding;
+        private StaticLayout lines;
+        private int alpha = 255;
+        private boolean gone;
+
+        Mark(View tile, String label, int accent) {
+            this.tile = tile;
+            this.reel = nameOf(tile);
+            this.label = label;
+            this.accent = accent;
+            density = tile.getResources().getDisplayMetrics().density;
+            padding = Math.round(8 * density);
+            edge.setStyle(Paint.Style.STROKE);
+            edge.setStrokeWidth(Math.max(1, Math.round(3 * density)));
+            text.setTypeface(Typeface.DEFAULT_BOLD);
+            text.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 14,
+                    tile.getResources().getDisplayMetrics()));
+        }
+
+        /** The label as laid out for the tile's width, or null before the mark has bounds. */
+        StaticLayout lines() {
+            return lines;
+        }
+
+        /** Whether the tile still shows the reel the mark was made for. */
+        boolean onItsReel() {
+            String now = nameOf(tile);
+            return reel != null && reel.equals(now);
+        }
+
+        @Override protected void onBoundsChange(Rect bounds) {
+            int width = bounds.width() - 2 * padding;
+            lines = width <= 0 ? null : StaticLayout.Builder.obtain(label, 0, label.length(), text, width)
+                    .setAlignment(Layout.Alignment.ALIGN_CENTER)
+                    .build();
+        }
+
+        @Override public void draw(Canvas canvas) {
+            if (gone || !onItsReel()) return;
+            Rect area = getBounds();
+            dim.setColor(Color.argb(Color.alpha(DIM) * alpha / 255, 0, 0, 0));
+            canvas.drawRect(area, dim);
+            float half = edge.getStrokeWidth() / 2;
+            edge.setColor(accent);
+            edge.setAlpha(Color.alpha(accent) * alpha / 255);
+            canvas.drawRect(area.left + half, area.top + half, area.right - half, area.bottom - half, edge);
+            if (lines == null) return;
+            text.setColor(Color.argb(alpha, 255, 255, 255));
+            text.setShadowLayer(2 * density, 0, density, Color.argb(0x99 * alpha / 255, 0, 0, 0));
+            canvas.save();
+            canvas.translate(area.left + padding, area.top + Math.max(0, (area.height() - lines.getHeight()) / 2f));
+            lines.draw(canvas);
+            canvas.restore();
+        }
+
+        /** Fades the mark out, then takes it off the tile. */
+        void fade() {
+            if (gone) return;
+            ValueAnimator out = ValueAnimator.ofInt(alpha, 0);
+            out.setDuration(FADE_MS);
+            out.addUpdateListener(step -> setAlpha((Integer) step.getAnimatedValue()));
+            // With animations off the animator ends at once, and the mark still goes.
+            out.addListener(new AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(Animator animation) {
+                    remove();
+                }
+            });
+            out.start();
+        }
+
+        void remove() {
+            if (gone) return;
+            gone = true;
+            tile.getOverlay().remove(this);
+            tile.removeOnAttachStateChangeListener(this);
+        }
+
+        @Override public void onViewAttachedToWindow(View view) {}
+
+        @Override public void onViewDetachedFromWindow(View view) {
+            remove();
+        }
+
+        @Override public void setAlpha(int alpha) {
+            this.alpha = alpha;
+            invalidateSelf();
+        }
+
+        @Override public int getAlpha() {
+            return alpha;
+        }
+
+        @Override public void setColorFilter(ColorFilter filter) {}
+
+        @Override public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
     }
 
     /** The profile's activity is the first one created after the tap; it going drops the id. */

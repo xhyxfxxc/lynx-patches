@@ -319,6 +319,94 @@ public class ChatReachTest {
         assertFalse(report, report.contains(GlassTopBar.HOOK));
     }
 
+    /**
+     * Instagram pads the messages again each time the message bar changes height, and the frame laid out then has
+     * them without the room the reach gives them, a line or more off, which flashed as the messages jumped and
+     * came back (#757). That frame isn't drawn, the next one is, with the room back, and never two in a row.
+     */
+    @Test
+    @Config(qualifiers = "w1080dp-h2000dp")
+    public void aFrameLaidOutWithoutTheReachIsNotDrawn() {
+        aboveTheNavigationBar();
+        glaze();
+        assertFalse("a still chat draws", preDraw());
+
+        // The message bar grows a line and Instagram pads the list for it.
+        list.setPadding(0, list.getPaddingTop(), 0, 20);
+        assertTrue("laid out without the room, not drawn", preDraw());
+        assertEquals("the room is back for the next layout", 20 + ENDS + NAV, list.getPaddingBottom());
+        layout();
+        assertFalse("laid out with it, drawn", preDraw());
+        assertEquals(TALL, windowBottom(list));
+
+        // The same at the top, under the header.
+        list.setPadding(0, 30, 0, list.getPaddingBottom());
+        assertTrue(preDraw());
+        layout();
+        assertFalse(preDraw());
+        assertEquals(30 + STATUS + HEADER, list.getPaddingTop());
+
+        // Instagram padding it again on every frame still has every other one drawn.
+        list.setPadding(0, list.getPaddingTop(), 0, 40);
+        assertTrue(preDraw());
+        list.setPadding(0, list.getPaddingTop(), 0, 50);
+        assertFalse("never two frames in a row", preDraw());
+        layout();
+        assertFalse(preDraw());
+        assertEquals(50 + ENDS + NAV, list.getPaddingBottom());
+        String report = HookStatus.report().toString();
+        assertFalse(report, report.contains(GlassTopBar.HOOK));
+    }
+
+    /** One pre-draw pass: true when it holds the frame back. */
+    private boolean preDraw() {
+        return header.getViewTreeObserver().dispatchOnPreDraw();
+    }
+
+    /**
+     * Instagram's own helper pads the messages with the room the reach gives them in it, and the chat reads its
+     * padding back without it, so a message bar changing height moves nothing and no frame is held back. Before,
+     * its padding undid the reach's and the messages dropped behind the bar until it was put back (#528).
+     */
+    @Test
+    @Config(qualifiers = "w1080dp-h2000dp")
+    public void instagramsOwnPaddingKeepsTheRoomUnderTheMessageBar() {
+        aboveTheNavigationBar();
+        glaze();
+        assertFalse(preDraw());
+        assertEquals("read back as Instagram set it", 0, GlassTopBar.ownBottomPadding(list, list.getPaddingBottom()));
+
+        // The message bar grows a line and Instagram pads the list for it through its helper.
+        padBottom(list, 20);
+        assertEquals(20 + ENDS + NAV, list.getPaddingBottom());
+        assertFalse("nothing to put back, so the frame is drawn", preDraw());
+        layout();
+        assertFalse(preDraw());
+        assertEquals(TALL, windowBottom(list));
+        assertEquals(20 + ENDS + NAV, list.getPaddingBottom());
+        assertEquals(20, GlassTopBar.ownBottomPadding(list, list.getPaddingBottom()));
+
+        // Any other view's padding is Instagram's.
+        assertEquals(20, GlassTopBar.bottomPadding(header, 20));
+        assertEquals(20, GlassTopBar.ownBottomPadding(header, 20));
+        assertEquals(20, GlassTopBar.bottomPadding(null, 20));
+
+        // Off, the list keeps Instagram's last padding, and its helper sets the next as it is.
+        on.set(false);
+        frame();
+        assertEquals(20, list.getPaddingBottom());
+        padBottom(list, 30);
+        assertEquals(30, list.getPaddingBottom());
+        assertEquals(30, GlassTopBar.ownBottomPadding(list, 30));
+        String report = HookStatus.report().toString();
+        assertFalse(report, report.contains(GlassTopBar.HOOK));
+    }
+
+    /** Instagram's helper setting [view]'s bottom padding, as the patch has it: left, top and right kept. */
+    private static void padBottom(View view, int bottom) {
+        view.setPadding(view.getPaddingLeft(), view.getPaddingTop(), view.getPaddingRight(), GlassTopBar.bottomPadding(view, bottom));
+    }
+
     @Test
     @Config(qualifiers = "w1080dp-h2000dp")
     public void offTheMessagesComeBackUpFromTheBottom() {

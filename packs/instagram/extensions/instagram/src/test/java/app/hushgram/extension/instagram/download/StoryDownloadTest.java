@@ -14,6 +14,8 @@ import static org.junit.Assert.assertTrue;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Looper;
 import android.text.SpannableString;
@@ -33,6 +35,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
@@ -44,6 +47,7 @@ import org.robolectric.shadows.ShadowToast;
 
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.instagram.settings.SettingsStatus;
+import app.hushgram.extension.instagram.stories.StoryListHold;
 import app.hushgram.extension.instagram.stories.StoryLoop;
 import app.hushgram.extension.shared.SettingsContextRule;
 import app.hushgram.extension.shared.Utils;
@@ -66,16 +70,21 @@ public class StoryDownloadTest {
         Story.posted = null;
         Story.id = null;
         Story.account = null;
+        Story.altText = null;
+        ListHold.over.clear();
         Built.storyLoop = false;
         Built.storySpeed = false;
         Built.storyDownload = false;
         Built.storyPriority = false;
+        Built.menuItems = false;
+        Settings.HIDDEN_MENU_ITEMS.resetToDefault();
         StoryLoop.forget();
         StoryDownload.building(null);
         HookStatus.clear();
         Settings.DOWNLOAD_STORIES.save(true);
         Settings.LOOP_STORIES.resetToDefault();
         Settings.STORY_SPEED_IN_MENU.resetToDefault();
+        Settings.STORY_COPY_TEXT_IN_MENU.resetToDefault();
         Settings.STORY_PRIORITY.resetToDefault();
         Settings.STORY_PRIORITY_ACCOUNTS.resetToDefault();
         Utils.setActivity(null);
@@ -273,10 +282,10 @@ public class StoryDownloadTest {
     /**
      * #726: on a photo story with music, the header's Download button asks under itself whether to
      * save the video or the photo, as the menu's two rows do, and the row picked starts that save.
-     * A plain photo saves straight away, with no list.
+     * A plain photo saves straight away, with no list. The story holds still under the list (#745).
      */
     @Test
-    @Config(shadows = Story.class)
+    @Config(shadows = {Story.class, ListHold.class})
     public void theHeaderButtonAsksVideoOrPhotoOnAPhotoWithMusic() {
         ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup().visible();
         try {
@@ -293,6 +302,7 @@ public class StoryDownloadTest {
             StoryDownload.saveStory(button, media);
             PopupMenu asked = ShadowPopupMenu.getLatestPopupMenu();
             assertNotNull("the button saved without asking", asked);
+            assertEquals("the story runs on under the list", Collections.singletonList(asked), ListHold.over);
             Menu rows = asked.getMenu();
             assertEquals(2, rows.size());
             assertEquals("Download as video", String.valueOf(rows.getItem(0).getTitle()));
@@ -318,6 +328,78 @@ public class StoryDownloadTest {
         }
     }
 
+    /** A press and hold on the button offers the story in front or the whole reel, each row does its own save, and the story holds still under the list (#745). */
+    @Test
+    @Config(shadows = {Story.class, ListHold.class})
+    public void holdingTheButtonOffersThisStoryOrAllOfThem() {
+        ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup().visible();
+        try {
+            Activity activity = controller.get();
+            FrameLayout root = new FrameLayout(activity);
+            ImageView button = new ImageView(activity);
+            root.addView(button);
+            activity.setContentView(root);
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            Object front = new Object();
+            List<Object> stories = Arrays.asList(new Object(), front, new Object());
+            List<List<?>> all = new ArrayList<>();
+
+            StoryDownload.ask(button, front, stories, all::add);
+            PopupMenu asked = ShadowPopupMenu.getLatestPopupMenu();
+            assertNotNull("the hold asked nothing", asked);
+            assertEquals("the story runs on under the list", Collections.singletonList(asked), ListHold.over);
+            Menu rows = asked.getMenu();
+            assertEquals(2, rows.size());
+            assertEquals("Download", String.valueOf(rows.getItem(0).getTitle()));
+            assertEquals("Save all", String.valueOf(rows.getItem(1).getTitle()));
+
+            assertTrue(Shadows.shadowOf(asked).getOnMenuItemClickListener().onMenuItemClick(rows.getItem(1)));
+            assertEquals(1, all.size());
+            assertSame(stories, all.get(0));
+
+            ShadowToast.reset();
+            assertTrue(Shadows.shadowOf(asked).getOnMenuItemClickListener().onMenuItemClick(rows.getItem(0)));
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            assertEquals("Download saved the whole reel", 1, all.size());
+            assertEquals("the one story's save didn't run", "Download failed", String.valueOf(ShadowToast.getTextOfLatestToast()));
+            asked.dismiss();
+        } finally {
+            controller.pause().stop().destroy();
+        }
+    }
+
+    /** Save all reads each story as a video or a picture, keeps their order, and fits a long reel into batches (#745). */
+    @Test
+    @Config(shadows = Story.class)
+    public void saveAllCutsALongReelIntoBatches() {
+        Story.video = true;
+        List<Object> stories = new ArrayList<>();
+        for (int at = 0; at < 2 * MediaSave.MAX_BATCH_PAGES + 6; at++) stories.add(new Object());
+
+        List<List<MediaSave.Item>> batches = StoryDownload.batches(stories);
+
+        assertEquals(3, batches.size());
+        assertEquals(MediaSave.MAX_BATCH_PAGES, batches.get(0).size());
+        assertEquals(MediaSave.MAX_BATCH_PAGES, batches.get(1).size());
+        assertEquals(6, batches.get(2).size());
+        MediaSave.Item video = batches.get(0).get(0);
+        assertTrue(video.video);
+        assertEquals(1, video.renditions.size());
+
+        Story.video = false;
+        MediaSave.Item photo = StoryDownload.batches(Collections.singletonList(new Object())).get(0).get(0);
+        assertFalse(photo.video);
+        assertTrue("nothing to save, nothing to run", StoryDownload.batches(Collections.emptyList()).isEmpty());
+    }
+
+    /** The lists handed over to hold the story still under them. */
+    @Implements(value = StoryListHold.class, isInAndroidSdk = false)
+    public static class ListHold {
+        static final List<PopupMenu> over = new ArrayList<>();
+
+        @Implementation protected static void over(PopupMenu list) { over.add(list); }
+    }
+
     /** A story's Media as the bridges read it: a video or not, its upload's flag and the type it was posted as. */
     @Implements(value = InstagramMedia.class, isInAndroidSdk = false)
     public static class Story {
@@ -333,6 +415,11 @@ public class StoryDownloadTest {
         @Implementation protected static String dashManifest(Object media) { return manifest; }
         @Implementation protected static Boolean storyImageWithMusic(Object media) { return flagged; }
         @Implementation protected static Integer originalMediaType(Object media) { return posted; }
+
+        /** Instagram's description of the story, which quotes the words it read in the picture. */
+        static String altText;
+
+        @Implementation protected static String accessibilityCaption(Object media) { return altText; }
 
         static String id;
 
@@ -352,7 +439,9 @@ public class StoryDownloadTest {
         static boolean storySpeed;
         static boolean storyDownload;
         static boolean storyPriority;
+        static boolean menuItems;
 
+        @Implementation protected static boolean menuItems() { return menuItems; }
         @Implementation protected static boolean storyLoop() { return storyLoop; }
         @Implementation protected static boolean storySpeed() { return storySpeed; }
         @Implementation protected static boolean storyDownload() { return storyDownload; }
@@ -427,6 +516,42 @@ public class StoryDownloadTest {
         Built.storyPriority = false;
         CharSequence[] unpatched = {"Report"};
         assertSame("without the patch", unpatched, StoryDownload.labels(unpatched));
+    }
+
+    /**
+     * #707: an item unticked in Items in the three-dot menus leaves HushGram's own story row out too,
+     * Download, Download as photo and Loop this story each by its own item. Without that patch in the
+     * build every row stays.
+     */
+    @Test
+    @Config(shadows = {Story.class, Built.class})
+    public void untickedItemsLeaveHushGramsStoryRowsOut() {
+        BaseSettings.PAUSED.save(false);
+        PauseForTests.resume();
+        Built.storyLoop = true;
+        Built.menuItems = true;
+        Settings.LOOP_STORIES.save(false);
+        StoryDownload.building(new Object());
+        Story.media = new Object();
+        Story.id = "3456789_123";
+
+        Settings.HIDDEN_MENU_ITEMS.save("STORY_LOOP");
+        assertArrayEquals(new CharSequence[] {"Report", "Download"}, StoryDownload.labels(new CharSequence[] {"Report"}));
+        Settings.HIDDEN_MENU_ITEMS.save("DOWNLOAD");
+        assertArrayEquals(new CharSequence[] {"Report", "Loop this story"}, StoryDownload.labels(new CharSequence[] {"Report"}));
+
+        CharSequence[] menu = {"Report", "Mute"};
+        Settings.HIDDEN_MENU_ITEMS.save("DOWNLOAD_PHOTO");
+        assertArrayEquals(new CharSequence[] {"Report", "Mute", "Download"},
+                StoryDownload.labels(menu, StoryDownload.Rows.DOWNLOAD_AND_PHOTO));
+        Settings.HIDDEN_MENU_ITEMS.save("DOWNLOAD,DOWNLOAD_PHOTO");
+        assertSame(menu, StoryDownload.labels(menu, StoryDownload.Rows.DOWNLOAD_AND_PHOTO));
+
+        Built.menuItems = false;
+        assertArrayEquals(new CharSequence[] {"Report", "Mute", "Download", "Download as photo"},
+                StoryDownload.labels(menu, StoryDownload.Rows.DOWNLOAD_AND_PHOTO));
+        assertArrayEquals(new CharSequence[] {"Report", "Download", "Loop this story"},
+                StoryDownload.labels(new CharSequence[] {"Report"}));
     }
 
     /**
@@ -562,6 +687,67 @@ public class StoryDownloadTest {
         Built.storyDownload = false;
         CharSequence[] unpatched = {"Report"};
         assertSame("without Download any story", unpatched, StoryDownload.labels(unpatched));
+    }
+
+    /**
+     * #789: with Copy text in the story menu on, a story's menu gets Copy text after Download, with
+     * Download off too, and only once, in your own highlights' list as well. A tap copies the words
+     * Instagram quoted in its description of the story and says so. A story whose Media can't be
+     * read, the switch off, a paused HushGram and a build without Download any story get no row, and
+     * the label is Instagram's again.
+     */
+    @Test
+    @Config(shadows = {Story.class, Built.class})
+    public void aStoryGetsCopyText() {
+        BaseSettings.PAUSED.save(false);
+        PauseForTests.resume();
+        Built.storyDownload = true;
+        Settings.STORY_COPY_TEXT_IN_MENU.save(true);
+        Object menu = new Object();
+        StoryDownload.building(menu);
+        Story.media = new Object();
+        Story.altText = "Photo by Sam on November 20, 2026. May be an image of text that says 'Doors open at 7, don't be late'.";
+
+        assertArrayEquals(new CharSequence[] {"Report", "Download", "Copy text"},
+                StoryDownload.labels(new CharSequence[] {"Report"}));
+        CharSequence[] already = {"Report", "Download", new SpannableString("Copy text")};
+        assertSame("added twice", already, StoryDownload.labels(already));
+        List<Object> list = new ArrayList<>(Arrays.asList("Edit highlight"));
+        StoryDownload.labelList(list);
+        assertEquals(Arrays.asList("Edit highlight", "Download", "Copy text"), list);
+        StoryDownload.labelList(list);
+        assertEquals("added twice", 3, list.size());
+
+        ShadowToast.reset();
+        assertTrue(StoryDownload.save(new SpannableString("Copy text"), menu));
+        ClipboardManager clipboard = (ClipboardManager) RuntimeEnvironment.getApplication().getSystemService(Context.CLIPBOARD_SERVICE);
+        assertEquals("Doors open at 7, don't be late", String.valueOf(clipboard.getPrimaryClip().getItemAt(0).getText()));
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertEquals("Copied", String.valueOf(ShadowToast.getTextOfLatestToast()));
+        String report = String.valueOf(HookStatus.report());
+        assertTrue(report, report.contains("story text copied from Instagram's description 1"));
+
+        Settings.DOWNLOAD_STORIES.save(false);
+        assertArrayEquals("with Download off", new CharSequence[] {"Report", "Copy text"},
+                StoryDownload.labels(new CharSequence[] {"Report"}));
+        Story.media = null;
+        CharSequence[] unread = {"Report"};
+        assertSame("a story whose Media can't be read", unread, StoryDownload.labels(unread));
+        Story.media = new Object();
+        PauseForTests.pause(HushgramPause.Reason.SWITCH);
+        CharSequence[] paused = {"Report"};
+        assertSame("paused", paused, StoryDownload.labels(paused));
+        assertFalse("paused, the label is Instagram's", StoryDownload.save("Copy text", menu));
+        PauseForTests.resume();
+        Built.storyDownload = false;
+        CharSequence[] unpatched = {"Report"};
+        assertSame("without Download any story", unpatched, StoryDownload.labels(unpatched));
+        assertFalse("without Download any story, the label is Instagram's", StoryDownload.save("Copy text", menu));
+        Built.storyDownload = true;
+        Settings.STORY_COPY_TEXT_IN_MENU.save(false);
+        CharSequence[] off = {"Report"};
+        assertSame("off", off, StoryDownload.labels(off));
+        assertFalse("off, the label is Instagram's", StoryDownload.save("Copy text", menu));
     }
 
     /** Each of HushGram's rows is HushGram's to handle, however the menu styled it, and Instagram's aren't. */

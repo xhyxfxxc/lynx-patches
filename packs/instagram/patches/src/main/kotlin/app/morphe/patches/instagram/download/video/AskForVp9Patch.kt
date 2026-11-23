@@ -43,9 +43,9 @@ private val PUTS = setOf(Opcode.INVOKE_VIRTUAL, Opcode.INVOKE_VIRTUAL_RANGE, Opc
 @Suppress("unused")
 val askForVp9Patch = bytecodePatch(
     name = "Ask for VP9 instead of AV1",
-    description = "Tells Instagram your phone has no AV1 decoder, so reels and stories come as VP9 or H.264, " +
-        "both to watch and to save. Useful when AV1 saves won't play in your gallery or editor, or Never save " +
-        "AV1 video can only fall back to a small file. Takes a restart. Starts off. Turn it on in HushGram " +
+    description = "Tells Instagram your phone has no AV1 decoder, which takes a restart. A post or reel that " +
+        "still comes as AV1 is saved as VP9 from Instagram's website when it offers one. Stories can still be " +
+        "AV1, and Convert to keep the full size turns those into H.264. Starts off. Turn it on in HushGram " +
         "settings > Downloads.",
     default = true,
 ) {

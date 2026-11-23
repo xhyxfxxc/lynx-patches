@@ -38,15 +38,17 @@ import app.hushgram.extension.shared.settings.PauseForTests;
 
 /**
  * What Three-dot menu items does (#697, #707): a feed menu loses the rows whose option is unticked,
- * a reel's row adder skips an unticked option, and a story menu loses Report and Mute by the icon
- * Instagram gives each label. Nothing saved, paused or anything thrown leaves the menu as built.
+ * a reel's row adder skips an unticked option, a reel's Edits rows go by their keys, and a story
+ * menu loses Report and Mute by the icon Instagram gives each label. Nothing saved, paused or
+ * anything thrown leaves the menu as built.
  */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = {28, 37})
 public class MenuItemsTest {
     /** Stand-in for Instagram's option enum: the names are all the hooks read. */
     private enum Option { REPORT, REPORT_AD, MUTE_USER, UNFOLLOW_USER, NOT_INTERESTED, INTERESTED, WHY_AM_I_SEEING_THIS,
-        PLAYBACK_SPEED, PLAYBACK_CONTROLS, SAVE, DOWNLOAD }
+        PLAYBACK_SPEED, PLAYBACK_CONTROLS, SAVE, DOWNLOAD, SEE_MORE, SEE_FEWER, ABOUT_THIS_ACCOUNT, QR_CODE,
+        HUSHGRAM_POST_DETAILS, HUSHGRAM_POST_BLOCK, HUSHGRAM_HIDE_ACCOUNT }
 
     /** A feed menu row the way Instagram's hold theirs: the option in a field of its own type. */
     private static final class Row {
@@ -102,6 +104,28 @@ public class MenuItemsTest {
         assertTrue(report, report.contains("Counted: " + MenuItems.LEFT_OFF + " 3"));
     }
 
+    /**
+     * #707: a suggested feed video's menu on Instagram 456, as it's built: Interested and Not interested
+     * carry SEE_MORE and SEE_FEWER there, and HushGram's own Details, Block and Hide posts rows go by
+     * their names too. QR code isn't offered and stays.
+     */
+    @Test
+    public void aSuggestedFeedVideosMenuLosesItsUntickedRowsToo() {
+        List<Row> rows = new ArrayList<>(Arrays.asList(new Row("Download", Option.DOWNLOAD),
+                new Row("Details", Option.HUSHGRAM_POST_DETAILS), new Row("Block", Option.HUSHGRAM_POST_BLOCK),
+                new Row("Why you're seeing this", Option.WHY_AM_I_SEEING_THIS), new Row("Interested", Option.SEE_MORE),
+                new Row("Not interested", Option.SEE_FEWER), new Row("Report", Option.REPORT),
+                new Row("Hide posts from this account", Option.HUSHGRAM_HIDE_ACCOUNT),
+                new Row("About this account", Option.ABOUT_THIS_ACCOUNT), new Row("QR code", Option.QR_CODE),
+                new Row("Save", Option.SAVE)));
+        MenuItems.feedRows(rows, () -> hiding("INTERESTED", "NOT_INTERESTED", "DETAILS", "HIDE_ACCOUNT"),
+                () -> Option.REPORT, FeedSaveRow::optionOf);
+        assertEquals("[Download/DOWNLOAD, Block/HUSHGRAM_POST_BLOCK, Why you're seeing this/WHY_AM_I_SEEING_THIS, "
+                + "Report/REPORT, About this account/ABOUT_THIS_ACCOUNT, QR code/QR_CODE, Save/SAVE]", rows.toString());
+        MenuItems.feedRows(rows, () -> hiding("DOWNLOAD", "BLOCK", "ABOUT", "SAVE"), () -> Option.REPORT, FeedSaveRow::optionOf);
+        assertEquals("[Why you're seeing this/WHY_AM_I_SEEING_THIS, Report/REPORT, QR code/QR_CODE]", rows.toString());
+    }
+
     @Test
     public void nothingTickedOffLeavesTheFeedMenuAlone() {
         List<Row> rows = feedMenu();
@@ -131,6 +155,7 @@ public class MenuItemsTest {
         assertTrue(MenuItems.reelRow(Option.INTERESTED, () -> hiding("INTERESTED")));
         assertFalse("Interested and Not interested are two items",
                 MenuItems.reelRow(Option.NOT_INTERESTED, () -> hiding("INTERESTED")));
+        assertTrue("456's name for Not interested", MenuItems.reelRow(Option.SEE_FEWER, () -> hiding("NOT_INTERESTED")));
         assertFalse(MenuItems.reelRow(Option.DOWNLOAD, () -> hiding("REPORT", "MUTE", "PLAYBACK")));
         assertFalse(MenuItems.reelRow(null, () -> hiding("REPORT")));
         assertFalse(MenuItems.reelRow("REPORT", () -> hiding("REPORT")));
@@ -222,12 +247,98 @@ public class MenuItemsTest {
 
     @Test
     public void theSavedValueKeepsOnlyOfferedNamesInListOrder() {
-        assertEquals(hiding("REPORT", "WHY"), MenuItems.parse(" WHY , REPORT,REPORT,, SAVE"));
-        assertEquals("REPORT,MUTE,PLAYBACK", MenuItems.join(hiding("PLAYBACK", "MUTE", "REPORT", "DOWNLOAD")));
+        assertEquals(hiding("REPORT", "WHY"), MenuItems.parse(" WHY , REPORT,REPORT,, QR_CODE"));
+        assertEquals("REPORT,MUTE,PLAYBACK", MenuItems.join(hiding("PLAYBACK", "MUTE", "REPORT", "QR_CODE")));
         assertEquals("", MenuItems.join(Collections.emptySet()));
         assertEquals(Collections.emptySet(), MenuItems.parse(null));
         for (String name : MenuItems.OFFERED) {
-            assertTrue(name, MenuItems.itemOf(optionFor(name)) != null);
+            boolean read = MenuItems.itemOf(optionFor(name)) != null || name.equals(MenuItems.itemOfEditsKey(keyFor(name)))
+                    || name.equals("LOOP") || name.equals("STORY_LOOP") || name.equals("PRIORITY");
+            assertTrue(name, read);
+        }
+    }
+
+    /** An Edits row the way Instagram holds one: its key in a String field. */
+    private static final class EditsRow {
+        final String key;
+
+        EditsRow(String key) {
+            this.key = key;
+        }
+
+        @Override public String toString() {
+            return key;
+        }
+    }
+
+    private static List<EditsRow> editsRows() {
+        return Arrays.asList(new EditsRow("show_as_template"), new EditsRow("remix_and_sequence"),
+                new EditsRow("use_as_reference"), new EditsRow("basel_made_with_edits_audio_menu"), new EditsRow("new_row"));
+    }
+
+    private static String keyOf(Object row) {
+        return ((EditsRow) row).key;
+    }
+
+    @Test
+    public void theEditsRowsLoseTheUntickedOnesAsANewList() {
+        List<EditsRow> rows = editsRows();
+        List<?> kept = MenuItems.editsRows(rows, () -> hiding("REMIX", "GET_EDITS"), MenuItemsTest::keyOf);
+        assertEquals("[show_as_template, use_as_reference, new_row]", kept.toString());
+        assertEquals("Instagram's list is left as it was", 5, rows.size());
+        String report = HookStatus.report().toString();
+        assertTrue(report, report.contains("Counted: " + MenuItems.LEFT_OFF + " 2"));
+        kept = MenuItems.editsRows(rows, () -> hiding("TEMPLATE", "REFERENCE"), MenuItemsTest::keyOf);
+        assertEquals("[remix_and_sequence, basel_made_with_edits_audio_menu, new_row]", kept.toString());
+    }
+
+    @Test
+    public void theEditsRowsStayAsBuiltWithNothingToLoseOrAKeyThatCantBeRead() {
+        List<EditsRow> rows = editsRows();
+        assertSame(rows, MenuItems.editsRows(rows, Collections::emptySet, MenuItemsTest::keyOf));
+        assertSame(rows, MenuItems.editsRows(rows, () -> hiding("REPORT", "LOOP"), MenuItemsTest::keyOf));
+        assertSame(rows, MenuItems.editsRows(rows, () -> hiding("REMIX"), row -> {
+            throw new ClassCastException("moved");
+        }));
+        assertSame(null, MenuItems.editsRows(null, () -> hiding("REMIX"), MenuItemsTest::keyOf));
+        List<EditsRow> none = Collections.emptyList();
+        assertSame(none, MenuItems.editsRows(none, () -> hiding("REMIX"), MenuItemsTest::keyOf));
+        // The stub answers no key until the patch writes it.
+        Settings.HIDDEN_MENU_ITEMS.save("REMIX,REFERENCE,TEMPLATE,GET_EDITS");
+        assertSame(rows, MenuItems.editsRows(rows));
+    }
+
+    @Test
+    public void madeWithEditsGoesOnlyWithTheLastEditsRow() {
+        List<EditsRow> rows = editsRows();
+        List<?> left = MenuItems.editsRows(rows, () -> hiding("REMIX", "REFERENCE", "TEMPLATE", "GET_EDITS"), MenuItemsTest::keyOf);
+        assertEquals(1, left.size());
+        assertEquals("Made with Edits", MenuItems.editsTitle("Made with Edits", rows, left));
+        List<?> gone = Collections.emptyList();
+        assertEquals(null, MenuItems.editsTitle("Made with Edits", rows, gone));
+        assertEquals("nothing there to begin with", "Made with Edits", MenuItems.editsTitle("Made with Edits", gone, gone));
+        assertEquals(null, MenuItems.editsTitle(null, rows, rows));
+        assertEquals("Made with Edits", MenuItems.editsTitle("Made with Edits", null, gone));
+    }
+
+    @Test
+    public void loopNeedsThePatchInTheBuild() {
+        Settings.HIDDEN_MENU_ITEMS.save("LOOP");
+        assertFalse("SettingsStatus.menuItems() answers no until the patch writes it", MenuItems.hidesLoop());
+    }
+
+    private static String keyFor(String item) {
+        switch (item) {
+            case "REMIX":
+                return "remix_and_sequence";
+            case "REFERENCE":
+                return "use_as_reference";
+            case "TEMPLATE":
+                return "show_as_template";
+            case "GET_EDITS":
+                return "basel_made_with_edits_audio_menu";
+            default:
+                return null;
         }
     }
 
@@ -241,6 +352,20 @@ public class MenuItemsTest {
                 return "WHY_AM_I_SEEING_THIS";
             case "PLAYBACK":
                 return "PLAYBACK_CONTROLS";
+            case "DOWNLOAD_PHOTO":
+                return "HUSHGRAM_DOWNLOAD_AS_PHOTO";
+            case "DOWNLOAD_VIDEO":
+                return "HUSHGRAM_DOWNLOAD_AS_VIDEO";
+            case "DOWNLOAD_COVER":
+                return "HUSHGRAM_DOWNLOAD_COVER";
+            case "DETAILS":
+                return "HUSHGRAM_POST_DETAILS";
+            case "ABOUT":
+                return "ABOUT_THIS_ACCOUNT";
+            case "BLOCK":
+                return "HUSHGRAM_POST_BLOCK";
+            case "HIDE_ACCOUNT":
+                return "HUSHGRAM_HIDE_ACCOUNT";
             default:
                 return item;
         }

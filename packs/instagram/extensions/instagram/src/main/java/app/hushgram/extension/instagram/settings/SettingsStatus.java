@@ -53,6 +53,10 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean withoutPlayServices() {
+        return false;
+    }
+
     public static boolean removeAdId() {
         return false;
     }
@@ -232,6 +236,11 @@ public final class SettingsStatus {
         return false;
     }
 
+    /** Rewritten by the Hide New message button and suggestions patch. */
+    public static boolean newMessage() {
+        return false;
+    }
+
     public static boolean instants() {
         return false;
     }
@@ -355,6 +364,10 @@ public final class SettingsStatus {
     }
 
     public static boolean profileHighlights() {
+        return false;
+    }
+
+    public static boolean profileFollowCounts() {
         return false;
     }
 
@@ -493,6 +506,11 @@ public final class SettingsStatus {
         return false;
     }
 
+    /** Rewritten by Hide comments when the heart and like count on a comment row were found too. */
+    public static boolean commentLikes() {
+        return false;
+    }
+
     public static boolean commentEmojiRow() {
         return false;
     }
@@ -518,6 +536,14 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean feedHeaderLine() {
+        return false;
+    }
+
+    public static boolean homeReelsBelowName() {
+        return false;
+    }
+
     public static boolean feedSave() {
         return false;
     }
@@ -536,6 +562,10 @@ public final class SettingsStatus {
     }
 
     public static boolean hideCaptions() {
+        return false;
+    }
+
+    public static boolean expandCaptions() {
         return false;
     }
 
@@ -618,6 +648,22 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean savedOnAll() {
+        return false;
+    }
+
+    public static boolean savedNewCollection() {
+        return false;
+    }
+
+    public static boolean savedReelsTab() {
+        return false;
+    }
+
+    public static boolean exploreSaved() {
+        return false;
+    }
+
     public static boolean stopHeartbeat() {
         return false;
     }
@@ -638,6 +684,11 @@ public final class SettingsStatus {
 
     /** Rewritten by the Open reel links on that reel patch. */
     public static boolean reelLinks() {
+        return false;
+    }
+
+    /** Rewritten by the Let the screen sleep when a reel stops patch. */
+    public static boolean reelScreenSleep() {
         return false;
     }
 
@@ -693,6 +744,10 @@ public final class SettingsStatus {
     }
 
     public static boolean reelProfileTabBar() {
+        return false;
+    }
+
+    public static boolean reelLinkTabBar() {
         return false;
     }
 
@@ -776,6 +831,11 @@ public final class SettingsStatus {
         return false;
     }
 
+    /** Rewritten by the Center names in chats patch. */
+    public static boolean centerChatName() {
+        return false;
+    }
+
     public static boolean askBeforeLike() {
         return false;
     }
@@ -790,6 +850,16 @@ public final class SettingsStatus {
 
     /** Rewritten by the Sent follow requests patch. */
     public static boolean sentRequests() {
+        return false;
+    }
+
+    /** Rewritten by the Chat bubbles patch. */
+    public static boolean chatBubbles() {
+        return false;
+    }
+
+    /** Rewritten by the Record calls patch. */
+    public static boolean callRecorder() {
         return false;
     }
 

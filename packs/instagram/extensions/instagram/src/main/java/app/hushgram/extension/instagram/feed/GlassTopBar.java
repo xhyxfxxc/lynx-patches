@@ -96,7 +96,7 @@ public final class GlassTopBar {
     /** How many parents up from the header the one drawing the feed before it is looked for. */
     static final int HOST_DEPTH = 6;
     /** How many parents up from a message box the view drawing what's under it is looked for. */
-    static final int BOX_DEPTH = 8;
+    public static final int BOX_DEPTH = 8;
     /** How deep into the header a view drawing inside it is looked for, before it's taken that one does. */
     private static final int SHOWN_DEPTH = 6;
 
@@ -139,7 +139,7 @@ public final class GlassTopBar {
     public static void glazeChat(@Nullable View header, int messages, int list, BooleanSupplier on) {
         try {
             if (header == null || !on.getAsBoolean() || !GLAZED.add(header)) return;
-            Glass glass = new Glass(header, on, FamilyNames.GLASS_CHAT, 0, false, Settings.GLASS_CHAT_TOP_BAR_OPACITY);
+            Glass glass = new Glass(header, on, FamilyNames.GLASS_CHAT, 0, false, Settings.GLASS_CHAT_TOP_BAR_OPACITY, false);
             // Below Android 12 there's no blur, so messages under the header would only be hidden.
             if (messages != 0 && list != 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 glass.chat = new ChatReach(messages, list);
@@ -148,6 +148,35 @@ public final class GlassTopBar {
             HookStatus.counted(FamilyNames.GLASS_CHAT, COUNT_GLAZED);
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.GLASS_CHAT, HOOK, failure);
+        }
+    }
+
+    /**
+     * Injected in Instagram's helper setting a view's bottom padding, which a chat runs on its messages each time
+     * the message bar changes height: [bottom], with the room the glass gives the messages under the bar when
+     * [view] is a chat's list it took down (#528). Answers [bottom] itself for any other view. Never throws.
+     */
+    public static int bottomPadding(@Nullable View view, int bottom) {
+        try {
+            HookStatus.invoked(FamilyNames.GLASS_CHAT);
+            return ChatReach.bottomPadding(view, bottom);
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.GLASS_CHAT, HOOK, failure);
+            return bottom;
+        }
+    }
+
+    /**
+     * Injected where a chat reads its message list's bottom padding to work out the next one: [bottom], as
+     * Instagram set it, without the room {@link #bottomPadding} adds (#528). Never throws.
+     */
+    public static int ownBottomPadding(@Nullable View view, int bottom) {
+        try {
+            HookStatus.invoked(FamilyNames.GLASS_CHAT);
+            return ChatReach.ownBottomPadding(view, bottom);
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.GLASS_CHAT, HOOK, failure);
+            return bottom;
         }
     }
 
@@ -176,9 +205,25 @@ public final class GlassTopBar {
      */
     public static void glazeBox(@Nullable View box, int source, boolean dark, BooleanSupplier on, String family,
                                 @Nullable IntegerSetting tintSlider, int corner) {
+        glazeBox(box, source, dark, on, family, tintSlider, corner, false);
+    }
+
+    /**
+     * #759: gives [row], the view Instagram draws a chat's message bar pill on when it hides the pill's picture,
+     * the glass in place of that fill, as {@link #glazeBox(View, int, boolean, BooleanSupplier, String,
+     * IntegerSetting, int)} does a picture. The views laid over the whole row lose their fill while it's on, and
+     * the row gets its own back when it comes off. Never throws. Done once per row.
+     */
+    public static void glazeRow(@Nullable View row, int source, BooleanSupplier on, String family,
+                                @Nullable IntegerSetting tintSlider, int corner) {
+        glazeBox(row, source, false, on, family, tintSlider, corner, true);
+    }
+
+    private static void glazeBox(@Nullable View box, int source, boolean dark, BooleanSupplier on, String family,
+                                 @Nullable IntegerSetting tintSlider, int corner, boolean replaces) {
         try {
             if (box == null || source == 0 || !on.getAsBoolean() || under(box, source) == null || !GLAZED.add(box)) return;
-            Glass glass = new Glass(box, on, family, source, dark, tintSlider);
+            Glass glass = new Glass(box, on, family, source, dark, tintSlider, replaces);
             glass.cornerId = corner;
             listen(glass);
             HookStatus.counted(family, COUNT_BOXES);
@@ -189,7 +234,7 @@ public final class GlassTopBar {
 
     private static void attach(View header, BooleanSupplier on, String family, @Nullable IntegerSetting tintSlider) {
         if (!GLAZED.add(header)) return;
-        listen(new Glass(header, on, family, 0, false, tintSlider));
+        listen(new Glass(header, on, family, 0, false, tintSlider, false));
         HookStatus.counted(family, COUNT_GLAZED);
     }
 
@@ -346,6 +391,12 @@ public final class GlassTopBar {
         return background instanceof Frost && ((Frost) background).sheened;
     }
 
+    /** How far below [header]'s top its sheen runs on over Home's stories row, 0 while it doesn't (#800). */
+    static int sheenTo(View header) {
+        Drawable background = header.getBackground();
+        return background instanceof Frost ? ((Frost) background).glass.sheenTo : 0;
+    }
+
     /**
      * The view under [header]'s parent, [header] or one of the views wrapped round it, whose parent
      * draws the feed before it: the first parent more than twice as tall as [header]. Null when there's
@@ -411,6 +462,8 @@ public final class GlassTopBar {
         @Nullable private final GlassReach reach;
         /** Runs a chat's messages on under its header and behind the status bar (#684). Null elsewhere. */
         @Nullable ChatReach chat;
+        /** Whether the last frame wasn't drawn because the chat's reach had just moved something (#757). */
+        private boolean heldBack;
         /** The view holding a chat's messages while they run on under the glass, with its soft edge on it. */
         @Nullable View banded;
         @Nullable private Edge edge;
@@ -431,6 +484,8 @@ public final class GlassTopBar {
         private final boolean dark;
         /** Whether a message box takes the glass over itself, as a foreground, and not as its background. */
         final boolean over;
+        /** Whether a message box's glass takes the place of its fill, which isn't drawn over it (#759). */
+        final boolean replaces;
         @Nullable private GlassLens rim;
         private final RectF rimBox = new RectF();
         /** How many times the rim bend was asked for. Read by tests. */
@@ -448,6 +503,15 @@ public final class GlassTopBar {
         int stripTop;
         int stripBottom;
         int fade;
+        /** How far Home's glass fades out below a header still showing, so it never ends on a hard line (#462). */
+        int softEdge;
+        /** Finds Home's stories row under the header. Null for a chat's header. */
+        @Nullable private final TraySheen traySheen;
+        /**
+         * How far below the header's top the stories row ends while the glass tab bar's sheen runs on down over
+         * it, 0 while it doesn't (#800).
+         */
+        int sheenTo;
         private boolean describedHollow;
         private int describedCovers = -1;
 
@@ -464,18 +528,20 @@ public final class GlassTopBar {
         private int lastHeight;
 
         Glass(View header, BooleanSupplier enabled, String family, int sourceId, boolean dark,
-              @Nullable IntegerSetting tintSlider) {
+              @Nullable IntegerSetting tintSlider, boolean replaces) {
             this.header = header;
             this.enabled = enabled;
             this.family = family;
             this.tintSlider = tintSlider;
             this.sourceId = sourceId;
             this.dark = dark;
-            this.over = sourceId != 0 && !(header instanceof ViewGroup);
+            this.replaces = sourceId != 0 && replaces;
+            this.over = sourceId != 0 && !this.replaces && !(header instanceof ViewGroup);
             boolean home = sourceId == 0 && FamilyNames.HOME_TOP_BAR.equals(family);
             this.lined = sourceId == 0 && !FamilyNames.GLASS_CHAT.equals(family);
             this.frost = new Frost(this, header.getResources().getDisplayMetrics().density);
             this.reach = home ? new GlassReach() : null;
+            this.traySheen = home ? new TraySheen() : null;
         }
 
         /** The view whose parent draws what's under the glass, under that parent: see {@link #host} and {@link #under}. */
@@ -497,7 +563,7 @@ public final class GlassTopBar {
         /** The background a message box had, drawn over its glass, or null when there's none to keep. */
         @Nullable
         Drawable kept() {
-            return sourceId == 0 || over ? null : original;
+            return sourceId == 0 || over || replaces ? null : original;
         }
 
         @Override
@@ -526,11 +592,22 @@ public final class GlassTopBar {
         @Override
         public boolean onPreDraw() {
             try {
-                if (!enabled.getAsBoolean()) {
+                // A message box Instagram hides keeps no glass, so what it took off the views round it comes back (#759).
+                if (!enabled.getAsBoolean() || (sourceId != 0 && !header.isShown())) {
                     takeOff();
                     return true;
                 }
                 putOn();
+                // Instagram pads a chat's messages again each time the message bar changes height, so this frame
+                // was laid out without the room the reach gives them and would show them a line or more off. The
+                // reach has put it back, and the next frame lays it out, so this one isn't drawn (#757). Never two
+                // in a row, so a reach that moves something every frame still draws.
+                ChatReach messages = chat;
+                if (messages != null && messages.moved() && !heldBack) {
+                    heldBack = true;
+                    return false;
+                }
+                heldBack = false;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) record(SystemClock.uptimeMillis());
             } catch (Throwable failure) {
                 // Instagram's header as it was, for as long as this header lives.
@@ -560,6 +637,7 @@ public final class GlassTopBar {
                 // A message box keeps what's round it as it is: the glass is only the pill.
                 base = dark || night ? Color.BLACK : Color.WHITE;
                 if (over) uncover();
+                else if (replaces) uncoverInside();
                 return;
             }
             View host = host();
@@ -574,9 +652,15 @@ public final class GlassTopBar {
             int wasAbove = above;
             int wasBelow = below;
             boolean wasHollow = hollow;
+            int wasSoftEdge = softEdge;
+            int wasSheenTo = sheenTo;
             reachUnder(host);
+            // While the glass reaches over Home, slid away to the strip or not, with the glass tab bar's look on it.
+            sheenTo = traySheen != null && reach != null && (softEdge > 0 || hollow) && GlassTabBar.onNow()
+                    ? traySheen.end(header, reach.home()) : 0;
             // A header sliding only moves its node, and how far the glass reaches is drawn into that node.
-            if (above != wasAbove || below != wasBelow || hollow != wasHollow) {
+            if (above != wasAbove || below != wasBelow || hollow != wasHollow || softEdge != wasSoftEdge
+                    || sheenTo != wasSheenTo) {
                 frost.invalidateSelf();
                 if (edge != null) edge.invalidateSelf();
             }
@@ -587,6 +671,7 @@ public final class GlassTopBar {
             above = 0;
             below = 0;
             hollow = false;
+            softEdge = 0;
             ChatReach messages = chat;
             if (messages != null) {
                 if (host == null || !(host.getParent() instanceof ViewGroup)) {
@@ -625,6 +710,7 @@ public final class GlassTopBar {
             fade = Math.round(STRIP_FADE * density);
             // The backdrop is recorded down to where the strip's fade ends, past a header slid away above it.
             if (hollow) below = Math.max(below, stripBottom + fade - header.getHeight());
+            else softEdge = fade;
             if (hollow && !describedHollow) {
                 describedHollow = true;
                 Logger.printDebug(() -> "Top bar glass: only the strip behind the status bar, header at " + top + ", holding " + children(header));
@@ -663,9 +749,21 @@ public final class GlassTopBar {
             int at = parent.indexOfChild(header);
             if (at < 0) return;
             for (int i = at + 1, n = parent.getChildCount(); i < n; i++) uncover(parent.getChildAt(i), 1);
+            describe("");
+        }
+
+        /** Takes the fill off the views in a row given the glass in its fill's place that cover the whole row (#759). */
+        private void uncoverInside() {
+            if (!(header instanceof ViewGroup) || header.getWidth() <= 0) return;
+            ViewGroup row = (ViewGroup) header;
+            for (int i = 0, n = row.getChildCount(); i < n; i++) uncover(row.getChildAt(i), 1);
+            describe("the row in place of the hidden pill, ");
+        }
+
+        private void describe(String where) {
             if (cleared.size() == describedCovers) return;
             describedCovers = cleared.size();
-            Logger.printDebug(() -> "Message box glass: on " + header.getClass().getSimpleName() + " alpha "
+            Logger.printDebug(() -> "Message box glass: on " + where + header.getClass().getSimpleName() + " alpha "
                     + header.getAlpha() + ", fills taken off " + takenOff());
         }
 
@@ -724,6 +822,8 @@ public final class GlassTopBar {
             above = 0;
             below = 0;
             hollow = false;
+            softEdge = 0;
+            sheenTo = 0;
         }
 
         private void forgetBackdrop() {
@@ -771,7 +871,7 @@ public final class GlassTopBar {
             int up = above;
             View messages = banded instanceof ViewGroup && banded.getParent() == source ? banded : null;
             // A chat's messages are recorded down to where the soft edge over them fades out.
-            int down = messages == null ? below : below + Math.max(0, Math.round(messages.getY() - y - height)) + edgeFade();
+            int down = messages == null ? below + softEdge : below + Math.max(0, Math.round(messages.getY() - y - height)) + edgeFade();
             boolean same = recorded && x == lastX && y == lastY && width == lastWidth && height == lastHeight
                     && blurDp == nodeBlurDp && up == nodeAbove && down == nodeBelow;
             if (same && now - recordedAt < GlassTabBar.RECORD_EVERY_MS) return;
@@ -1002,23 +1102,34 @@ public final class GlassTopBar {
             if (hollow) {
                 area.set(bounds.left, bounds.top + glass.stripTop, bounds.right, bounds.top + glass.stripBottom + glass.fade);
             } else {
-                area.set(bounds.left, bounds.top - glass.above, bounds.right, bounds.bottom + glass.below);
+                area.set(bounds.left, bounds.top - glass.above, bounds.right, bounds.bottom + glass.below + glass.softEdge);
             }
-            // The strip alone fades out under the status bar, so it's drawn in a layer the fade can thin (#450).
-            int layer = hollow ? canvas.saveLayer(area.left, area.top, area.right, area.bottom, null) : -1;
+            // The strip fades out under the status bar and Home's glass below its header, so each is drawn in a
+            // layer the fade can thin (#450, #462).
+            boolean fades = hollow || glass.softEdge > 0;
+            // Over Home's stories row the sheen runs on to the row's bottom, whole through the fade, so the row and
+            // the header, or the strip left of it once it slid away, read as one pane of glass (#800).
+            int sheenTo = glass.sheenTo <= 0 ? Integer.MIN_VALUE : bounds.top + glass.sheenTo;
+            boolean runsOn = sheenTo > area.bottom && GlassTabBar.onNow();
+            int layer = fades ? canvas.saveLayer(area.left, area.top, area.right, area.bottom, null) : -1;
             try {
-                drawGlass(canvas, bounds, base);
-                if (hollow) fadeOut(canvas, area.bottom - glass.fade);
+                drawGlass(canvas, bounds, base, !runsOn);
+                if (fades) fadeOut(canvas, area.bottom - glass.fade);
             } finally {
                 if (layer >= 0) canvas.restoreToCount(layer);
             }
-            if (!glass.lined || hollow) return;
+            if (runsOn) {
+                sheened = true;
+                keepSheen(GlassTabBar.isDark(base), area.top, sheenTo);
+                canvas.drawRect(area.left, area.top, area.right, sheenTo, sheen);
+            }
+            if (!glass.lined || fades) return;
             paint.setColor(hairline(base));
             canvas.drawRect(area.left, area.bottom - hairline, area.right, area.bottom, paint);
         }
 
-        /** The blur over [area], its rim bend and the tint and sheen over it. */
-        private void drawGlass(Canvas canvas, Rect bounds, int base) {
+        /** The blur over [area], its rim bend and the tint over it, and the sheen too when [withSheen]. */
+        private void drawGlass(Canvas canvas, Rect bounds, int base, boolean withSheen) {
             boolean blurred = glass.drawBackdrop(canvas, area);
             // Every header follows the glass tab bar's pill: its rim bend, measured on the header, and its sheen.
             boolean likeTabBar = GlassTabBar.onNow();
@@ -1028,8 +1139,8 @@ public final class GlassTopBar {
             paint.setColor(GlassTabBar.tint(base, blurred, glass.tintScale()));
             canvas.drawRect(area, paint);
             sheened = likeTabBar;
-            if (likeTabBar) {
-                keepSheen(GlassTabBar.isDark(base));
+            if (likeTabBar && withSheen) {
+                keepSheen(GlassTabBar.isDark(base), area.top, area.bottom);
                 canvas.drawRect(area, sheen);
             }
         }
@@ -1064,8 +1175,7 @@ public final class GlassTopBar {
                 canvas.drawRect(bounds, paint);
                 sheened = likeTabBar;
                 if (likeTabBar) {
-                    area.set(bounds);
-                    keepSheen(GlassTabBar.isDark(glass.base));
+                    keepSheen(GlassTabBar.isDark(glass.base), bounds.top, bounds.bottom);
                     canvas.drawRect(bounds, sheen);
                 }
             } finally {
@@ -1081,13 +1191,13 @@ public final class GlassTopBar {
             kept.draw(canvas);
         }
 
-        /** Makes the sheen's gradient again when the glass's top, bottom or shade changed. */
-        private void keepSheen(boolean dark) {
-            if (sheenTop == area.top && sheenBottom == area.bottom && sheenDark == dark) return;
-            sheenTop = area.top;
-            sheenBottom = area.bottom;
+        /** Makes the sheen's gradient again when its [top], [bottom] or shade changed. */
+        private void keepSheen(boolean dark, int top, int bottom) {
+            if (sheenTop == top && sheenBottom == bottom && sheenDark == dark) return;
+            sheenTop = top;
+            sheenBottom = bottom;
             sheenDark = dark;
-            sheen.setShader(new LinearGradient(0, area.top, 0, area.bottom,
+            sheen.setShader(new LinearGradient(0, top, 0, bottom,
                     GlassTabBar.sheenTop(dark), 0x00ffffff, Shader.TileMode.CLAMP));
         }
 

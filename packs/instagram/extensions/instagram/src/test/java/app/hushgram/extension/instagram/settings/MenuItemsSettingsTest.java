@@ -109,7 +109,7 @@ public class MenuItemsSettingsTest {
         String[] keys = new String[feed.getPreferenceCount()];
         for (int i = 0; i < keys.length; i++) keys[i] = feed.getPreference(i).getKey();
         int at = Arrays.asList(keys).indexOf(Settings.HIDDEN_MENU_ITEMS.key);
-        assertEquals(Arrays.toString(keys), Settings.HIDE_FEED_LIKE_BUTTON.key, keys[at - 1]);
+        assertEquals(Arrays.toString(keys), Settings.HIDE_LIKED_BY.key, keys[at - 1]);
         assertEquals(Collections.singletonList(Settings.HIDDEN_MENU_ITEMS), PatchFamily.MENU_ITEMS.choices());
         assertEquals("Three-dot menu items", PatchFamily.MENU_ITEMS.patchName);
         assertEquals("", Settings.HIDDEN_MENU_ITEMS.get());
@@ -117,7 +117,10 @@ public class MenuItemsSettingsTest {
 
         ListView list = openList();
         String[] expected = {"Report", "Mute", "Unfollow", "Not interested", "Interested", "Why you're seeing this post",
-                "Playback speed", "Playback"};
+                "Playback speed", "Playback", "Remix and sequence", "Use as reference", "Use template", "Get Edits",
+                "Loop this video", "Save", "Download", "Download as photo", "Download as video", "Download cover",
+                "Details", "About this account", "Block", "Hide posts from this account", "Loop this story",
+                "Add to Stories priority"};
         assertEquals(expected.length, list.getCount());
         for (int i = 0; i < expected.length; i++) {
             assertEquals(expected[i], list.getItemAtPosition(i).toString());

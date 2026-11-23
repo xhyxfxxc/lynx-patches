@@ -20,15 +20,17 @@ internal const val REEL_ORIGIN_PATCH = "Find the reel you came from"
 
 /**
  * Takes you back to the reel you were watching from its creator's profile (#30). Opening a profile
- * from a reel remembers the reel, and the profile's Reels tab scrolls its grid to that reel's tile
- * and outlines it, or for a photo reel the profile's posts grid does (#225). In the default
- * selection with its switch off.
+ * from a reel, in Reels or from a reel's header in the feed (#795), remembers the reel, and the
+ * profile's Reels tab scrolls its grid to that reel's tile
+ * and labels it You just watched (#781), or for a photo reel the profile's posts grid does (#225).
+ * In the default selection with its switch off.
  */
 @Suppress("unused")
 val findReelOriginPatch = bytecodePatch(
     name = "Find the reel you came from",
     description = "Open a creator's profile from a reel, then their Reels tab, and it scrolls to that reel and " +
-        "outlines it for a moment. A photo reel is found in their posts. Stop looking ends the search, and Wait " +
+        "labels it You just watched for a few seconds. A photo reel is found in their posts. Stop looking ends " +
+        "the search, and Wait " +
         "for a tap to find it holds it until you tap Find the reel. Starts off. Turn it on in HushGram settings > Reels.",
 ) {
     category("Reels")
@@ -37,6 +39,10 @@ val findReelOriginPatch = bytecodePatch(
     execute {
         requireStatusMethod("reelOrigin")
         hookReelOrigin()
+        // A reel in the feed opens its author's profile from the post's header, not the opener (#795).
+        for (tap in findFeedHeaderTapsOrWarn()) hookFeedHeaderTap(tap)
+        // A tap on the post's name reaches Instagram's own profile open instead, on the main feed of 456 at least.
+        for (open in findFeedProfileOpensOrWarn()) hookFeedProfileOpen(open)
         enableStatus("reelOrigin")
     }
 }

@@ -34,6 +34,7 @@ import app.hushgram.extension.instagram.download.SaveFolder;
 import app.hushgram.extension.instagram.download.SavedProfiles;
 import app.hushgram.extension.instagram.direct.MessageBox;
 import app.hushgram.extension.instagram.feed.MenuItems;
+import app.hushgram.extension.instagram.profile.NotificationKinds;
 import app.hushgram.extension.instagram.profile.ProfileTabs;
 import app.hushgram.extension.instagram.misc.GlassBlur;
 import app.hushgram.extension.instagram.misc.GlassOpacity;
@@ -170,6 +171,8 @@ public final class ConfigurationBackup {
         if (PatchFamily.CAPTION_WORD_REELS.inBuild()) {
             settings.put(Settings.REELS_BLOCKED_WORDS.key, Settings.REELS_BLOCKED_WORDS);
             settings.put(Settings.REELS_KEPT_LANGUAGES.key, Settings.REELS_KEPT_LANGUAGES);
+            settings.put(Settings.HIDE_CAPTION_WORD_COMMENTS.key, Settings.HIDE_CAPTION_WORD_COMMENTS);
+            settings.put(Settings.HIDE_CAPTION_WORD_SEARCH.key, Settings.HIDE_CAPTION_WORD_SEARCH);
             // Also on Home, both of them: their rows show only with Home's reads in the build.
             if (PatchFamily.feedTypesInBuild()) {
                 settings.put(Settings.HIDE_CAPTION_WORD_HOME.key, Settings.HIDE_CAPTION_WORD_HOME);
@@ -179,6 +182,15 @@ public final class ConfigurationBackup {
         if (PatchFamily.LOW_VIEW_REELS.inBuild()) {
             settings.put(Settings.MIN_REEL_VIEWS.key, Settings.MIN_REEL_VIEWS);
             settings.put(Settings.MIN_REEL_LIKES.key, Settings.MIN_REEL_LIKES);
+            settings.put(Settings.MAX_REEL_VIEWS.key, Settings.MAX_REEL_VIEWS);
+            settings.put(Settings.MIN_REEL_LIKES_PER_1000.key, Settings.MIN_REEL_LIKES_PER_1000);
+            settings.put(Settings.MIN_REEL_COMMENTS_PER_1000.key, Settings.MIN_REEL_COMMENTS_PER_1000);
+            settings.put(Settings.MIN_REEL_SECONDS.key, Settings.MIN_REEL_SECONDS);
+            settings.put(Settings.MAX_REEL_SECONDS.key, Settings.MAX_REEL_SECONDS);
+            settings.put(Settings.MAX_REEL_AGE_DAYS.key, Settings.MAX_REEL_AGE_DAYS);
+            settings.put(Settings.REELS_NEWEST_FIRST.key, Settings.REELS_NEWEST_FIRST);
+            // Also on Home: its row shows only with Home's reads in the build.
+            if (PatchFamily.feedTypesInBuild()) settings.put(Settings.HIDE_LOW_VIEW_HOME.key, Settings.HIDE_LOW_VIEW_HOME);
         }
         if (PatchFamily.STORY_PRIORITY.inBuild()) settings.put(Settings.STORY_PRIORITY_ACCOUNTS.key, Settings.STORY_PRIORITY_ACCOUNTS);
         if (PatchFamily.CALL_BLOCKER.inBuild()) {
@@ -194,12 +206,14 @@ public final class ConfigurationBackup {
             settings.put(Settings.HEADER_TEXT_FONT.key, Settings.HEADER_TEXT_FONT);
             settings.put(Settings.HEADER_TEXT_CENTER.key, Settings.HEADER_TEXT_CENTER);
         }
+        if (PatchFamily.PROFILE_SUGGESTIONS.inBuild()) settings.put(Settings.HIDDEN_NOTIFICATION_KINDS.key, Settings.HIDDEN_NOTIFICATION_KINDS);
         if (PatchFamily.NOTIFICATION_GROUPS.inBuild()) {
             settings.put(Settings.GROUP_NOTIFICATIONS_BY_TYPE.key, Settings.GROUP_NOTIFICATIONS_BY_TYPE);
             settings.put(Settings.MUTED_NOTIFICATION_CHANNELS.key, Settings.MUTED_NOTIFICATION_CHANNELS);
         }
         if (PatchFamily.PLAYBACK_QUALITY.inBuild()) {
             settings.put(Settings.PLAYBACK_QUALITY.key, Settings.PLAYBACK_QUALITY);
+            settings.put(Settings.PLAYBACK_QUALITY_STEPS_DOWN.key, Settings.PLAYBACK_QUALITY_STEPS_DOWN);
             settings.put(Settings.QUALITY_TAB_TARGET.key, Settings.QUALITY_TAB_TARGET);
         }
         if (PatchFamily.DATA_SAVER.inBuild()) {
@@ -242,11 +256,14 @@ public final class ConfigurationBackup {
         if (PatchFamily.STORY_TIME.inBuild()) settings.put(Settings.STORY_TIME_MODE.key, Settings.STORY_TIME_MODE);
         if (PatchFamily.STORY_MENTIONS.inBuild()) settings.put(Settings.STORY_MENTIONS_LOOK.key, Settings.STORY_MENTIONS_LOOK);
         if (PatchFamily.CAROUSEL_ARROWS.inBuild()) settings.put(Settings.CAROUSEL_PILL_LOOK.key, Settings.CAROUSEL_PILL_LOOK);
+        if (PatchFamily.EXPAND_CAPTIONS.inBuild()) settings.put(Settings.CAPTION_LINES.key, Settings.CAPTION_LINES);
         if (PatchFamily.FEED_SEEK_BAR.inBuild()) {
             settings.put(Settings.FEED_SEEK_BAR_LOOK.key, Settings.FEED_SEEK_BAR_LOOK);
             settings.put(Settings.SEEK_BAR_SHAPE.key, Settings.SEEK_BAR_SHAPE);
             settings.put(Settings.FEED_SEEK_SHAPE.key, Settings.FEED_SEEK_SHAPE);
             settings.put(Settings.FEED_DOUBLE_TAP_SKIP_SECONDS.key, Settings.FEED_DOUBLE_TAP_SKIP_SECONDS);
+            settings.put(Settings.FEED_SEEK_TIME.key, Settings.FEED_SEEK_TIME);
+            settings.put(Settings.FEED_SEEK_TIME_LEFT.key, Settings.FEED_SEEK_TIME_LEFT);
         }
         if (PatchFamily.REEL_DOUBLE_TAP_SKIP.inBuild()) {
             settings.put(Settings.DOUBLE_TAP_SKIP_REELS_SECONDS.key, Settings.DOUBLE_TAP_SKIP_REELS_SECONDS);
@@ -257,6 +274,8 @@ public final class ConfigurationBackup {
         if (PatchFamily.STORY_SEEK_BAR.inBuild()) {
             settings.put(Settings.STORY_SEEK_BAR_LOOK.key, Settings.STORY_SEEK_BAR_LOOK);
             settings.put(Settings.STORY_SEEK_BAR_POSITION.key, Settings.STORY_SEEK_BAR_POSITION);
+            settings.put(Settings.STORY_SEEK_TIME.key, Settings.STORY_SEEK_TIME);
+            settings.put(Settings.STORY_SEEK_TIME_LEFT.key, Settings.STORY_SEEK_TIME_LEFT);
         }
         if (PatchFamily.FRIENDSHIP_STATUS.inBuild()) settings.put(Settings.FOLLOW_LABEL_PLACE.key, Settings.FOLLOW_LABEL_PLACE);
         if (PatchFamily.FULL_SCREEN_BARS.inBuild()) settings.put(Settings.FULL_SCREEN_HIDES.key, Settings.FULL_SCREEN_HIDES);
@@ -310,6 +329,9 @@ public final class ConfigurationBackup {
             if (PatchFamily.KEEP_REEL_SPEED.inBuild()) {
                 settings.put(Settings.SPEED_BUTTON_ON_REELS.key, Settings.SPEED_BUTTON_ON_REELS);
                 settings.put(Settings.SPEED_IN_REEL_MENU.key, Settings.SPEED_IN_REEL_MENU);
+            }
+            if (PatchFamily.REEL_AUTO_SCROLL.inBuild()) {
+                settings.put(Settings.AUTO_SCROLL_IN_REEL_MENU.key, Settings.AUTO_SCROLL_IN_REEL_MENU);
             }
             if (PatchFamily.REEL_DECLUTTER.inBuild()) {
                 settings.put(Settings.FULL_SCREEN_BUTTON_ON_REELS.key, Settings.FULL_SCREEN_BUTTON_ON_REELS);
@@ -367,6 +389,8 @@ public final class ConfigurationBackup {
         settings.put(Settings.CATEGORY_GRID.key, Settings.CATEGORY_GRID);
         settings.put(Settings.DESCRIPTIONS_BEHIND_INFO.key, Settings.DESCRIPTIONS_BEHIND_INFO);
         settings.put(Settings.SETTINGS_BLACK_LOOK.key, Settings.SETTINGS_BLACK_LOOK);
+        settings.put(Settings.SETTINGS_LIGHT_LOOK.key, Settings.SETTINGS_LIGHT_LOOK);
+        settings.put(Settings.SETTINGS_INSTAGRAM_LOOK.key, Settings.SETTINGS_INSTAGRAM_LOOK);
         settings.put(Settings.DATE_SETTINGS_EXPORT.key, Settings.DATE_SETTINGS_EXPORT);
         return settings;
     }
@@ -474,6 +498,11 @@ public final class ConfigurationBackup {
                 }
                 updates.put(setting, value);
             }
+            // A file from before the Reels switch had one switch for both questions, and every later
+            // export writes the Reels one, so a file without it gives Reels the Home answer (#769).
+            Object home = updates.get(Settings.HIDE_FEED_INTEREST);
+            if (home != null && allowed.get(Settings.HIDE_REEL_INTEREST.key) == Settings.HIDE_REEL_INTEREST
+                    && !values.has(Settings.HIDE_REEL_INTEREST.key)) updates.put(Settings.HIDE_REEL_INTEREST, home);
             if (listed) {
                 // An entry that isn't an account is a file of the wrong shape. One the list couldn't
                 // have saved is left out, and so is the whole list without Saved profiles in the build.
@@ -547,7 +576,8 @@ public final class ConfigurationBackup {
         int longest = setting == Settings.REELS_BLOCKED_WORDS || setting == Settings.REELS_KEPT_LANGUAGES
                 || setting == Settings.STORY_PRIORITY_ACCOUNTS || setting == Settings.FRIENDS_TAB_PICKS
                 || setting == Settings.CALL_BLOCK_ACCOUNTS || setting == Settings.HIDDEN_SETTINGS_ROWS
-                || setting == Settings.MUTED_NOTIFICATION_CHANNELS ? MAX_WORDS_TEXT : MAX_TEXT;
+                || setting == Settings.MUTED_NOTIFICATION_CHANNELS || setting == Settings.HIDDEN_NOTIFICATION_KINDS
+                ? MAX_WORDS_TEXT : MAX_TEXT;
         if (!(value instanceof String) || ((String) value).length() > longest) return null;
         if (fallback instanceof Enum) {
             if (!"enum".equals(declared)) return null;
@@ -625,6 +655,8 @@ public final class ConfigurationBackup {
         if (setting == Settings.MUTED_NOTIFICATION_CHANNELS) {
             return text.equals(NotificationGroups.joinChannels(NotificationGroups.mutedChannels(text)));
         }
+        // The notification kinds hidden, as the server's names for them with commas between, in name order.
+        if (setting == Settings.HIDDEN_NOTIFICATION_KINDS) return text.equals(NotificationKinds.join(NotificationKinds.parse(text)));
         // The profile tabs left off, as Instagram's keys with commas between, in the order the dialog lists them.
         if (setting == Settings.HIDDEN_PROFILE_TABS) return text.equals(ProfileTabs.join(ProfileTabs.parse(text)));
         // The same for your own profile, or the mark that it still follows other profiles.

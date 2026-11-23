@@ -23,7 +23,7 @@
       "title": "HushGram (Lynx build)",
       "app": "com.instagram.android",
       "upstream": "https://github.com/SysAdminDoc/HushGram",
-      "ref": "v0.0.21",
+      "ref": "v0.0.22",
       "exclude": [
         "patches-bundle.json",
         ".github/**",
@@ -36,7 +36,7 @@
         "output": "patches/build/release/patches-*.mpp",
         "args": ""
       },
-      "commit": "78f7deb99969b30dd9eeabe8e572c1b60386fad5"
+      "commit": "30d2d105f0f70245ffe10d9a8cf904b0c900ddb6"
     },
     "threads": {
       "title": "HushThreads (Lynx build)",

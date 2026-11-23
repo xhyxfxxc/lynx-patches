@@ -32,6 +32,7 @@ import org.robolectric.annotation.Implements;
 import org.robolectric.shadows.ShadowAlertDialog;
 import org.robolectric.shadows.ShadowToast;
 
+import app.hushgram.extension.instagram.reels.ReelAutoScroll;
 import app.hushgram.extension.instagram.settings.FamilyNames;
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.instagram.settings.SettingsStatus;
@@ -73,6 +74,10 @@ public class ReelDownloadTest {
         Item.id = null;
         Settings.STOP_VIDEO_LOOPING.resetToDefault();
         Settings.REEL_AUTO_ADVANCE.resetToDefault();
+        Settings.AUTO_SCROLL_IN_REEL_MENU.resetToDefault();
+        Settings.REEL_AUTO_SCROLL_HELD_OFF.resetToDefault();
+        Settings.REEL_AUTO_SCROLL_ON.resetToDefault();
+        ReelAutoScroll.forgetForTests();
     }
 
     /** With the switch on, every reel gets the row, whatever Instagram and its flag say. */
@@ -222,7 +227,7 @@ public class ReelDownloadTest {
     /** The two options a photo with music gets, by the names the extension gives them. */
     private enum Ours {
         HUSHGRAM_DOWNLOAD_AS_VIDEO, HUSHGRAM_DOWNLOAD_AS_PHOTO, HUSHGRAM_DOWNLOAD_REEL, HUSHGRAM_DOWNLOAD_COVER, HUSHGRAM_DOWNLOAD_AUDIO,
-        HUSHGRAM_DOWNLOAD_SONG, HUSHGRAM_REEL_DETAILS, HUSHGRAM_REEL_SPEED, HUSHGRAM_VIDEO_LOOP
+        HUSHGRAM_DOWNLOAD_SONG, HUSHGRAM_REEL_DETAILS, HUSHGRAM_REEL_SPEED, HUSHGRAM_VIDEO_LOOP, HUSHGRAM_REEL_AUTO_SCROLL
     }
 
     /** A photo the Reels viewer shows with music that has a track to fetch. */
@@ -786,6 +791,63 @@ public class ReelDownloadTest {
     }
 
     /**
+     * With Auto scroll in the reel menu on, a video reel gets Turn on auto scroll last of ours
+     * (#768), and a tap turns it on, says so and turns the label to Turn off auto scroll. A second
+     * tap turns it off and holds it off. Download on reels off, the row still lets Instagram's
+     * Download row in. A photo gets none, and neither does a build without Keep Reels auto scroll on.
+     */
+    @Test
+    @Config(shadows = {Item.class, Built.class})
+    public void aVideoReelGetsAutoScrollWithItsSwitch() {
+        Activity activity = Robolectric.buildActivity(Activity.class).setup().get();
+        Item.videos = List.of(new MediaSave.Rendition(META + "720.mp4", 720, 1280, 0));
+        Object reel = new Object();
+        Built.autoScroll = true;
+        assertFalse("Auto scroll in the reel menu starts off", ReelDownload.rows(null, reel, null, null, null));
+        assertTrue(Item.rows.isEmpty());
+
+        Settings.AUTO_SCROLL_IN_REEL_MENU.save(true);
+        assertTrue(ReelDownload.rows(null, reel, null, null, null));
+        assertEquals(List.of("HUSHGRAM_DOWNLOAD_REEL=Download", "HUSHGRAM_REEL_AUTO_SCROLL=Turn on auto scroll"), Item.rows);
+
+        assertTrue("the tap is ours", ReelDownload.save(Ours.HUSHGRAM_REEL_AUTO_SCROLL, reel, activity));
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertEquals("Auto scroll on", String.valueOf(ShadowToast.getTextOfLatestToast()));
+        assertTrue(Settings.REEL_AUTO_ADVANCE.get());
+        Item.rows.clear();
+        assertTrue(ReelDownload.rows(null, reel, null, null, null));
+        assertEquals(List.of("HUSHGRAM_DOWNLOAD_REEL=Download", "HUSHGRAM_REEL_AUTO_SCROLL=Turn off auto scroll"), Item.rows);
+        assertTrue(ReelDownload.save(Ours.HUSHGRAM_REEL_AUTO_SCROLL, reel, activity));
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertEquals("Auto scroll off", String.valueOf(ShadowToast.getTextOfLatestToast()));
+        assertFalse(Settings.REEL_AUTO_ADVANCE.get());
+        assertTrue("held off over Instagram's own switch", Settings.REEL_AUTO_SCROLL_HELD_OFF.savedValue());
+
+        Settings.DOWNLOAD_REELS.save(false);
+        Item.rows.clear();
+        assertTrue(ReelDownload.offerRow(0, reel));
+        assertTrue(ReelDownload.rows(null, reel, null, null, null));
+        assertEquals(List.of("HUSHGRAM_REEL_AUTO_SCROLL=Turn on auto scroll"), Item.rows);
+        List<Object> reduced = options(Option.PLAYBACK_CONTROLS, Option.REPORT);
+        ReelDownload.addTo(reduced, Option.DOWNLOAD);
+        assertEquals(options(Option.DOWNLOAD, Option.PLAYBACK_CONTROLS, Option.REPORT), reduced);
+        assertEquals(Arrays.asList(ReelDownload.AUTO_SCROLL_ICONS),
+                Arrays.asList(ReelDownload.iconsOf(ReelDownload.AUTO_SCROLL_OPTION)));
+
+        Item.videos = null;
+        Item.rows.clear();
+        assertFalse("a photo doesn't scroll on by itself", ReelDownload.offerRow(0, reel));
+        assertFalse(ReelDownload.rows(null, reel, null, null, null));
+        assertTrue(Item.rows.isEmpty());
+
+        Item.videos = List.of(new MediaSave.Rendition(META + "720.mp4", 720, 1280, 0));
+        Built.autoScroll = false;
+        assertFalse("a build without the patch", ReelDownload.offerRow(0, reel));
+        assertFalse(ReelDownload.rows(null, reel, null, null, null));
+        assertTrue(Item.rows.isEmpty());
+    }
+
+    /**
      * With Speed in the reel menu on, a reel with a video file or a manifest gets Playback speed
      * after Download, and after Details when that's on too (#553). A photo gets none, and neither
      * does a build without Keep the reel speed, whose player setter a pick goes through.
@@ -949,5 +1011,20 @@ public class ReelDownloadTest {
             assertTrue(icon + " is a 24dp glyph", icon.endsWith("_24"));
             assertFalse(icon + " is the speed icon's", List.of(ReelSpeedButton.ICON_NAMES).subList(0, 2).contains(icon));
         }
+    }
+
+    /** Playback speed and Block in a feed post's menu (#743) draw their own glyphs, not Download's arrow. */
+    @Test
+    public void theFeedPostRowsTakeTheirOwnGlyphs() {
+        android.content.Context context = org.robolectric.RuntimeEnvironment.getApplication();
+        int download = android.R.drawable.ic_menu_save;
+
+        for (String row : new String[]{FeedPostRows.SPEED_OPTION, FeedPostRows.BLOCK_OPTION}) {
+            assertEquals(row, android.R.drawable.ic_media_ff, ReelDownload.rowIcon(row, download, context, "no_such_icon", "ic_media_ff"));
+            assertEquals(row + " in a build without the glyph", download, ReelDownload.rowIcon(row, download, context, "no_such_icon"));
+        }
+        assertEquals(Arrays.asList(ReelDownload.SPEED_ICONS), Arrays.asList(ReelDownload.iconsOf(FeedPostRows.SPEED_OPTION)));
+        assertEquals(Arrays.asList(ReelBlockButton.ICON_NAMES), Arrays.asList(ReelDownload.iconsOf(FeedPostRows.BLOCK_OPTION)));
+        assertEquals(Arrays.asList(ReelDownload.DETAILS_ICONS), Arrays.asList(ReelDownload.iconsOf(PostInfo.OPTION)));
     }
 }

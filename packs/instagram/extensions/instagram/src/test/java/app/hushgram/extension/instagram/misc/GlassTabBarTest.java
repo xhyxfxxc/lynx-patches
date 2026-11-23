@@ -699,6 +699,64 @@ public class GlassTabBarTest {
         }
     }
 
+    /**
+     * #618: Instagram hides its tab bar as a story opens under a floating pill. Its screens still had the
+     * pill's 0 for the navigation bar and heard the real height a turn of the main loop after the next
+     * insets pass, so the story showed down to the bottom edge for a frame and then jumped up. In the
+     * frame the pill goes, the screens hear the real height at once and that frame waits for their new
+     * layout. The insets pass that follows tells nobody again, and the next frame draws.
+     */
+    @Test
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void screensHearTheNavigationBarsHeightInTheFrameThePillGoes() throws Exception {
+        GlassTabBar.resetForTests();
+        java.util.List<String> told = new java.util.ArrayList<>();
+        Class<?> teller = Class.forName("app.hushgram.extension.instagram.reels.FullScreenBars$Teller");
+        Object recorder = java.lang.reflect.Proxy.newProxyInstance(teller.getClassLoader(), new Class<?>[] {teller},
+                (proxy, method, args) -> {
+                    switch (method.getName()) {
+                        case "tell": told.add(args[0] + " " + args[1] + " " + args[2]); return null;
+                        case "hashCode": return System.identityHashCode(proxy);
+                        case "equals": return proxy == args[0];
+                        default: return "recorder";
+                    }
+                });
+        ReflectionHelpers.callStaticMethod(FullScreenBars.class, "resetHeightsForTests",
+                ReflectionHelpers.ClassParameter.from(teller, recorder));
+        ReflectionHelpers.callStaticMethod(FullScreenBars.class, "registeredForTests",
+                ReflectionHelpers.ClassParameter.from(boolean.class, true));
+        try (GlassHost host = new GlassHost(Color.BLACK, true, GlassHeight.STANDARD, false, false)) {
+            int nav = host.dp(24);
+            int status = host.dp(28);
+            navBarAtTheFoot(nav);
+            host.controller.pause().resume();
+            ReflectionHelpers.callStaticMethod(FullScreenBars.class, "nowResumed",
+                    ReflectionHelpers.ClassParameter.from(Activity.class, host.activity));
+            host.frame();
+            FullScreenBars.heightsAsked(host.activity, "story screen");
+            assertEquals(status, FullScreenBars.barHeight(status));
+            assertEquals("shown in front", 0, FullScreenBars.navBarHeight(nav));
+            host.frame();
+            told.clear();
+
+            host.bar.setVisibility(View.GONE);
+            boolean held = host.bar.getViewTreeObserver().dispatchOnPreDraw();
+            assertEquals("told in the frame the pill went", java.util.Collections.singletonList("story screen " + status + " " + nav), told);
+            assertTrue("that frame waits for the new layout", held);
+            assertEquals("the pill is out of the way", nav, GlassTabBar.navBarHeight(nav));
+
+            assertEquals(status, FullScreenBars.barHeight(status));
+            assertEquals("the insets pass after it", nav, FullScreenBars.navBarHeight(nav));
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200));
+            assertEquals("nobody is told twice", 1, told.size());
+            assertFalse("the next frame draws", host.bar.getViewTreeObserver().dispatchOnPreDraw());
+        } finally {
+            ReflectionHelpers.callStaticMethod(FullScreenBars.class, "registeredForTests",
+                    ReflectionHelpers.ClassParameter.from(boolean.class, false));
+            resetFullScreenHeights();
+        }
+    }
+
     /** FullScreenBars starts and ends with nothing offered, taken or kept, telling the patch's listeners. */
     private static void resetFullScreenHeights() throws Exception {
         Class<?> teller = Class.forName("app.hushgram.extension.instagram.reels.FullScreenBars$Teller");
@@ -3876,7 +3934,7 @@ public class GlassTabBarTest {
         assertEquals("the video and its cover, not the play button or inside the video",
                 java.util.Arrays.asList(video, cover), media);
 
-        Map<View, Integer> given = new HashMap<>();
+        Map<ViewGroup.LayoutParams, Integer> given = new java.util.WeakHashMap<>();
         for (View view : media) assertTrue(GlassTabBar.placeReelMedia(view, true, true, 250, given));
         layOutReel(viewer);
         assertEquals(45, video.getTop());
@@ -3895,6 +3953,102 @@ public class GlassTabBarTest {
         assertEquals("Instagram's own margin kept under ours", 135, ((FrameLayout.LayoutParams) cover.getLayoutParams()).bottomMargin);
         assertTrue(GlassTabBar.placeReelMedia(cover, false, true, 250, given));
         assertEquals(10, ((FrameLayout.LayoutParams) cover.getLayoutParams()).bottomMargin);
+    }
+
+    /**
+     * #763: Instagram 456's reel binder gives a reel's video and its cover one layout params object. Placing
+     * both behind a 250 pixel slot gives that object half the slot once, so the reel sits at 45 as a viewer
+     * stopped at the slot has it, not a whole slot up at the viewer's top, and it stays there look after look
+     * and goes back to 170 when the reel no longer runs behind.
+     */
+    @Test
+    public void aVideoAndCoverSharingParamsMoveUpOnce() {
+        Context context = RuntimeEnvironment.getApplication();
+        FrameLayout viewer = new FrameLayout(context);
+        FrameLayout item = new FrameLayout(context);
+        viewer.addView(item, new FrameLayout.LayoutParams(1080, ViewGroup.LayoutParams.MATCH_PARENT));
+        FrameLayout.LayoutParams shared = new FrameLayout.LayoutParams(1080, 1920, Gravity.CENTER);
+        ImageView cover = new ImageView(context);
+        item.addView(cover, shared);
+        View video = new com.instagram.ui.simplevideolayout.SimpleVideoLayout(context);
+        item.addView(video, shared);
+        layOutReel(viewer);
+
+        java.util.List<View> media = new java.util.ArrayList<>();
+        GlassTabBar.reelMedia(viewer, media, 0);
+        assertEquals(2, media.size());
+
+        Map<ViewGroup.LayoutParams, Integer> given = new java.util.WeakHashMap<>();
+        for (int look = 0; look < 3; look++) {
+            for (View view : media) GlassTabBar.placeReelMedia(view, true, true, 250, given);
+            layOutReel(viewer);
+            assertEquals("half the slot, given once", 125, shared.bottomMargin);
+            assertEquals(45, video.getTop());
+            assertEquals(45, cover.getTop());
+        }
+
+        for (View view : media) GlassTabBar.placeReelMedia(view, true, false, 250, given);
+        layOutReel(viewer);
+        assertEquals(0, shared.bottomMargin);
+        assertEquals(170, video.getTop());
+        assertTrue(given.isEmpty());
+    }
+
+    /**
+     * #764: unfolding a foldable has Instagram move the bar's own tabs into its side rail. The liquid look's
+     * shift, fade and tuck come off each tab that left, so the rail shows them in line, and a tab still in
+     * the bar keeps what the look gave it. A change Instagram made after the move is its own and stays.
+     */
+    @Test
+    public void tabsMovedIntoTheRailLoseTheLiquidLook() {
+        Context context = RuntimeEnvironment.getApplication();
+        LinearLayout bar = new LinearLayout(context);
+        LinearLayout rail = new LinearLayout(context);
+        rail.setOrientation(LinearLayout.VERTICAL);
+        View search = new FrameLayout(context);
+        View home = new FrameLayout(context);
+        View reels = new FrameLayout(context);
+        View profile = new FrameLayout(context);
+        View direct = new FrameLayout(context);
+        for (View tab : new View[] {search, home, reels, profile, direct}) bar.addView(tab);
+
+        Map<View, Float> shifted = new java.util.WeakHashMap<>();
+        Map<View, Float> faded = new java.util.WeakHashMap<>();
+        Map<View, Boolean> tucked = new java.util.WeakHashMap<>();
+        search.setTranslationX(612f);
+        shifted.put(search, 612f);
+        home.setTranslationX(-40f);
+        shifted.put(home, -40f);
+        home.setAlpha(0.4f);
+        faded.put(home, 0.4f);
+        reels.setTranslationX(25f);
+        shifted.put(reels, 25f);
+        profile.setVisibility(View.INVISIBLE);
+        tucked.put(profile, Boolean.TRUE);
+        direct.setTranslationX(-18f);
+        shifted.put(direct, -18f);
+
+        assertEquals("every tab still in the bar", 0, GlassTabBar.tabsThatLeft(bar, shifted, faded, tucked));
+        assertEquals(612f, search.getTranslationX(), 0f);
+        assertEquals(View.INVISIBLE, profile.getVisibility());
+
+        for (View tab : new View[] {search, home, profile, direct}) {
+            bar.removeView(tab);
+            rail.addView(tab);
+        }
+        direct.setTranslationX(7f);
+
+        assertEquals(4, GlassTabBar.tabsThatLeft(bar, shifted, faded, tucked));
+        assertEquals(0f, search.getTranslationX(), 0f);
+        assertEquals(0f, home.getTranslationX(), 0f);
+        assertEquals(1f, home.getAlpha(), 0f);
+        assertEquals(View.VISIBLE, profile.getVisibility());
+        assertEquals("Instagram's own shift", 7f, direct.getTranslationX(), 0f);
+        assertEquals("the tab left in the bar", 25f, reels.getTranslationX(), 0f);
+        assertEquals(java.util.Collections.singleton(reels), shifted.keySet());
+        assertTrue(faded.isEmpty());
+        assertTrue(tucked.isEmpty());
+        assertEquals(0, GlassTabBar.tabsThatLeft(bar, shifted, faded, tucked));
     }
 
     private static void layOutReel(View view) {
@@ -3920,6 +4074,36 @@ public class GlassTabBarTest {
         assertEquals("no window yet", 0, GlassTabBar.intoTheNavigationBar(1600, 0, 48));
         assertEquals(48, GlassTabBar.reelsBandLift(false, false, 126, GlassTabBar.intoTheNavigationBar(1600, 1600, 48), 8));
         assertEquals(0, GlassTabBar.reelsBandLift(false, false, 126, GlassTabBar.intoTheNavigationBar(1552, 1600, 48), 8));
+    }
+
+    /**
+     * #450: with the pill away, a reel's seek bar on a gesture navigation phone (a 48 pixel bar under a 64
+     * pixel gesture area, as the API 36 emulator reports) goes up past the whole gesture area, so the seek
+     * bar's room finds it clear and adds no lift of its own. Lifted 48, the room put 16 on top; a drag made
+     * the pill and the room each take the other's for Instagram's, and the bar was left over the caption.
+     * The taller of the two counts, and a phone reporting neither falls back to the bar it's taken to have.
+     */
+    @Test
+    public void aReelWithThePillAwayClearsTheGestureAreaSoTheRoomAddsNothing() {
+        int lift = GlassTabBar.intoTheSeekBarsStrip(1600, 1600, 48, 64, 63);
+        assertEquals("past the gesture area", 64, lift);
+        int room = ReflectionHelpers.callStaticMethod(ReelSeekRoom.class, "liftFor",
+                ReflectionHelpers.ClassParameter.from(int.class, 1600 - lift),
+                ReflectionHelpers.ClassParameter.from(int.class, 1600),
+                ReflectionHelpers.ClassParameter.from(int.class, ReelSeekRoom.strip(48, 64, 63)));
+        assertEquals("the room has nothing to add", 0, room);
+        int navOnly = GlassTabBar.intoTheNavigationBar(1600, 1600, 48);
+        int under = ReflectionHelpers.callStaticMethod(ReelSeekRoom.class, "liftFor",
+                ReflectionHelpers.ClassParameter.from(int.class, 1600 - navOnly),
+                ReflectionHelpers.ClassParameter.from(int.class, 1600),
+                ReflectionHelpers.ClassParameter.from(int.class, ReelSeekRoom.strip(48, 64, 63)));
+        assertEquals("past the bar alone the room still lifted", 16, under);
+
+        assertEquals("a taller bar counts", 126, GlassTabBar.intoTheSeekBarsStrip(1600, 1600, 126, 0, 63));
+        assertEquals("nothing reported", 63, GlassTabBar.intoTheSeekBarsStrip(1600, 1600, 0, 0, 63));
+        assertEquals("stopped above the strip", 0, GlassTabBar.intoTheSeekBarsStrip(1536, 1600, 48, 64, 63));
+        assertEquals("part way in", 30, GlassTabBar.intoTheSeekBarsStrip(1566, 1600, 48, 64, 63));
+        assertEquals("no window yet", 0, GlassTabBar.intoTheSeekBarsStrip(1600, 0, 48, 64, 63));
     }
 
     /**
@@ -4017,6 +4201,45 @@ public class GlassTabBarTest {
         assertEquals("the buttons are highest", 954, GlassTabBar.roomAbove(band));
         buttons.setVisibility(View.INVISIBLE);
         assertEquals(1807, GlassTabBar.roomAbove(band));
+    }
+
+    /**
+     * #450: coming back from picture in picture, Litho's animation ended by putting the seek bar's holder where
+     * its layout says, which counts the row's translation, so the holder sat that much lower, on the pill. A
+     * view whose translation, with those between it and the band, cancels the band's is put back at 0. A slide
+     * still under way, a band that isn't raised and a view past the depth are left alone.
+     */
+    @Test
+    public void aViewLithoPutBackUnderARaisedBandGoesUpWithIt() {
+        Context context = RuntimeEnvironment.getApplication();
+        FrameLayout band = new FrameLayout(context);
+        FrameLayout holder = new FrameLayout(context);
+        View bar = new View(context), sliding = new View(context);
+        band.addView(holder);
+        band.addView(sliding);
+        holder.addView(bar);
+        holder.setTranslationY(32f);
+        sliding.setTranslationY(25.5f);
+        assertEquals("the band isn't raised", 0, GlassTabBar.keepUnderTheLift(band, 3));
+        assertEquals(32f, holder.getTranslationY(), 0f);
+
+        band.setTranslationY(-32f);
+        assertEquals("only the holder was put back", 1, GlassTabBar.keepUnderTheLift(band, 3));
+        assertEquals(0f, holder.getTranslationY(), 0f);
+        assertEquals("a slide under way stays", 25.5f, sliding.getTranslationY(), 0f);
+        assertEquals("nothing left to put back", 0, GlassTabBar.keepUnderTheLift(band, 3));
+
+        bar.setTranslationY(32f);
+        assertEquals("past the depth", 0, GlassTabBar.keepUnderTheLift(band, 1));
+        assertEquals("a level down", 1, GlassTabBar.keepUnderTheLift(band, 3));
+        assertEquals(0f, bar.getTranslationY(), 0f);
+
+        holder.setTranslationY(12f);
+        bar.setTranslationY(20f);
+        assertEquals("the two together cancel the band", 1, GlassTabBar.keepUnderTheLift(band, 3));
+        assertEquals("the holder's own stays", 12f, holder.getTranslationY(), 0f);
+        assertEquals(0f, bar.getTranslationY(), 0f);
+        assertEquals("a view isn't a band", 0, GlassTabBar.keepUnderTheLift(sliding, 3));
     }
 
     /**

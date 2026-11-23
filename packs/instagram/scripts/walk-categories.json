@@ -105,11 +105,13 @@
           "Full screen Reels and Home",
           "Hide Follow on feed posts",
           "Hide captions",
+          "Expand captions",
           "Hide the audio icon on posts",
           "Auto scroll in Home",
           "Keep Home's top bar",
           "Hide activity bubbles",
           "Hide Made with Edits",
+          "Hide the line under names",
           "Save in the post menu",
           "Watch again in the feed"
         ]
@@ -241,6 +243,7 @@
           "Split the notes row",
           "Hide the search bar in Messages",
           "Hide suggested accounts in DMs",
+          "Hide New message button and suggestions",
           "Hide Instants",
           "Read messages without the seen receipt",
           "Hide that you're typing",
@@ -260,9 +263,11 @@
           "Preview chats",
           "Ask before a call",
           "Call blocker",
+          "Record calls",
           "Message box buttons",
           "Chat plus menu",
           "Glass in chats",
+          "Center names in chats",
           "Full screen Reels and Home"
         ]
       },
@@ -282,6 +287,15 @@
             "op": "any",
             "patches": [
               "Read messages without the seen receipt"
+            ]
+          }
+        },
+        {
+          "title": "Record calls",
+          "when": {
+            "op": "any",
+            "patches": [
+              "Record calls"
             ]
           }
         }
@@ -320,9 +334,11 @@
           "Stop Reels scrolling",
           "Swipe left to open the profile",
           "Keep the tab bar on a reel's profile",
+          "Keep the tab bar on reel links",
           "Find the reel you came from",
           "Open reel links on that reel",
-          "Control the reel above comments"
+          "Control the reel above comments",
+          "Let the screen sleep when a reel stops"
         ]
       },
       "anchors": [
@@ -532,6 +548,7 @@
           "Show if a profile follows you",
           "Hide suggested people on profiles",
           "Hide highlights",
+          "Hide Followers and Following on profiles",
           "Hide the Threads button",
           "Hide Notes on profile pictures",
           "Hide profile tabs",
@@ -693,7 +710,8 @@
         "op": "any",
         "patches": [
           "Group Instagram's notifications",
-          "Hide suggested people on profiles"
+          "Hide suggested people on profiles",
+          "Chat bubbles"
         ]
       },
       "anchors": [
@@ -712,6 +730,15 @@
             "op": "any",
             "patches": [
               "Group Instagram's notifications"
+            ]
+          }
+        },
+        {
+          "title": "Chat bubbles",
+          "when": {
+            "op": "any",
+            "patches": [
+              "Chat bubbles"
             ]
           }
         },
