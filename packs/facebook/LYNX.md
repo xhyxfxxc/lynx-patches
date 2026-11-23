@@ -68,6 +68,9 @@ code was read closely, many layout and reels files only scanned. The first audit
 Morphe Desktop 2.3.0 and `--validate`: of 127 patches (122 on by default) 122 applied, 0 failed, no warning. With
 the two off-by-default theme patches ("AMOLED black theme", "Material You theme", which use a looser matcher) on
 too: 124 applied, 0 failed. This proves the patches fit this build, not that every feature works on a phone.
+Tested signed in on a Galaxy S25 Ultra with Android 17 on 2026-11-23 (installed over the 0.23.0 build, the login
+was kept): the feed shows no sponsored or suggested posts over twelve screens, Reels are laid out correctly, the
+settings open and show 0.24.0-lynx.1, the In-app proxy row is blank, and there was no crash.
 
 ## Upstream documentation that does not apply to this build
 
@@ -80,8 +83,10 @@ checksums), docs/help.md lines 3, 13, 55, 106, and CONTRIBUTING.md (upstream tra
 ## Known problems that are not fixed
 
 - Upstream issue 551 (open, against 0.24.0 on a Galaxy S26 Ultra with Android 17): on Reels the layout sits too
-  low and the bottom bar covers the description and buttons. Issue 552 (open): video stories can freeze, the seek
-  bar sits low, and reel captions break when "Keep progress bar" and "Keep the tab bar on reels" are both on.
+  low and the bottom bar covers the description and buttons. Lynx did not see this on a Galaxy S25 Ultra with
+  Android 17 and the default settings (four reels checked), so it may depend on which switches are on. Issue 552
+  (open): video stories can freeze, the seek bar sits low, and reel captions break when "Keep progress bar" and
+  "Keep the tab bar on reels" are both on. Lynx did not test stories.
 - Upstream issue 528 (open): a crash at launch on 0.23.0 with Android 17, cause unknown (the pack pauses itself
   after three crashes in a minute). Issues 505 and 548 (on 0.23.0): double seek bar and battery drain, not analysed.
 - Sign-in can loop on accounts that have a passkey (upstream issue 273, closed with a workaround): remove the
