@@ -244,6 +244,148 @@ def check_private():
             fail("private", os.path.relpath(path, ROOT), "names a private app")
 
 
+JAVA_ESCAPES = {'"': '"', "\\": "\\", "'": "'", "n": "\n", "t": "\t", "r": "\r"}
+JAVA_STRING = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
+JAVA_ESCAPE = re.compile(r"\\(u[0-9a-fA-F]{4}|.)", re.S)
+
+
+def java_unescape(body):
+    """Decode the Java escapes for quotes, backslash, n, t, r and uXXXX. Any other backslash stays for a later check."""
+    def one(match):
+        code = match.group(1)
+        return chr(int(code[1:], 16)) if len(code) == 5 else JAVA_ESCAPES.get(code, match.group(0))
+    return JAVA_ESCAPE.sub(one, body)
+
+
+def java_string_array(text, name):
+    """
+    The string literals of the Java array initializer `name = { ... };`, or None when it cannot be found or holds
+    anything but string literals. // and /* */ comments outside string literals are skipped.
+    """
+    start = re.search(r"\b" + re.escape(name) + r"\s*(?:\[\s*\]\s*)?=\s*\{", text)
+    if not start:
+        return None
+    items, i = [], start.end()
+    while i < len(text):
+        if text[i] in " \t\r\n,":
+            i += 1
+        elif text.startswith("//", i):
+            end = text.find("\n", i)
+            i = len(text) if end < 0 else end + 1
+        elif text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            i = len(text) if end < 0 else end + 2
+        elif text[i] == "}":
+            return items
+        else:
+            literal = JAVA_STRING.match(text, i)
+            if not literal:
+                return None
+            items.append(java_unescape(literal.group(1)))
+            i = literal.end()
+    return None
+
+
+RULE_MAX_LENGTH = 300
+RULE_FORBIDDEN_CHARS = "{};@\\<`"
+RULE_FORBIDDEN_TEXT = ("/*", "*/", "url(", "expression(", "javascript:")
+RULE_PAIRS = {"[": "]", "(": ")"}
+
+
+def shown(text, limit):
+    """Text for a message: cut, and nothing but printable ASCII."""
+    return re.sub(r"[^\x20-\x7e]", "?", text[:limit])
+
+
+def pairs_up(selector):
+    """Quotes close (a quote opens a string that ends at the next same quote) and every [ and ( closes in order."""
+    stack, quote = [], None
+    for ch in selector:
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+        elif ch in RULE_PAIRS:
+            stack.append(RULE_PAIRS[ch])
+        elif ch in "])" and (not stack or stack.pop() != ch):
+            return False
+    return quote is None and not stack
+
+
+def last_compounds(selector):
+    """The last compound selector of every part of a selector list, split at top-level commas and combinators."""
+    parts, compound, depth, quote = [], "", 0, None
+    for ch in selector:
+        if quote:
+            quote = None if ch == quote else quote
+        elif ch in "\"'":
+            quote = ch
+        elif ch in RULE_PAIRS or ch in "])":
+            depth += 1 if ch in RULE_PAIRS else -1
+        elif depth == 0 and ch == ",":
+            parts.append(compound)
+            compound = ""
+            continue
+        elif depth == 0 and (ch.isspace() or ch in ">+~"):
+            compound = ""
+            continue
+        compound += ch
+    return parts + [compound]
+
+
+def compound_problems(compound):
+    if not any(ch in compound for ch in ".#[:"):
+        return [f"part '{shown(compound, 40)}' would hide a whole element type"]
+    tag = re.match(r"[A-Za-z][A-Za-z0-9-]*", compound)
+    if (tag and tag.group(0).lower() in ("html", "body")) or re.match(r":root(?![\w-])", compound, re.I):
+        return [f"part '{shown(compound, 40)}' would hide the whole page"]
+    return []
+
+
+def rule_problems(selector):
+    """
+    Short problem texts for one ad-hiding selector; an empty list means it is acceptable. At run time the
+    selector becomes `<selector>{display:none!important}` in a style sheet put into Amazon's pages, so one bad
+    entry could blank a page, break the sheet, or open a new rule.
+    """
+    if not selector:
+        return ["is empty"]
+    problems = []
+    if selector != selector.strip():
+        problems.append("has leading or trailing white space")
+    if len(selector) > RULE_MAX_LENGTH:
+        problems.append(f"is {len(selector)} characters long (limit {RULE_MAX_LENGTH})")
+    if any(not " " <= ch <= "~" for ch in selector):
+        problems.append("has a character that is not printable ASCII")
+    problems += [f"contains {ch!r}" for ch in RULE_FORBIDDEN_CHARS if ch in selector]
+    problems += [f"contains '{text}'" for text in RULE_FORBIDDEN_TEXT if text in selector.lower()]
+    if not pairs_up(selector):
+        problems.append("has quotes or brackets that do not pair up")
+    else:
+        for compound in last_compounds(selector):
+            problems += compound_problems(compound)
+    return problems
+
+
+AMAZON_HELPER = os.path.join(EXTENSION, "app", "amazon", "extension", "AmazonHelper.java")
+
+
+def check_amazon_rules():
+    """Every entry of AD_SELECTORS in AmazonHelper.java passes rule_problems, and none is listed twice."""
+    where = os.path.relpath(AMAZON_HELPER, ROOT)
+    selectors = java_string_array(read(AMAZON_HELPER), "AD_SELECTORS") if os.path.exists(AMAZON_HELPER) else None
+    if not selectors:
+        fail("amazon rules", where, "AD_SELECTORS is missing, empty, or not a plain list of string literals")
+        return
+    for selector in selectors:
+        problems = rule_problems(selector)
+        if problems:
+            fail("amazon rules", where, f"{shown(selector, 80)} -> {'; '.join(problems)}")
+    for selector in sorted({s for s in selectors if selectors.count(s) > 1}):
+        fail("amazon rules", where, f"{shown(selector, 80)} -> listed more than once")
+
+
 def main():
     check_menu_flags()
     check_apps()
@@ -255,6 +397,7 @@ def main():
     check_docs_claims()
     check_brand()
     check_private()
+    check_amazon_rules()
     if not failures:
         print("audit: clean")
         return 0
