@@ -8,16 +8,25 @@ Third-party Morphe patch packs kept as source snapshots under packs/<name>/.
     python tools/pack_sync.py import <name> [--dry-run]
     python tools/pack_sync.py sync <name> <new-ref> [--dry-run]
     python tools/pack_sync.py diff <name> [--stat] [--name-only]
+    python tools/pack_sync.py check [--min-age-hours N]
 
 The pack list lives in packs/packs.json (schema and filter rules: packs/README.md). The tool only moves git
 objects: it never checks an upstream tree out into a working directory of its own and never runs anything from
 it. Trees are built in throwaway index files and grafted in with git plumbing, so blobs stay byte-identical to
 upstream whatever core.autocrlf says on this machine.
 
+check is read-only (it changes no file and no index entry, and works in a dirty tree). It asks GitHub for the
+newest stable release of every upstream (api.github.com, no token; gh is only a fallback) and says per pack
+whether a newer release exists that changes files we keep.
+
 Exit codes: 0 ok, 1 error, 2 (sync only) the merge left conflicts.
 """
 
 import argparse
+import contextlib
+import datetime
+import http.client
+import io
 import json
 import os
 import re
@@ -25,6 +34,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 
 PACKS_JSON = "packs/packs.json"
 ROOT_BUNDLE = "patches-bundle.json"
@@ -42,6 +53,8 @@ IDENTITY = {
     "GIT_COMMITTER_NAME": "pack-sync", "GIT_COMMITTER_EMAIL": "pack-sync@invalid",
 }
 SHOWN = 20
+VERSION_RE = re.compile(r"^v?(\d+(?:\.\d+)*)$")
+RELEASES_FIXTURE_ENV = "PACK_SYNC_TEST_RELEASES"
 
 
 class PackError(Exception):
@@ -433,6 +446,133 @@ def describe_filter(include, exclude):
     return (", ".join(include) if include else "(everything)"), (", ".join(exclude) if exclude else "(nothing)")
 
 
+# --- upstream releases (used by check) ---------------------------------------------------------------------
+
+class TryGh(Exception):
+    """The direct GitHub call failed in a way the gh command might get around (rate limit, network)."""
+
+    def __init__(self, reason):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def first_line(text, limit=120):
+    lines = str(text).strip().splitlines()
+    return (lines[0] if lines else "")[:limit]
+
+
+def parse_published(value):
+    """GitHub's published_at ('2026-11-22T10:00:00Z') as an aware UTC datetime."""
+    try:
+        moment = datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (AttributeError, ValueError):
+        raise PackError(f"release has an unusable published_at {str(value)[:40]!r}")
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=datetime.timezone.utc)
+    return moment.astimezone(datetime.timezone.utc)
+
+
+def release_fields(data):
+    """(tag_name, published_at) out of a GitHub release object."""
+    tag = data.get("tag_name") if isinstance(data, dict) else None
+    if not isinstance(tag, str) or not tag.strip():
+        raise PackError("release answer has no tag_name")
+    return tag, parse_published(data.get("published_at"))
+
+
+def fixture_release(path, upstream):
+    """Test seam, see latest_release."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            table = json.load(handle)
+    except (OSError, ValueError) as exc:
+        raise PackError(f"{RELEASES_FIXTURE_ENV} file {path!r} is unusable: {first_line(exc, 80)}")
+    item = table.get(upstream) if isinstance(table, dict) else None
+    if item is None:
+        raise PackError("no stable release")
+    if isinstance(item, dict) and "error" in item:
+        raise PackError(first_line(item["error"]))
+    return release_fields(item)
+
+
+def github_latest(slug):
+    """GET the latest-release object with no token. TryGh when gh might do better, PackError when nothing will."""
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{slug}/releases/latest",
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "pack-sync"})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            raise PackError("no stable release")
+        if exc.code in (403, 429):
+            raise TryGh("rate limited")
+        raise PackError(f"GitHub answered HTTP {exc.code}")
+    except (urllib.error.URLError, http.client.HTTPException, OSError, ValueError) as exc:
+        # network trouble, or an answer that is no JSON
+        raise TryGh(f"network error: {first_line(getattr(exc, 'reason', exc), 80)}")
+
+
+def gh_latest(slug, reason):
+    """The same call through the gh command line tool, which uses its own stored login (never read here)."""
+    try:
+        proc = subprocess.run(["gh", "api", f"repos/{slug}/releases/latest"], capture_output=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise PackError(f"{reason}, gh failed: {first_line(exc, 80)}")
+    if proc.returncode != 0:
+        detail = first_line(proc.stderr.decode("utf-8", "replace") or proc.stdout.decode("utf-8", "replace"), 80)
+        if "404" in detail or "Not Found" in detail:
+            raise PackError("no stable release")
+        raise PackError(f"{reason}, gh failed: {detail or 'no message'}")
+    try:
+        return json.loads(proc.stdout.decode("utf-8"))
+    except ValueError:
+        raise PackError(f"{reason}, gh answered something that is not JSON")
+
+
+def latest_release(upstream):
+    """
+    (tag_name, published_at as an aware UTC datetime) of GitHub's "latest release" of an upstream, which leaves
+    out pre-releases and drafts. Raises PackError with a one-line reason when there is none or it cannot be read.
+
+    Test seam: when the environment variable PACK_SYNC_TEST_RELEASES names a JSON file, that file is read
+    instead of the network. It maps an upstream URL to {"tag_name": ..., "published_at": ...}, or to
+    {"error": "<message>"} for a failing lookup; an upstream that is missing from it has "no stable release".
+    """
+    fixture = os.environ.get(RELEASES_FIXTURE_ENV)
+    if fixture:
+        return fixture_release(fixture, upstream)
+    slug = github_slug(upstream)
+    if slug is None:
+        raise PackError("upstream is not on GitHub")
+    try:
+        data = github_latest(slug)
+    except TryGh as exc:
+        if not shutil.which("gh"):
+            raise PackError(f"{exc.reason}, gh not found")
+        data = gh_latest(slug, exc.reason)
+    return release_fields(data)
+
+
+def parse_version(text):
+    """'v1.2.3' or '1.2' as a tuple of ints, or None when the text is not a plain dotted number."""
+    match = VERSION_RE.match(text)
+    return tuple(int(part) for part in match.group(1).split(".")) if match else None
+
+
+def age_hours(published, now):
+    return max((now - published).total_seconds() / 3600.0, 0.0)
+
+
+def age_text(hours):
+    return f"{int(hours)} h old" if hours < 48 else f"{int(hours // 24)} d old"
+
+
+def printable(text):
+    return re.sub(r"[^\x20-\x7e]", "?", str(text))
+
+
 # --- commands ----------------------------------------------------------------------------------------------
 
 def pristine_snapshot(repo, name, entry):
@@ -630,6 +770,132 @@ def cmd_diff(repo, args):
     return 0
 
 
+class CheckRow:
+    """What `check` knows about one pack: the columns, the state with its note, and the flags."""
+
+    def __init__(self, name, entry):
+        entry = entry if isinstance(entry, dict) else {}
+        self.name = printable(name)
+        self.ours = printable(entry.get("ref") or "?")
+        self.lynx = printable(entry.get("version") or "-")
+        self.latest = "?"
+        self.published = "-"
+        self.state = "UNKNOWN"
+        self.note = ""
+        self.flags = []                    # [(FLAG, note)]
+
+
+def check_state(repo, name, entry, min_age_hours, now, row):
+    """(state, note) of one pack against the newest stable release of its upstream."""
+    validate_entry(name, entry)
+    ours, upstream = entry["ref"], entry["upstream"]
+    tag, published = latest_release(upstream)
+    hours = age_hours(published, now)
+    row.latest = f"{printable(tag)[:40]} ({age_text(hours)})"
+    if tag == ours:
+        return "OK", ""
+    old_version, new_version = parse_version(ours), parse_version(tag)
+    if old_version is None or new_version is None:
+        return "UNKNOWN", printable(f"cannot compare {ours} with {tag}")[:120]
+    if new_version < old_version:
+        return "OLDER", ""
+    # Not lower: higher, or the same number spelled differently. Either way the files decide.
+    include, exclude = filter_of(entry)
+    with contextlib.redirect_stdout(io.StringIO()):         # one line per pack: no "fetching recorded commit" chatter
+        ours_snap = pristine_snapshot(repo, name, entry)
+        sha = fetch_commit(repo, upstream, f"refs/tags/{tag}")
+    if snapshot(repo, sha, include, exclude).tree == ours_snap.tree:
+        return "OK-SAME-FILES", ""
+    if hours < min_age_hours:
+        return "TOO-NEW", f"younger than {min_age_hours:g} h"
+    return "UPDATE", ""
+
+
+def read_bundle_version(repo, name):
+    """(version, problem) of packs/<name>/patches-bundle.json in the working tree; one of them is None."""
+    rel = f"packs/{name}/patches-bundle.json"
+    path = os.path.join(repo.root, *rel.split("/"))
+    if not NAME_RE.match(name) or not os.path.isfile(path):
+        return None, f"no {rel}"
+    try:
+        with open(path, encoding="utf-8-sig") as handle:
+            version = json.load(handle).get("version")
+    except (OSError, ValueError, AttributeError):
+        return None, f"{rel} is unreadable"
+    if not isinstance(version, str) or not version:
+        return None, f"{rel} has no version"
+    return version, None
+
+
+def add_flags(repo, name, entry, row):
+    entry = entry if isinstance(entry, dict) else {}
+    ref, version = entry.get("ref"), entry.get("version")
+    notes = []
+    if isinstance(ref, str) and ref:
+        base = ref[1:] if ref.startswith("v") else ref
+        if not isinstance(version, str) or not version.startswith(f"{base}-lynx."):
+            notes.append(f"version {printable(version) if version else '-'} does not belong to ref {printable(ref)}")
+    bundle, problem = read_bundle_version(repo, name)
+    if bundle is not None:
+        row.published = printable(bundle)
+        if bundle != version:
+            notes.append(f"bundle version {row.published} differs from version {row.lynx}")
+    else:
+        notes.append(problem)
+    if notes:
+        row.flags.append(("UNRELEASED", "; ".join(notes)))
+    # --no-optional-locks: a plain `git status` may refresh the index file; this one never writes it
+    if NAME_RE.match(name):
+        status = repo.run("--no-optional-locks", "status", "--porcelain", "--", f"packs/{name}").stdout
+        if status.strip():
+            row.flags.append(("IN-PROGRESS", f"uncommitted changes in packs/{name}"))
+
+
+def check_pack(repo, name, entry, min_age_hours, now):
+    row = CheckRow(name, entry)
+    try:
+        row.state, row.note = check_state(repo, name, entry, min_age_hours, now, row)
+    except PackError as exc:
+        row.state, row.note = "UNKNOWN", printable(first_line(exc))
+    except Exception as exc:                                # one pack must never stop the others
+        row.state, row.note = "UNKNOWN", printable(f"unexpected {type(exc).__name__}: {first_line(exc, 80)}")
+    add_flags(repo, name, entry, row)
+    return row
+
+
+def cmd_check(repo, args):
+    data = load_packs(repo)
+    if not data["packs"]:
+        print(f"no packs in {PACKS_JSON}")
+        return 0
+    now = datetime.datetime.now(datetime.timezone.utc)
+    rows = [check_pack(repo, name, entry, args.min_age_hours, now) for name, entry in data["packs"].items()]
+    cells = [[r.name, f"ours={r.ours}", f"latest={r.latest}", f"lynx={r.lynx}", f"published={r.published}"]
+             for r in rows]
+    widths = [max(len(cell[i]) for cell in cells) for i in range(5)]
+    for row, cell in zip(rows, cells):
+        line = "  ".join(text.ljust(width) for text, width in zip(cell, widths))
+        line += f"  -> {row.state}" + (f" ({row.note})" if row.note else "")
+        for flag, note in row.flags:
+            line += f" +{flag} ({note})"
+        print(line)
+
+    def names(pick):
+        return ", ".join(r.name for r in rows if pick(r)) or "-"
+
+    def flagged(flag):
+        return lambda r: any(f == flag for f, _ in r.flags)
+
+    print("summary: " + " | ".join([
+        "UPDATE: " + names(lambda r: r.state == "UPDATE"),
+        "TOO-NEW: " + names(lambda r: r.state == "TOO-NEW"),
+        "UNRELEASED: " + names(flagged("UNRELEASED")),
+        "IN-PROGRESS: " + names(flagged("IN-PROGRESS")),
+        "UNKNOWN: " + names(lambda r: r.state == "UNKNOWN"),
+    ]))
+    return 0
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="pack_sync.py", description="Keep third-party patch packs as source snapshots under packs/<name>/.")
@@ -655,6 +921,12 @@ def build_parser():
     group.add_argument("--stat", action="store_true")
     group.add_argument("--name-only", action="store_true")
     p_diff.set_defaults(func=cmd_diff)
+
+    p_check = sub.add_parser(
+        "check", help="compare every pack with the newest stable release of its upstream (read-only)")
+    p_check.add_argument("--min-age-hours", type=float, default=24.0, metavar="N",
+                         help="a release younger than N hours is TOO-NEW instead of UPDATE (default 24)")
+    p_check.set_defaults(func=cmd_check)
     return parser
 
 

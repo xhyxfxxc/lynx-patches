@@ -84,6 +84,31 @@ One line per pack: upstream, ref, short commit, version, whether `packs/<name>/`
 files differ from the pristine upstream snapshot (or "not imported").
 
 ```bash
+python tools/pack_sync.py check
+python tools/pack_sync.py check --min-age-hours 0
+```
+Asks GitHub for the newest stable release of every upstream and prints one line per pack plus a summary line
+(`summary: UPDATE: ... | TOO-NEW: ... | UNRELEASED: ... | IN-PROGRESS: ... | UNKNOWN: ...`). It changes nothing: no
+file, no index entry, no `packs.json`, and it works in a dirty tree. Only stable releases count, because GitHub's
+"latest release" leaves out pre-releases and drafts. Upstreams that are not on GitHub come out as UNKNOWN. The
+lookup sends no token; when GitHub refuses (rate limit) or the network fails, it falls back to the `gh` command if
+that is installed. The state of a pack is one of:
+
+- `OK`: the latest tag is the `ref` we recorded.
+- `OK-SAME-FILES`: upstream has a newer release, but it changes no file that we keep (the filtered trees match).
+- `TOO-NEW`: a newer release changes files we keep, but it is younger than `--min-age-hours` (default 24). Wait a
+  day or two before upgrading, so that a quick follow-up fix from the author lands first.
+- `UPDATE`: the same, and the release is old enough. Time to run the upgrade steps in [PROCESS.md](PROCESS.md).
+- `OLDER`: the latest stable release is lower than our `ref` (we are on something newer, such as a pre-release).
+- `UNKNOWN`: the answer could not be had or compared (rate limited, no stable release, a tag that is not a plain
+  version number such as `v1.2.3`, a fetch error). The reason is in brackets. One failing pack never stops the rest.
+
+Two flags can be added to any state, each with a note in brackets: `+UNRELEASED` (the `version` in `packs.json`
+does not belong to the `ref`, or `packs/<name>/patches-bundle.json` is missing or names another version, so what
+we publish is not what `packs.json` says) and `+IN-PROGRESS` (`git status` shows uncommitted changes in
+`packs/<name>`, for example a staged sync that is not committed yet). Exit code 0, or 1 if the tool itself fails.
+
+```bash
 python tools/pack_sync.py import facebook --dry-run     # prints the tree, files kept and dropped, changes nothing
 python tools/pack_sync.py import facebook
 ```
@@ -159,6 +184,19 @@ The workflow builds in `packs/<name>`, checks the bundle holds `classes.dex` and
 uploads it as a workflow artifact (also with `publish=false`, so you can try it on a phone first), and with
 `publish=true` creates the release `pack-<name>-v<version>` (never marked latest), writes
 `packs/<name>/patches-bundle.json`, pushes it to main and attests the build.
+
+Before a release, compare the host names inside the new bundle with the last released one:
+
+```bash
+python -I tools/bundle_hosts.py <last released bundle> <new bundle>
+```
+
+It opens both bundles (including the nested `extensions/*.mpe` and `*.rve` zips), without running anything from
+them, and prints `+ <class> <host>  <entry>` for every host only the new bundle has, `- <class> <host>` for every
+host only the old one has, and `added: <n>, removed: <m>`. Class `url` is the host of a real `http(s)`, `ws(s)` or
+`ftp` URL; class `bare` is a dotted name with a common top-level domain and no scheme, which also catches some
+words and package names. With one bundle it lists all hosts. An added host must be explained by the review (what
+it is for, and what is sent to it) before the release.
 
 ## Add a pack as a source in Morphe Manager
 

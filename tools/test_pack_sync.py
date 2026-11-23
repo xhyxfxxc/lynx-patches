@@ -7,9 +7,12 @@ Tests for tools/pack_sync.py. Run from the repo root, no network needed:
 
 Every test builds a throwaway fake upstream repo and a throwaway fake "lynx" repo in a temp dir and runs a copy
 of the tool against them. Git is isolated from this machine's own config (no system or global config), so the
-results do not depend on whose PC runs them.
+results do not depend on whose PC runs them. The tests of `check` never reach GitHub: the tool reads the releases
+from a JSON file named by PACK_SYNC_TEST_RELEASES, and the lookup code itself is tested with mocks.
 """
 
+import datetime
+import io
 import json
 import os
 import re
@@ -18,6 +21,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.error
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -536,6 +541,419 @@ class DiffAndStatusTests(PackTestCase):
         result = self.tool("status", cwd=os.path.join(self.lynx, "tools"))
         self.assertEqual(result.code, 0, result.text)
         self.assertIn("no packs", result.out)
+
+
+class CheckTests(PackTestCase):
+    """`check` against fake upstream releases. The fixture file stands in for GitHub's "latest release" answer."""
+
+    def setUp(self):
+        super().setUp()
+        self.fixture = os.path.join(self._tmp.name, "releases.json")
+        self.releases = {}
+        self.env["PACK_SYNC_TEST_RELEASES"] = self.fixture
+        self.write_releases()                                      # no release known for any upstream yet
+
+    # --- helpers
+
+    def release(self, tag, hours, upstream=None):
+        """GitHub reports `tag` as the newest stable release of an upstream (default: the demo one), `hours` old."""
+        moment = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=hours)
+        self.releases[upstream or self.upstream] = {
+            "tag_name": tag, "published_at": moment.strftime("%Y-%m-%dT%H:%M:%SZ")}
+        self.write_releases()
+
+    def release_fails(self, message, upstream=None):
+        self.releases[upstream or self.upstream] = {"error": message}
+        self.write_releases()
+
+    def write_releases(self):
+        with open(self.fixture, "w", encoding="utf-8") as handle:
+            json.dump(self.releases, handle)
+
+    def commit_all(self, message):
+        self.git(self.lynx, "add", "-A")
+        self.git(self.lynx, "commit", "-q", "-m", message)
+
+    def released_demo(self, **over):
+        """An imported pack whose lynx version and published bundle both belong to ref v1: no flag expected."""
+        self.import_demo(version="1-lynx.1", **over)
+        self.write(self.lynx, "packs/demo/patches-bundle.json", json.dumps({"version": "1-lynx.1"}) + "\n")
+        self.commit_all("chore(pack-demo): bundle")
+
+    def add_pack(self, name, **over):
+        data = json.loads(self.read(self.lynx, "packs/packs.json").decode("utf-8"))
+        data["packs"][name] = self.entry(**over)
+        self.write(self.lynx, "packs/packs.json", json.dumps(data, indent=2) + "\n")
+        self.commit_all(f"test: add {name}")
+
+    def upstream_release(self, tag, files):
+        """A new upstream commit that writes {path: text} and carries the tag."""
+        for rel, data in files.items():
+            self.write(self.upstream, rel, data)
+        return self.up_commit(tag, tag)
+
+    def check(self, *args):
+        result = self.tool("check", *args)
+        self.assertEqual(result.code, 0, result.text)
+        return result
+
+    @staticmethod
+    def line(result, name="demo"):
+        lines = [line for line in result.out.splitlines() if line.startswith(name + " ")]
+        assert len(lines) == 1, result.out
+        return lines[0]
+
+    @staticmethod
+    def summary(update="-", too_new="-", unreleased="-", in_progress="-", unknown="-"):
+        return (f"summary: UPDATE: {update} | TOO-NEW: {too_new} | UNRELEASED: {unreleased} | "
+                f"IN-PROGRESS: {in_progress} | UNKNOWN: {unknown}")
+
+    # --- states
+
+    def test_ok_when_the_latest_tag_is_the_recorded_ref(self):
+        self.released_demo()
+        self.release("v1", hours=15)
+        result = self.check()
+        line = self.line(result)
+        for part in ("ours=v1", "latest=v1 (15 h old)", "lynx=1-lynx.1", "published=1-lynx.1"):
+            self.assertIn(part, line)
+        self.assertTrue(line.endswith("-> OK"), line)
+        self.assertEqual(result.out.splitlines()[-1], self.summary())
+        self.assertEqual(len(result.out.splitlines()), 2, result.out)            # one pack line plus the summary
+
+    def test_update_when_a_newer_release_changes_a_file_we_keep(self):
+        self.released_demo()
+        self.upstream_release("v2", {"b.txt": "b v2\n"})
+        self.release("v2", hours=72)
+        result = self.check()
+        line = self.line(result)
+        self.assertIn("latest=v2 (3 d old)", line)
+        self.assertTrue(line.endswith("-> UPDATE"), line)
+        self.assertEqual(result.out.splitlines()[-1], self.summary(update="demo"))
+
+    def test_too_new_until_the_release_is_old_enough(self):
+        self.released_demo()
+        self.upstream_release("v2", {"b.txt": "b v2\n"})
+        self.release("v2", hours=2)
+        young = self.check()
+        self.assertIn("latest=v2 (2 h old)", self.line(young))
+        self.assertTrue(self.line(young).endswith("-> TOO-NEW (younger than 24 h)"), young.out)
+        self.assertEqual(young.out.splitlines()[-1], self.summary(too_new="demo"))
+        for limit, state in (("0", "UPDATE"), ("1.5", "UPDATE"), ("3", "TOO-NEW"), ("48", "TOO-NEW")):
+            with self.subTest(min_age_hours=limit):
+                result = self.check("--min-age-hours", limit)
+                self.assertRegex(self.line(result), rf"-> {state}\b")
+
+    def test_ok_same_files_when_only_filtered_files_changed(self):
+        self.released_demo()
+        self.upstream_release("v2", {".github/workflows/x.yml": "name: changed\n",
+                                     "patches-bundle.json": '{"version": "newer upstream"}\n'})
+        self.release("v2", hours=120)
+        result = self.check()
+        self.assertTrue(self.line(result).endswith("-> OK-SAME-FILES"), result.out)
+        self.assertEqual(result.out.splitlines()[-1], self.summary())
+
+    def test_older_when_the_latest_release_is_lower_than_ours(self):
+        self.released_demo()
+        self.release("v0.9", hours=500)
+        result = self.check()
+        self.assertTrue(self.line(result).endswith("-> OLDER"), result.out)
+
+    def test_unknown_when_the_lookup_fails_and_the_other_packs_still_run(self):
+        self.released_demo()
+        self.add_pack("other", upstream=self.upstream + "-other", ref="v7", version="7-lynx.1")
+        self.release_fails("rate limited, gh not found")
+        self.release("v7", hours=5, upstream=self.upstream + "-other")
+        result = self.check()
+        self.assertIn("latest=?", self.line(result))
+        self.assertTrue(self.line(result).endswith("-> UNKNOWN (rate limited, gh not found)"), result.out)
+        other = self.line(result, "other")
+        self.assertIn("latest=v7 (5 h old)", other)
+        self.assertIn("-> OK +UNRELEASED", other)                                # no bundle was ever published
+        self.assertEqual(result.out.splitlines()[-1], self.summary(unreleased="other", unknown="demo"))
+
+    def test_unknown_when_there_is_no_stable_release(self):
+        self.released_demo()                                       # the fixture knows no release for this upstream
+        result = self.check()
+        self.assertTrue(self.line(result).endswith("-> UNKNOWN (no stable release)"), result.out)
+
+    def test_unknown_when_a_tag_cannot_be_parsed(self):
+        self.released_demo()
+        self.release("nightly-1", hours=5)
+        result = self.check()
+        self.assertIn("latest=nightly-1 (5 h old)", self.line(result))
+        self.assertTrue(self.line(result).endswith("-> UNKNOWN (cannot compare v1 with nightly-1)"), result.out)
+        self.update_pack(ref="main")                               # now the recorded ref is the odd one
+        self.release("v2", hours=5)
+        result = self.check()
+        self.assertIn("-> UNKNOWN (cannot compare main with v2)", self.line(result))
+
+    def test_unknown_when_the_recorded_commit_is_missing(self):
+        self.released_demo()
+        data = json.loads(self.read(self.lynx, "packs/packs.json").decode("utf-8"))
+        del data["packs"]["demo"]["commit"]
+        self.write(self.lynx, "packs/packs.json", json.dumps(data, indent=2) + "\n")
+        self.commit_all("test: forget the commit")
+        self.upstream_release("v2", {"b.txt": "b v2\n"})
+        self.release("v2", hours=72)
+        result = self.check()
+        self.assertIn("-> UNKNOWN (demo has no recorded commit", self.line(result))
+
+    # --- flags
+
+    def test_unreleased_when_the_version_does_not_belong_to_the_ref(self):
+        self.released_demo()
+        self.update_pack(version="0.9-lynx.1")
+        self.write(self.lynx, "packs/demo/patches-bundle.json", '{"version": "0.9-lynx.1"}\n')
+        self.commit_all("chore(pack-demo): bundle 0.9")
+        self.release("v1", hours=5)
+        result = self.check()
+        self.assertTrue(self.line(result).endswith(
+            "-> OK +UNRELEASED (version 0.9-lynx.1 does not belong to ref v1)"), result.out)
+        self.assertEqual(result.out.splitlines()[-1], self.summary(unreleased="demo"))
+
+    def test_unreleased_when_the_published_bundle_is_missing_unreadable_or_another_version(self):
+        self.released_demo()
+        self.release("v1", hours=5)
+        bundle = "packs/demo/patches-bundle.json"
+        cases = [
+            ("another version", '{"version": "1-lynx.0"}\n', "bundle version 1-lynx.0 differs from version 1-lynx.1"),
+            ("unreadable", "{not json", f"{bundle} is unreadable"),
+            ("no version", '{"name": "x"}\n', f"{bundle} has no version"),
+            ("missing", None, f"no {bundle}"),
+        ]
+        for label, content, note in cases:
+            with self.subTest(label):
+                if content is None:
+                    os.remove(os.path.join(self.lynx, *bundle.split("/")))
+                else:
+                    self.write(self.lynx, bundle, content)
+                self.commit_all(f"chore(pack-demo): bundle {label}")
+                result = self.check()
+                self.assertTrue(self.line(result).endswith(f"-> OK +UNRELEASED ({note})"), result.out)
+        self.write(self.lynx, bundle, '{"version": "1-lynx.1"}\n')
+        self.commit_all("chore(pack-demo): bundle again")
+        self.assertTrue(self.line(self.check()).endswith("-> OK"))
+
+    def test_in_progress_when_the_pack_folder_has_uncommitted_changes(self):
+        self.released_demo()
+        self.release("v1", hours=5)
+        self.assertTrue(self.line(self.check()).endswith("-> OK"))
+
+        self.write(self.lynx, "junk.txt", "outside the pack\n")                  # other changes do not count
+        self.write(self.lynx, "tools/notes.txt", "outside the pack\n")
+        self.assertTrue(self.line(self.check()).endswith("-> OK"))
+
+        note = "+IN-PROGRESS (uncommitted changes in packs/demo)"
+        self.edit(self.lynx, "packs/demo/README.md", "readme v1\n", "readme edited\n")          # unstaged
+        result = self.check()
+        self.assertTrue(self.line(result).endswith(f"-> OK {note}"), result.out)
+        self.assertEqual(result.out.splitlines()[-1], self.summary(in_progress="demo"))
+        self.git(self.lynx, "add", "packs/demo/README.md")                                      # staged only
+        self.assertTrue(self.line(self.check()).endswith(f"-> OK {note}"))
+        self.git(self.lynx, "commit", "-q", "-m", "chore(pack-demo): readme")
+        self.assertTrue(self.line(self.check()).endswith("-> OK"))
+        self.write(self.lynx, "packs/demo/new-file.txt", "untracked\n")
+        self.assertTrue(self.line(self.check()).endswith(f"-> OK {note}"))
+
+    def test_both_flags_come_after_the_state(self):
+        self.released_demo()
+        self.update_pack(ref="v2", version="1-lynx.1")                 # the real-world case: ref moved, version not
+        self.write(self.lynx, "packs/demo/README.md", "edited in the middle of a sync\n")
+        self.release("v2", hours=5)
+        result = self.check()
+        self.assertTrue(self.line(result).endswith(
+            "-> OK +UNRELEASED (version 1-lynx.1 does not belong to ref v2) "
+            "+IN-PROGRESS (uncommitted changes in packs/demo)"), result.out)
+        self.assertEqual(result.out.splitlines()[-1], self.summary(unreleased="demo", in_progress="demo"))
+
+    # --- output, safety
+
+    def test_columns_line_up_and_age_is_hours_then_days(self):
+        self.released_demo()
+        self.add_pack("a-much-longer-name", upstream=self.upstream + "-other", ref="v7", version="7-lynx.1")
+        self.upstream_release("v2", {"b.txt": "b v2\n"})
+        self.release("v2", hours=72)
+        self.release("v7", hours=47, upstream=self.upstream + "-other")
+        result = self.check()
+        demo, other = self.line(result), self.line(result, "a-much-longer-name")
+        self.assertIn("(3 d old)", demo)
+        self.assertIn("(47 h old)", other)
+        for marker in ("ours=", "latest=", "lynx=", "published=", "-> "):
+            self.assertEqual(demo.index(marker), other.index(marker), marker)
+        self.assertEqual(result.out.splitlines()[-1],
+                         self.summary(update="demo", unreleased="a-much-longer-name"))
+
+    def test_check_changes_nothing_in_a_dirty_tree(self):
+        self.released_demo()
+        self.upstream_release("v2", {"b.txt": "b v2\n"})
+        self.release("v2", hours=72)
+        self.edit(self.lynx, "packs/demo/a.txt", "line 03\n", "line 03 staged edit\n")
+        self.git(self.lynx, "add", "packs/demo/a.txt")
+        self.edit(self.lynx, "packs/demo/b.txt", "b v1\n", "b unstaged edit\n")
+        self.write(self.lynx, "packs/demo/untracked.txt", "new\n")
+        self.write(self.lynx, "junk.txt", "outside\n")
+        data = json.loads(self.read(self.lynx, "packs/packs.json").decode("utf-8"))
+        data["_note"] = "unstaged edit of packs.json"
+        self.write(self.lynx, "packs/packs.json", json.dumps(data, indent=2) + "\n")
+
+        def state():
+            return {"status": self.git(self.lynx, "status", "--porcelain"),
+                    "packs.json": self.read(self.lynx, "packs/packs.json"),
+                    "index": self.read(self.lynx, ".git/index"),
+                    "staged": self.git(self.lynx, "diff", "--cached"),
+                    "head": self.git(self.lynx, "rev-parse", "HEAD"),
+                    "refs": self.git(self.lynx, "for-each-ref")}
+
+        before = state()               # the git calls in here may refresh the index file; check itself must not
+        result = self.check()
+        index_after = self.read(self.lynx, ".git/index")
+        self.assertTrue(self.line(result).endswith(
+            "-> UPDATE +IN-PROGRESS (uncommitted changes in packs/demo)"), result.out)
+        self.assertEqual(index_after, before["index"])
+        self.assertEqual(state(), before)
+        self.assertFalse(self.exists(self.lynx, ".git/shallow"))
+        self.assertFalse(self.exists(self.lynx, "build"))
+
+    def test_check_with_a_broken_packs_json_exits_with_one(self):
+        self.write(self.lynx, "packs/packs.json", "{not json")
+        result = self.tool("check")
+        self.assertEqual(result.code, 1)
+        self.assertIn("not valid JSON", result.err)
+
+    def test_check_without_packs(self):
+        result = self.check()
+        self.assertIn("no packs", result.out)
+
+    def test_check_works_from_a_subfolder_and_rejects_a_bad_age(self):
+        self.released_demo()
+        self.release("v1", hours=5)
+        proc = self.tool("check", cwd=os.path.join(self.lynx, "tools"))
+        self.assertEqual(proc.code, 0, proc.text)
+        self.assertTrue(self.line(proc).endswith("-> OK"))
+        self.assertEqual(self.tool("check", "--min-age-hours", "soon").code, 2)
+
+
+class LookupTests(unittest.TestCase):
+    """latest_release and its helpers without the network: urlopen, gh and PATH are replaced by mocks."""
+
+    class Response:
+        def __init__(self, body):
+            self.body = body
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return self.body
+
+    GOOD = json.dumps({"tag_name": "v3.2.1", "published_at": "2026-11-20T08:30:00Z"}).encode("utf-8")
+
+    def setUp(self):
+        patcher = mock.patch.dict(os.environ)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        os.environ.pop("PACK_SYNC_TEST_RELEASES", None)
+
+    @staticmethod
+    def http_error(code):
+        return urllib.error.HTTPError("https://api.github.com/x", code, "msg", {}, io.BytesIO(b""))
+
+    @staticmethod
+    def gh_result(code, stdout=b"", stderr=b""):
+        return mock.Mock(return_value=subprocess.CompletedProcess([], code, stdout=stdout, stderr=stderr))
+
+    def lookup(self, upstream="https://github.com/owner/repo", urlopen=None, which=None, run=None):
+        """latest_release with the network, PATH and gh replaced; an unset mock fails the test when it is used."""
+        with mock.patch.object(pack_sync.urllib.request, "urlopen", urlopen or mock.Mock(side_effect=AssertionError)), \
+                mock.patch.object(pack_sync.shutil, "which", which or mock.Mock(return_value=None)), \
+                mock.patch.object(pack_sync.subprocess, "run", run or mock.Mock(side_effect=AssertionError)):
+            return pack_sync.latest_release(upstream)
+
+    def lookup_error(self, **kw):
+        with self.assertRaises(pack_sync.PackError) as caught:
+            self.lookup(**kw)
+        return str(caught.exception)
+
+    def test_a_good_answer_gives_the_tag_and_the_time(self):
+        urlopen = mock.Mock(return_value=self.Response(self.GOOD))
+        tag, published = self.lookup(urlopen=urlopen)
+        self.assertEqual(tag, "v3.2.1")
+        self.assertEqual(published, datetime.datetime(2026, 11, 20, 8, 30, tzinfo=datetime.timezone.utc))
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.full_url, "https://api.github.com/repos/owner/repo/releases/latest")
+        headers = {key.lower(): value for key, value in request.header_items()}
+        self.assertEqual(headers, {"accept": "application/vnd.github+json", "user-agent": "pack-sync"})   # no token
+        self.assertEqual(urlopen.call_args.kwargs["timeout"], 30)
+
+    def test_an_upstream_outside_github_is_refused(self):
+        self.assertEqual(self.lookup_error(upstream="https://gitlab.com/owner/repo"), "upstream is not on GitHub")
+
+    def test_404_means_no_stable_release_and_gh_is_not_asked(self):
+        urlopen = mock.Mock(side_effect=self.http_error(404))
+        self.assertEqual(self.lookup_error(urlopen=urlopen, which=mock.Mock(return_value="gh")), "no stable release")
+
+    def test_other_http_errors_do_not_try_gh(self):
+        urlopen = mock.Mock(side_effect=self.http_error(500))
+        self.assertEqual(self.lookup_error(urlopen=urlopen, which=mock.Mock(return_value="gh")),
+                         "GitHub answered HTTP 500")
+
+    def test_rate_limit_without_gh(self):
+        for code in (403, 429):
+            with self.subTest(code=code):
+                urlopen = mock.Mock(side_effect=self.http_error(code))
+                self.assertEqual(self.lookup_error(urlopen=urlopen), "rate limited, gh not found")
+
+    def test_network_error_without_gh(self):
+        urlopen = mock.Mock(side_effect=urllib.error.URLError("no route to host"))
+        self.assertEqual(self.lookup_error(urlopen=urlopen), "network error: no route to host, gh not found")
+        urlopen = mock.Mock(side_effect=TimeoutError("timed out"))
+        self.assertIn("network error", self.lookup_error(urlopen=urlopen))
+
+    def test_rate_limit_falls_back_to_gh_without_passing_a_token(self):
+        urlopen = mock.Mock(side_effect=self.http_error(429))
+        run = self.gh_result(0, stdout=self.GOOD)
+        tag, published = self.lookup(urlopen=urlopen, which=mock.Mock(return_value="C:/gh.exe"), run=run)
+        self.assertEqual(tag, "v3.2.1")
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0], ["gh", "api", "repos/owner/repo/releases/latest"])
+        self.assertEqual(sorted(run.call_args.kwargs), ["capture_output", "timeout"])       # no env, no token
+        self.assertEqual(run.call_args.kwargs["timeout"], 60)
+
+    def test_gh_failures_are_one_line_reasons(self):
+        urlopen = mock.Mock(side_effect=self.http_error(403))
+        which = mock.Mock(return_value="gh")
+        not_found = self.gh_result(1, stderr=b"gh: Not Found (HTTP 404)\n")
+        self.assertEqual(self.lookup_error(urlopen=urlopen, which=which, run=not_found), "no stable release")
+        failing = self.gh_result(1, stderr=b"gh: bad credentials\nmore\n")
+        self.assertEqual(self.lookup_error(urlopen=urlopen, which=which, run=failing),
+                         "rate limited, gh failed: gh: bad credentials")
+        garbage = self.gh_result(0, stdout=b"<html>")
+        self.assertIn("not JSON", self.lookup_error(urlopen=urlopen, which=which, run=garbage))
+
+    def test_an_answer_without_a_usable_tag_or_time_is_an_error(self):
+        for body in (b'{"published_at": "2026-11-20T08:30:00Z"}', b'{"tag_name": "v1"}',
+                     b'{"tag_name": "v1", "published_at": "yesterday"}', b"[]"):
+            with self.subTest(body=body):
+                self.assertTrue(self.lookup_error(urlopen=mock.Mock(return_value=self.Response(body))))
+
+    def test_version_parsing(self):
+        table = [("v0.24.0", (0, 24, 0)), ("2.10", (2, 10)), ("v1", (1,)), ("1.2.3-rc1", None), ("nightly", None),
+                 ("v", None), ("1..2", None), ("", None), ("vv1", None), ("1.2.3.4", (1, 2, 3, 4))]
+        for text, expected in table:
+            with self.subTest(text=text):
+                self.assertEqual(pack_sync.parse_version(text), expected)
+        self.assertLess(pack_sync.parse_version("v2.9.0"), pack_sync.parse_version("v2.10.0"))   # numbers, not text
+
+    def test_age_text(self):
+        table = [(0, "0 h old"), (0.5, "0 h old"), (15.9, "15 h old"), (47.99, "47 h old"), (48, "2 d old"),
+                 (80, "3 d old"), (24 * 12 + 5, "12 d old")]
+        for hours, expected in table:
+            with self.subTest(hours=hours):
+                self.assertEqual(pack_sync.age_text(hours), expected)
 
 
 if __name__ == "__main__":
