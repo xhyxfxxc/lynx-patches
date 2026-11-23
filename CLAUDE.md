@@ -73,9 +73,9 @@ manifest permissions, price history card), so never copy their files over ours.
 - Everything we changed in a pack is listed in `packs/<name>/LYNX.md`; keep it current.
   `python tools/pack_sync.py diff <name>` shows the exact difference from upstream.
 - Release a pack: raise `version` in `packs/packs.json` (`<upstream version>-lynx.<n>`), apply the built bundle
-  with Morphe Desktop `--validate` to the original APK in `apks\` (every default patch must apply), test on the
-  phone, ask the owner before a pack's first release, then
-  `gh workflow run Pack -R xhyxfxxc/lynx-patches -f pack=<name>`.
+  with Morphe Desktop `--validate` to the original APK in `apks\` (every default patch must apply), run the emulator
+  start-up test (`tools/emu_smoke.py`; a signed-in test on the S25 only when the owner asks), ask the owner before
+  a pack's first release, then `gh workflow run Pack -R xhyxfxxc/lynx-patches -f pack=<name>`.
 - License duties: keep each pack's LICENSE and upstream NOTICE text, name it "<Upstream name> (Lynx build)",
   never publish upstream's own `patches-bundle.json` or signing key from our folders.
 - CI lessons (2026-11-23): dispatch one Pack run at a time and wait for it (`gh run watch`), because the workflow's
@@ -99,15 +99,17 @@ manifest permissions, price history card), so never copy their files over ours.
   decision 2026-11-23: keep this pattern; the packs stay separate sources because that keeps each pack's upgrade
   and review path simple.
 - Roles for this work: the main session (Claude Fable 5.2 or Claude Opus 5.5) plans, reads the build files,
-  re-checks review claims in the code, decides, tests on the phone and runs the releases; Sonnet 5.5 sub-sessions
-  do all bulk reading and every change to files in the repo. Commit trailers name the model that wrote the commit.
+  re-checks review claims in the code, decides, runs the tests and the releases; Sonnet 5.5 sub-sessions do all
+  bulk reading and every change to files in the repo. Commit trailers name the model that wrote the commit.
 - Scheduled check (owner decisions 2026-11-23): every second day at 03:00 the desktop-app scheduled task
   `lynx-pack-upstream-check` runs `python tools/pack_sync.py check` and, for a pack whose upstream has a new stable
-  release that is at least 24 hours old, section E of `packs/PROCESS.md`. An unattended run publishes by itself only
-  when the update is clean (nothing risky in the review, no new Lynx change needed, every check passes); anything
-  else is prepared and parked for the owner. It never downloads, never uses a phone (the emulator start-up test
-  `tools/emu_smoke.py` stands in, so signed-in screens stay untested) and takes no pre-releases. Lynx's own
-  upstream (Loki Patches) is not part of it: still on demand only.
+  release that is at least 24 hours old, section E of `packs/PROCESS.md`. Its main session is Claude Opus 5.5 and
+  the execution is done by Sonnet 5.5 sub-sessions. An unattended run publishes by itself only when the update is
+  clean (nothing risky in the review, no new Lynx change needed, every check passes); anything else is prepared
+  and parked for the owner. It never downloads, never uses a phone (the emulator start-up test
+  `tools/emu_smoke.py` stands in) and takes no pre-releases. Signed-in screens are not tested for any pack
+  upgrade: the owner tries new versions on the daily phone and problems are fixed when they report them. Lynx's
+  own upstream (Loki Patches) is not part of it: still on demand only.
 
 ## Branches, commits, releases
 

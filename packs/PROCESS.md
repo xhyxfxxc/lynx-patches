@@ -15,9 +15,10 @@ original app file on the PC; Morphe Manager does the same on the phone.
 
 ## Who does what
 
-- Main session (Claude Fable 5.2 or Claude Opus 5.5): plans, writes the briefs, reads the build files itself,
-  re-checks the key claims of every review in the code, decides what to remove or fix, drives the test phone,
-  runs the release commands, asks the owner. It writes no code and edits no repo file itself.
+- Main session (Claude Fable 5.2 or Claude Opus 5.5; a scheduled run is always Claude Opus 5.5, owner decision
+  2026-11-23): plans, writes the briefs, reads the build files itself, re-checks the key claims of every review
+  in the code, decides what to remove or fix, runs the tests and the release commands, asks the owner. It
+  writes no code and edits no repo file itself.
 - Sonnet 5.5 sub-sessions (`model: "sonnet"`): all bulk reading (audits, reviews) and all changes to files in
   the repo (code, docs, version bumps, builds, validation runs). One brief each, self-contained.
   Reason: parallel main-model reviewers used up the owner's 5-hour usage window twice on 2026-11-23.
@@ -126,16 +127,21 @@ crashes instead of falling back to the app's own behaviour. Fix P0 and P1; list 
    extension), unit tests. Checksums added to `gradle/verification-metadata.xml` must first be matched with the
    publisher's own SHA-256; verification is never switched off.
 10. Read the build session's diff. Check any added checksum yourself.
-11. Phone test on the S25, aimed at the bugs users reported upstream against the new version. Run the emulator
-    start-up test first (`tools/emu_smoke.py`, section E): it is quick and catches a crash at launch before
-    the phone is touched.
-12. CI build-only, compare with the tested bundle, publish, verify (section D). If the phone test changed what
-    LYNX.md should say, have it updated BEFORE publishing: LYNX.md becomes the release notes.
+11. Emulator start-up test (`tools/emu_smoke.py`, section E): it is quick and catches a crash at launch. That
+    is the test for an upgrade. A signed-in test on the S25 (section C) is run only when the owner asks for one,
+    or to prove a fix for a problem they reported. Owner decision 2026-11-23: "no need for separate s25 check.
+    I will load it on my s26 for real life test after publishing and if it is not working then we will work on
+    fixes on this ad-hoc basis." Do not ask the owner to unlock the S25 for an upgrade.
+12. CI build-only, compare with the tested bundle, publish, verify (section D). Have the test result written
+    into LYNX.md BEFORE publishing (what was tested and what was not): LYNX.md becomes the release notes.
 13. Tell the owner in plain words: what they get, what the review found, what was tested and what was not,
     and what they must do on their phone (Manager version, which app file to patch).
 
 ## C. Phone test (Galaxy S25 Ultra, the test phone)
 
+- When: only if the owner asks for a signed-in check, or to prove a fix for a problem they reported (step B11).
+  The S25 has a screen lock that only the owner opens: wake it, never type a code, and if it is locked ask the
+  owner or leave the test out and say so.
 - Only the S25. The S26 Ultra is the daily phone: never install, uninstall or tap there.
 - Helpers: `tools/phone/phone.sh` (set `LYNX_ADB_SERIAL` first). Use the guarded helpers (`gtap`, `tapnode`,
   `gswipe`): they act only when the intended app is in front and find a control by its name first. BACK at an
@@ -157,7 +163,8 @@ crashes instead of falling back to the app's own behaviour. Fix P0 and P1; list 
   answers 200 with the new version; `gh release download pack-<name>-v<version> -R xhyxfxxc/lynx-patches` and
   `python -I tools/zipcmp.py <tested bundle> <release asset>` prints CODE IDENTICAL; the Lynx Patches release
   is still the one marked Latest; `git pull --ff-only`, tree clean.
-- On the S25, open Morphe Manager, refresh Sources: the pack shows the new version.
+- The owner refreshes Sources in Morphe Manager on their phone and re-patches the app when they choose. (When
+  the S25 happens to be unlocked and plugged in, Manager on it can confirm that the new version shows.)
 
 ## E. Scheduled check (every 2 days, nobody at the PC)
 
@@ -172,8 +179,12 @@ next opens. The task's prompt only points here: to change the behaviour, change 
 The time, and switching the task off, are changed in the app's Scheduled tasks list or by asking a session.
 
 An unattended run is section B with nobody to ask. It does everything that needs no yes and parks a pack where
-one is needed. The roles do not change: the main session plans, re-checks and decides; Sonnet 5.5 sub-sessions
-do the bulk reading and every repo change.
+one is needed. The roles do not change, and the models are fixed (owner decision 2026-11-23: "make all the
+schedule jobs' main session being opus 5.5 and execution being done by sonnet 5.5"): the main session is Claude
+Opus 5.5 and plans, re-checks and decides; Sonnet 5.5 sub-sessions do the bulk reading and every repo change.
+The task asks for its model with the line `model: claude-opus-5-5` in the front matter of its file
+(`C:\Users\thoma\.claude\scheduled-tasks\lynx-pack-upstream-check\SKILL.md`); the model and the permission mode
+can also be set in the app (Scheduled, the task, Edit).
 
 1. Start. Read `CLAUDE.md` (section "Packs"), this file and `PROGRESS.md`. Then `git pull --ff-only origin main`
    and `git status --short`. If the tree is not clean, or PROGRESS.md shows a session at work on a pack (an
@@ -199,7 +210,7 @@ do the bulk reading and every repo change.
    has these limits:
    - No phone. Not the S25 and never the S26: do not run `tools/phone/phone.sh` and do not pass a phone's
      serial to adb. The only device is the emulator `emulator-5584`, driven by `tools/emu_smoke.py`, which
-     refuses anything that is not an emulator. The emulator test replaces step B11.
+     refuses anything that is not an emulator.
    - No download: no original app file, no Morphe Desktop jar, no upstream bundle, no emulator image. If step B8
      shows that the version needs another app version or build than the one in `apks\`, or a newer patcher than
      the jars in `tools\`: finish the review, commit the sync, then park the pack and write down the exact
@@ -228,7 +239,7 @@ do the bulk reading and every repo change.
    - The permissions and exported components of the patched app equal those of the last release's patched app.
    - Emulator: `tools/emu_smoke.py` says PASS (see below).
    - The CI artifact is code-identical to the tested bundle (`tools/zipcmp.py`).
-   Then publish and verify as in section D, leaving out its last line (the phone).
+   Then publish and verify as in section D.
 5. Not clean: do NOT publish. Prepare as far as is sound (the fix or removal through the build session, build,
    validate, emulator test), commit and push that work, and park the pack: PROGRESS.md gets what was found,
    what was done and the one thing the owner must decide or do. The owner then says "continue the <pack>
@@ -247,7 +258,7 @@ that, and compares the two. PASS means: the patched app installs, is still runni
 one of its own screens as the original does, and its log has no fatal error, no "not responding" report and no
 class-loading error that the original does not have. Exit codes: 0 PASS, 2 FAIL (the original starts and the
 patched app does not: a P0, park the pack), 3 UNUSABLE (the emulator cannot install or run this app at all:
-park the pack with "needs a phone test"), 1 the tool itself failed.
+park the pack: it has had no start-up test, the owner decides), 1 the tool itself failed.
 
 The emulator: AVD `lynx_packs`, Android 15 with Google APIs, x86_64 with arm64 translation, made on
 2026-11-23 from the system image that was already in the Android SDK. It holds no account and none is ever
@@ -255,8 +266,14 @@ signed in on it.
 
 What it proves is start-up only. The apps are not signed in on the emulator (signing in is the owner's to do,
 and it would need a spare account), so feeds without ads, the pack's own settings and the bugs users reported
-are NOT tested by an unattended run. The owner can ask for the signed-in check in the daytime ("test <pack> on
-the S25") before re-patching the daily phone.
+are NOT tested. The owner knows this and decided on 2026-11-23 to publish on this basis ("Publish it"): they
+try a new version on their daily phone themselves, and what does not work is fixed when they report it. A
+signed-in check on the S25 is run only when they ask for one ("test <pack> on the S25").
+
+Two details of the tool: it installs with `--abi arm64-v8a` when the emulator offers it, so the arm64 code that
+the phones run is the code that is tested (some app files also carry a partial x86_64 copy that crashes); and a
+system permission prompt lying over the app's first screen counts as the app's own screen. No prompt is ever
+answered.
 
 Trial on 2026-11-23 with the builds that were current then:
 
@@ -265,11 +282,12 @@ Trial on 2026-11-23 with the builds that were current then:
 | facebook | Facebook 588.0.0.42.55 | PASS | Original and patched show the same signed-out welcome screen with Android's "Allow Facebook to send you notifications?" prompt on top. Patch log lines present. |
 | instagram | Instagram 456.0.0.53.78 | PASS | Original and patched show the same "Join Instagram" signed-out screen. Patch log lines present. |
 | threads | Threads 455.0.0.55.72 | PASS | Original and patched show the same Threads logo with the "Log in with Instagram" button. Patch log lines present. |
-| gboard | Gboard 18.5.4.993608717 | UNUSABLE | The emulator image already contains Gboard with a different signature, so not even the genuine original can be installed over it (no screenshots): needs a phone test. |
+| gboard | Gboard 18.5.4.993608717 | UNUSABLE | The emulator image already contains Gboard with a different signature, so not even the genuine original can be installed over it (no screenshots). |
 | waze | Waze 5.27.5.0 | PASS | Original and patched show the same first-run "Give Waze access to your precise location" screen. The pack logs nothing at start-up, so the tool shows its "no patch tag" warning. |
 | x | X 12.19.1-release.0 | PASS | Original and patched show the same "See what's happening" login screen with the "Allow X to send you notifications?" prompt on top. Patch log lines present. |
 
-A pack marked UNUSABLE cannot be published by an unattended run: it is parked until a phone test.
+A pack marked UNUSABLE has had no start-up test, so an unattended run does not publish it: it is parked until
+the owner says "publish <pack>" or asks for a phone test.
 
 ## Where things are (outside git)
 
