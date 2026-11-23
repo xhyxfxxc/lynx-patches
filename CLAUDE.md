@@ -68,7 +68,8 @@ manifest permissions, price history card), so never copy their files over ours.
   Read the upstream diff it writes to `build/pack-sync/` for anything that sends data off the phone, loads code,
   adds permissions or exported components, or changes the build, and only then commit. Never run a pack's build
   on code that has not been reviewed. The first audits (2026-11-23) are in
-  `C:\Users\thoma\Morpheapp\upstream-src\_audit\` (local, not in git).
+  `C:\Users\thoma\Morpheapp\upstream-src\_audit\` (local, not in git); upgrade reviews are saved there as
+  `<pack>-v<version>-review.md`.
 - Everything we changed in a pack is listed in `packs/<name>/LYNX.md`; keep it current.
   `python tools/pack_sync.py diff <name>` shows the exact difference from upstream.
 - Release a pack: raise `version` in `packs/packs.json` (`<upstream version>-lynx.<n>`), apply the built bundle
@@ -92,6 +93,14 @@ manifest permissions, price history card), so never copy their files over ours.
 - One-tap add link (checked in Morphe Manager 2.7.0):
   `https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/<name>&name=<label>`. Manager
   shows the bundle's own name ("<Upstream name> (Lynx build)") once the source has loaded.
+- The pattern for every pack (adopt, review, fix, publish, upgrade when upstream has something new) is the
+  runbook `packs/PROCESS.md`; follow it for "add this pack" and "upgrade <pack>" requests. Its briefs are in
+  `packs/briefs/`, the bundle comparer is `tools/zipcmp.py`, the phone helpers are in `tools/phone/`. Owner
+  decision 2026-11-23: keep this pattern; the packs stay separate sources because that keeps each pack's upgrade
+  and review path simple.
+- Roles for this work: the main session (Claude Fable 5.2 or Claude Opus 5.5) plans, reads the build files,
+  re-checks review claims in the code, decides, tests on the phone and runs the releases; Sonnet 5.5 sub-sessions
+  do all bulk reading and every change to files in the repo. Commit trailers name the model that wrote the commit.
 
 ## Branches, commits, releases
 

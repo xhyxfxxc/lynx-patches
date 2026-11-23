@@ -5,3 +5,5 @@
 # the Windows batch launchers need CRLF or cmd.exe misreads them.
 /gradlew  text eol=lf
 *.bat     text eol=crlf
+# The phone helpers are sourced by bash (Git Bash on Windows): CRLF would break them.
+/tools/phone/*.sh  text eol=lf

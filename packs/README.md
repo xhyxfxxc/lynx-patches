@@ -4,6 +4,9 @@ A pack is somebody else's Morphe patch pack (for one app, such as Facebook or Wa
 source snapshot under `packs/<name>/`, is kept up to date from its upstream, carries our own fixes on top, and is
 built and published by Lynx CI as its own Morphe source.
 
+The order of work for adopting and upgrading a pack is in [PROCESS.md](PROCESS.md); the briefs for the review and
+port sessions are in [briefs/](briefs/).
+
 Why a pack is its own source and not part of the Lynx Patches bundle:
 
 - Every pack was written against its own patcher toolkit version and has its own Gradle build, so the packs
@@ -17,6 +20,8 @@ Why a pack is its own source and not part of the Lynx Patches bundle:
 packs/
   packs.json             the list: one entry per pack (schema below)
   README.md              this file
+  PROCESS.md             the order of work: adopt, review, fix, publish, upgrade
+  briefs/                briefs for review and port sessions
   <name>/                the pack, as upstream wrote it plus our fix commits
     gradlew, settings.gradle.kts, ...   upstream's own build
     LYNX.md              what we changed, in plain words (our file; it becomes the release notes)
@@ -113,6 +118,15 @@ A sync is never committed before its upstream diff has been read. Open `build/pa
 - new permissions or exported components added to the patched app;
 - changes to the build: `*.gradle*`, `gradle/`, `gradlew`, wrapper jar or properties, `buildSrc/`, `.github/`. A
   build runs code on this PC and on CI with a token in the environment. The sync summary lists such files.
+
+For an upgrade, the lead repeats this search over the added lines of the extension after the reviewers report (add
+`| grep -v 'table\.put('` or similar when translation tables flood it):
+
+```bash
+git diff --cached -U0 -- packs/<name>/extensions | grep -E "^\+" | grep -v -E "^\+\+\+" \
+  | grep -v -E "^\+\s*(//|\*|/\*)" \
+  | grep -n -E "HttpURLConnection|HttpsURLConnection|URLConnection|openConnection|openStream|okhttp|OkHttp|Retrofit|Volley|HttpClient|\bSocket\(|ServerSocket|SocketFactory|DatagramSocket|InetAddress|InetSocketAddress|WebSocket|DownloadManager|Cronet|\.connect\(|https?://|wss?://|DexClassLoader|PathClassLoader|InMemoryDexClassLoader|defineClass|Runtime\.getRuntime|ProcessBuilder|System\.load|evaluateJavascript|addJavascriptInterface|loadUrl\(|WebView|setProperty\(|getCookie|CookieManager|sendBroadcast|ContentResolver|getExternalStorage|Base64|Cipher"
+```
 
 Never run an upstream build script (`gradlew`, a Gradle plugin, a task) that has not been reviewed. CI also
 checks the Gradle wrapper jar against Gradle's official checksums before it builds.
