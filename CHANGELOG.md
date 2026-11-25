@@ -1,3 +1,10 @@
+## 3.9.0 (2026-11-25)
+
+### New Features
+- **Video Converter:** Video Converter joins the bundle - its ads never show and watch-an-ad unlocks work at once.
+
+**59 patches for 25 apps.** Full list in the [README](https://github.com/[secure]/lynx-patches#apps).
+
 ## 3.8.0 (2026-11-22)
 
 ### New Features

@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "3.8.0",
+  "version": "3.9.0",
   "patches": [
     {
       "name": "AMOLED black (Splitwise)",
@@ -1850,6 +1850,44 @@
       "options": []
     },
     {
+      "name": "Hide ads (Video Converter)",
+      "description": "Removes Video Converter's ads: banners, native, full-screen and app-open ads from Google AdMob and InverseAI's own cross-promotion ads, including the Noise Reducer screens. Billing and premium are untouched.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch",
+        "ResourcePatch",
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.inverseai.video_converter",
+          "name": "Video Converter",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#895F7B",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "20.11.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Hide bottom tabs",
       "description": "Adds switches to take My Network, Jobs and More out of the bottom bar (More is hidden by default).",
       "default": true,
@@ -2787,6 +2825,43 @@
           "targets": [
             {
               "version": "30.28",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Skip rewarded ads (Video Converter)",
+      "description": "Gives the unlock of a \"watch an ad\" button straight away, without playing an ad. The AI assistant's credits (earned on InverseAI's server) and the Noise Reducer's \"Watch ad\" button are not unlocked this way.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch",
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.inverseai.video_converter",
+          "name": "Video Converter",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#895F7B",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "20.11.0",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,

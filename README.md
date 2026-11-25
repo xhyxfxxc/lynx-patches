@@ -18,7 +18,7 @@ make everyday apps work the way you want.
 [![Latest release](https://img.shields.io/github/v/release/xhyxfxxc/lynx-patches?sort=semver&style=for-the-badge&label=release&labelColor=0d1117&color=22d3ee)](https://github.com/xhyxfxxc/lynx-patches/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/xhyxfxxc/lynx-patches/total?style=for-the-badge&labelColor=0d1117&color=0ea5e9)](https://github.com/xhyxfxxc/lynx-patches/releases)
 <!-- BADGES_START -->
-[![apps](https://img.shields.io/badge/apps-24-2563eb?style=for-the-badge&labelColor=0d1117)](#apps) [![patches](https://img.shields.io/badge/patches-80-14b8a6?style=for-the-badge&labelColor=0d1117)](#apps)
+[![apps](https://img.shields.io/badge/apps-25-2563eb?style=for-the-badge&labelColor=0d1117)](#apps) [![patches](https://img.shields.io/badge/patches-82-14b8a6?style=for-the-badge&labelColor=0d1117)](#apps)
 <!-- BADGES_END -->
 [![Morphe](https://img.shields.io/badge/patches%20for-Morphe-06b6d4?style=for-the-badge&labelColor=0d1117)](https://morphe.software)
 [![License](https://img.shields.io/github/license/xhyxfxxc/lynx-patches?style=for-the-badge&labelColor=0d1117&color=6e7681)](LICENSE)
@@ -47,7 +47,7 @@ Every app with its highlights, the version it is built for, and which file to do
 for its features, patches and FAQ.
 
 <!-- APPS_START -->
-> **[v3.8.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.8.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**24** apps&nbsp;&nbsp;•&nbsp;&nbsp;**80** patches
+> **[v3.9.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.9.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**25** apps&nbsp;&nbsp;•&nbsp;&nbsp;**82** patches
 
 ### Featured
 
@@ -91,6 +91,7 @@ for its features, patches and FAQ.
 | <img src="assets/icons/com.Splitwise.SplitwiseMobile.png" width="20" height="20" align="top" alt=""> [**Splitwise**](docs/apps/splitwise.md) | 💎 🚫 🛡️ 🎨 🔑 | 5 | `26.11.1` | **APK** | Account tab |
 | <img src="assets/icons/kr.co.smartstudy.tracingworld_android_googlemarket.png" width="20" height="20" align="top" alt=""> [**Tracing World**](docs/apps/tracing-world.md) | 🚫 | 1 | `33.21` | **XAPK** | Home screen shortcut |
 | <img src="assets/icons/com.truecaller.png" width="20" height="20" align="top" alt=""> [**Truecaller**](docs/apps/truecaller.md) | 💎 📵 🔑 | 3 | `26.44.6` | **APKM** | Profile menu · Settings |
+| <img src="assets/icons/com.inverseai.video_converter.png" width="20" height="20" align="top" alt=""> [**Video Converter**](docs/apps/video-converter.md) | 🚫 | 2 | `20.11.0` | **XAPK** | Home screen shortcut |
 
 ### For any app
 

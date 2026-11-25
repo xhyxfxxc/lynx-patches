@@ -3,7 +3,7 @@
 
 ![version](https://img.shields.io/badge/version-32.20.2.100-2563eb?style=for-the-badge&labelColor=0d1117) ![patches](https://img.shields.io/badge/patches-9-14b8a6?style=for-the-badge&labelColor=0d1117) ![file](https://img.shields.io/badge/file-APKM%20%28Android%2012%2B%29-0ea5e9?style=for-the-badge&labelColor=0d1117) ![menu](https://img.shields.io/badge/menu-Home%20screen%20shortcut-6e7681?style=for-the-badge&labelColor=0d1117)
 
-[← All apps](../../README.md#apps)&nbsp;&nbsp;•&nbsp;&nbsp;`com.amazon.mShop.android.shopping`&nbsp;&nbsp;•&nbsp;&nbsp;[v3.8.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.8.0)
+[← All apps](../../README.md#apps)&nbsp;&nbsp;•&nbsp;&nbsp;`com.amazon.mShop.android.shopping`&nbsp;&nbsp;•&nbsp;&nbsp;[v3.9.0](https://github.com/xhyxfxxc/lynx-patches/releases/tag/v3.9.0)
 
 **🎯 Supported versions:** `32.19.0.100` · `32.20.2.100`
 <!-- HEADER_END -->
