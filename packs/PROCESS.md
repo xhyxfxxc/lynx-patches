@@ -126,7 +126,8 @@ crashes instead of falling back to the app's own behaviour. Fix P0 and P1; list 
    `--validate` for the default set and once more with any off-by-default patch a reviewer flagged, static
    checks on the patched app (permissions and exported components against the original, URL strings in the
    extension), unit tests. Checksums added to `gradle/verification-metadata.xml` must first be matched with the
-   publisher's own SHA-256; verification is never switched off.
+   publisher's own SHA-256; verification is never switched off. For facebook, instagram and threads, also do the
+   link-handling check below.
 10. Read the build session's diff. Check any added checksum yourself.
 11. Emulator start-up test (`tools/emu_smoke.py`, section E): it is quick and catches a crash at launch. That
     is the test for an upgrade. A signed-in test on the S25 (section C) is run only when the owner asks for one,
@@ -137,6 +138,32 @@ crashes instead of falling back to the app's own behaviour. Fix P0 and P1; list 
     into LYNX.md BEFORE publishing (what was tested and what was not): LYNX.md becomes the release notes.
 13. Tell the owner in plain words: what they get, what the review found, what was tested and what was not,
     and what they must do on their phone (Manager version, which app file to patch).
+
+### Link handling of the Meta packs (owner request 2026-11-26)
+
+A re-signed Facebook, Instagram or Threads fails Android's link verification (each site names Meta's signing key),
+and the official Meta apps on a phone (Messenger, Meta App Manager, the official Instagram) stay verified for some
+of the same addresses, so those links open there or in the browser. `packs/facebook/docs/help.md` ("Facebook links
+from other apps don't open in Facebook") has the per-address adb fix, a Lynx change listed in
+`packs/facebook/LYNX.md`. Owner, 2026-11-26: "when we next time do upgrades or rework we consider this as well."
+So:
+1. Upgrade of facebook: the build session (B9) confirms the adb part of the help survived the merge. When the
+   target Facebook build changes, list the hosts of the `android:autoVerify="true"` link filters and the m.me
+   paths in the new build's manifest (`apkanalyzer manifest print <base.apk>`, or
+   `adb shell dumpsys package com.facebook.katana` on a phone that has it) and compare them with the addresses and
+   the /j/, /ch/, /cm/, /ce/ paths in the help part. If they moved, update the help part and LYNX.md, and say there
+   what was checked and what was not.
+2. Rework of the pack's link code (`SupportedLinks.java`, the Links rows in `HushfacebookPreferenceFragment.java`,
+   `OpenInFacebook.java`): consider pointing the Messenger and Meta App Manager rows at the per-address fix as
+   well as the whole-app switch, which also sends messenger.com links to the browser.
+3. instagram and threads: same cause, no help part yet. Seen on the owner's S26 (2026-11-26): Meta App Manager held
+   www.instagram.com and www.threads.net; the patched Threads held instagram.com by user selection for one path
+   only (/spotify-login-callback); the patched Instagram disables its own InstagramShortenDeeplinkAliasActivity,
+   so instagr.am and m.instagram.com links open in the browser whatever the link settings are. When either pack is
+   upgraded or reworked, consider a matching help entry (deny on App Manager; approve instagram.com and
+   www.instagram.com for com.instagram.android, www.threads.net for com.instagram.barcelona).
+4. An unattended run (section E) only checks that the help part survived the merge; the manifest comparison and
+   any doc change wait for the owner's session.
 
 ## C. Phone test (Galaxy S25 Ultra, the test phone)
 
