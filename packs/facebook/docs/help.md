@@ -58,6 +58,35 @@ If Android refuses Facebook some other way, please [report it](https://github.co
 
 Android ties facebook.com links to Meta's signature, so it may stop sending them to a re-signed Facebook. **Supported links** under Links and sharing shows what Android reports and opens the page where you can select Facebook's addresses by hand. If they won't stay selected, another Meta app such as Messenger, Instagram or Meta App Manager holds them. The official Messenger claims facebook.com, www.facebook.com and m.me for itself, which is why those switches turn back off. Tap that app's row under Links and sharing (or open its Open by default page in Android's settings), turn off **Open supported links** there, or on newer Android pick **In your browser**, then select Facebook's addresses again. Links you tap inside Messenger are Messenger's to open, and the official app may keep them in its own browser. From there, share the page (or long-press the link and share it) and pick **Open in Facebook**.
 
+### Moving only Facebook's addresses with a PC (adb)
+
+Turning off **Open supported links** for Messenger also sends messenger.com links to the browser. With a PC you can take only Facebook's addresses away from the Meta app that holds them and give them to Facebook, on Android 12 or newer. You need adb (Android's platform tools) and USB debugging on (Developer options). Checked on a Galaxy S26 Ultra with Android 17 and Facebook 588 on 2026-11-26.
+
+1. See who holds each address. The app listed under VERIFIED is the one Android uses:
+
+       adb shell pm get-app-link-owners --user 0 facebook.com www.facebook.com m.facebook.com mbasic.facebook.com mtouch.facebook.com mobile.facebook.com
+
+   If your Android doesn't know this command, `adb shell pm get-app-links --user 0 com.facebook.orca` shows what one app holds. Messenger is `com.facebook.orca`, Meta App Manager `com.facebook.appmanager`, the official Instagram `com.instagram.android`.
+
+2. Take those addresses away from the app that holds them (3 means denied). It keeps all its other links. On that phone Messenger held facebook.com and www.facebook.com, and Meta App Manager held the www, m, mbasic, mtouch and mobile addresses:
+
+       adb shell pm set-app-links --package com.facebook.orca 3 facebook.com www.facebook.com
+       adb shell pm set-app-links --package com.facebook.appmanager 3 www.facebook.com m.facebook.com mbasic.facebook.com mtouch.facebook.com mobile.facebook.com
+
+3. Give them to Facebook (2 means approved):
+
+       adb shell pm set-app-links --package com.facebook.katana 2 facebook.com www.facebook.com m.facebook.com mbasic.facebook.com mtouch.facebook.com mobile.facebook.com m.me www.m.me
+
+   For a second Facebook (next entry) use its package name, `com.facebook.katana.hush` unless you picked another. That case was not tested.
+
+4. Check. The last line should start with `com.facebook.katana/`:
+
+       adb shell cmd package resolve-activity --brief --user 0 -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d https://www.facebook.com/zuck
+
+Leave m.me and www.m.me with Messenger. Facebook only opens m.me group and community links (paths `/j/`, `/ch/`, `/cm/` and `/ce/`), and those still come to Facebook while Messenger keeps the addresses. If Messenger loses them, a chat link like m.me/name opens in the browser.
+
+An update of Messenger or Meta App Manager, or a Facebook patched with a different signing key, can undo this: run the commands again. To give an app its addresses back: `adb shell pm reset-app-links com.facebook.orca`, then `adb shell pm verify-app-links --re-verify com.facebook.orca`.
+
 ## A second Facebook beside the first
 
 If your phone came with Facebook built in, a patched Facebook can't install over it. Pick `Clone install under another package name` in Expert mode and the patched app installs beside it as `com.facebook.katana.hush`, called Facebook Clone. Both can be changed in the patch's options. Don't pick Morphe's Clone app as well.

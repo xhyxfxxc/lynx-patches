@@ -37,6 +37,11 @@ and publishes it as its own Morphe source, so it is built from exactly this code
    `helper/keystore.properties` exists, which it does not here).
 6. Build fix: the dependency checksum list now also accepts the Linux build of the Android resource tool aapt2
    (checksum from Google's own published value), because upstream only builds on Windows and Lynx builds on Linux.
+7. Help (2026-11-26, owner request; docs only, not in the bundle): `docs/help.md`, entry "Facebook links from other
+   apps don't open in Facebook", has a new part on moving only Facebook's addresses with adb (`pm set-app-links`:
+   denied on the Meta app that holds them, approved on Facebook), with the m.me exception and how to undo it.
+   Checked on the owner's Galaxy S26 Ultra (Android 17, Facebook 588). On an upgrade, check it against the new
+   build's manifest (`packs/PROCESS.md`, "Link handling of the Meta packs").
 
 ## New in 0.24.0: what the review found
 
@@ -78,7 +83,7 @@ The upstream README, docs and CONTRIBUTING still point at upstream's own source 
 the Lynx source (below), report at https://github.com/xhyxfxxc/lynx-patches/issues, and there is no Hush Unpacker.
 Ignore README.md lines 4, 12-13, 25, 27, 35 (badge, Ko-fi, upstream release and add-source links), 118 (upstream
 Discussions and forms), 149 (the release check reads upstream releases), 164 and 175-179 (Hush Unpacker, upstream
-checksums), docs/help.md lines 3, 13, 55, 106, and CONTRIBUTING.md (upstream tracker and release steps).
+checksums), docs/help.md lines 3, 13, 55, 135, and CONTRIBUTING.md (upstream tracker and release steps).
 
 ## Known problems that are not fixed
 
