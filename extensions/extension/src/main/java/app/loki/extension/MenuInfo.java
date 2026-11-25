@@ -80,6 +80,9 @@ public final class MenuInfo {
             // The Pinkfong games: only some of them have rewarded ads, so the second row reads "false" in the rest.
             rows.add(new String[]{"Hide ads (Pinkfong)", flag(flags, "app.loki.menu.pinkfongads")});
             rows.add(new String[]{"Skip rewarded ads (Pinkfong)", flag(flags, "app.loki.menu.pinkfongrewards")});
+        } else if (pkg.startsWith("com.inverseai.video_converter")) {
+            rows.add(new String[]{"Hide ads (Video Converter)", flag(flags, "app.loki.menu.hideads")});
+            rows.add(new String[]{"Skip rewarded ads (Video Converter)", flag(flags, "app.loki.menu.videoconverterrewards")});
         } else if (pkg.startsWith("com.mxtech.videoplayer")) {
             rows.add(new String[]{"All codecs", flag(flags, "app.loki.menu.codec")});
             rows.add(new String[]{"Skip license check", flag(flags, "app.loki.menu.license")});

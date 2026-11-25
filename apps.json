@@ -251,6 +251,15 @@
       "highlights": "🚫",
       "family": "Pinkfong",
       "blurb": "No ads in the game"
+    },
+    "com.inverseai.video_converter": {
+      "name": "Video Converter",
+      "slug": "video-converter",
+      "category": "Video & music",
+      "file": "XAPK",
+      "menu": "Home screen shortcut",
+      "highlights": "🚫",
+      "blurb": "No ads, and watch-an-ad unlocks work at once"
     }
   }
 }
