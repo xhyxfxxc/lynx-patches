@@ -1,14 +1,22 @@
 # Hushfacebook (Lynx build)
 
+## Status
+
+Prepared on 2026-11-27 by the scheduled check. NOT published. It waits for the owner's decision on the new share
+screen of the default-on patch "Share to Facebook chats" (see "New in 0.25.0" below). The last published version
+stays 0.24.0-lynx.1: `patches-bundle.json` and the release `pack-facebook-v0.24.0-lynx.1` are unchanged, so adding
+the Lynx source in Morphe Manager still gives 0.24.0-lynx.1. Everything below describes 0.25.0-lynx.1 as it is
+prepared in this folder.
+
 ## What this is
 
 Patches for the Facebook app (package `com.facebook.katana`), made for use with Morphe. They fit one Facebook
 build only: 588.0.0.42.55, build 707615136 (the arm64-v8a bundle on APKMirror). The 32-bit build 707615135 was
-not tested by Lynx; other builds of 588 and all older versions are not supported. Upstream is Hushfacebook 0.24.0
-by SysAdminDoc (https://github.com/SysAdminDoc/HushFacebook), commit e82b05b. The Lynx version is 0.24.0-lynx.1.
-It needs Morphe Manager 2.7.0 or newer (Morphe Desktop 2.3.0 or newer on a PC). Terms: a "patch" rewrites the
-Facebook app on a PC before it is installed; the "extension" is Java code the patches add that then runs inside
-the app; the "bundle" (a `.mpp` file) is the finished pack that Morphe applies.
+not tested by Lynx; other builds of 588 and all older versions are not supported. Upstream is Hushfacebook 0.25.0
+by SysAdminDoc (https://github.com/SysAdminDoc/HushFacebook), commit 5e928c9. The Lynx version is 0.25.0-lynx.1
+(prepared, not published yet). It needs Morphe Manager 2.7.0 or newer (Morphe Desktop 2.3.0 or newer on a PC).
+Terms: a "patch" rewrites the Facebook app on a PC before it is installed; the "extension" is Java code the patches
+add that then runs inside the app; the "bundle" (a `.mpp` file) is the finished pack that Morphe applies.
 
 ## Why it is here
 
@@ -23,15 +31,17 @@ and publishes it as its own Morphe source, so it is built from exactly this code
    opens https://github.com/xhyxfxxc/lynx-patches/tree/main/packs/facebook. Before, both went to the upstream
    author's repository. The Ko-fi link and the release check are unchanged (the check is off by default and still
    reads the upstream author's releases). Files: `HushfacebookPreferenceFragment.java` and `ReportProblemForm.java`
-   (extension, settings folder), and the five tests that pinned the old addresses.
+   (extension, settings folder), and the five tests that pinned the old addresses. The 0.25.0 merge conflicted once,
+   in `SettingsL10nTest.java` (the list of texts that stay as they are in every language): Lynx's address was kept
+   and upstream's new "#1E3A5F" entry was taken. That is not a new Lynx change.
 2. Marked as a modified version, as the GPL asks: the bundle's name, source, website and author in
    `patches/build.gradle.kts` (this is what Morphe Manager shows), and a Lynx section at the top of `NOTICE`
-   (it names upstream 0.24.0; the upstream text below it is unchanged and shown in the app under Licenses).
+   (it names upstream 0.25.0; the upstream text below it is unchanged and shown in the app under Licenses).
 3. Build fix: `gradle/verification-metadata.xml` had no checksum for some small metadata files the build downloads
    (junit-bom 5.14.4, the Bouncy Castle BOM 1.85 and the parent file of Guava 33.8.0; none is in the bundle), so
    the build stopped on this PC. Each was added only after matching the file with the SHA-256 Maven Central shows.
 4. Build fix: `helper/build.gradle.kts` read every dot-separated part of the version as a number, so a suffix such
-   as 0.24.0-lynx.1 stopped the whole build. It now reads only the part before the dash.
+   as 0.25.0-lynx.1 stopped the whole build. It now reads only the part before the dash.
 5. Hush Unpacker (the `helper/` app, only for the Android 9 and 10 build of Facebook) is not published by Lynx:
    its source is left where it is, its APK is not built or shipped (the bundle build only builds it when
    `helper/keystore.properties` exists, which it does not here).
@@ -41,41 +51,81 @@ and publishes it as its own Morphe source, so it is built from exactly this code
    apps don't open in Facebook", has a new part on moving only Facebook's addresses with adb (`pm set-app-links`:
    denied on the Meta app that holds them, approved on Facebook), with the m.me exception and how to undo it.
    Checked on the owner's Galaxy S26 Ultra (Android 17, Facebook 588). On an upgrade, check it against the new
-   build's manifest (`packs/PROCESS.md`, "Link handling of the Meta packs").
+   build's manifest (`packs/PROCESS.md`, "Link handling of the Meta packs"). Still in place after the 0.25.0 merge.
 
-## New in 0.24.0: what the review found
+## New in 0.25.0: what the review found
 
-Nothing was removed. Worth knowing before you install:
-1. In-app proxy (a new row in Hushfacebook settings) is blank by default and does nothing while blank. If you
-   type a proxy there, every Facebook connection goes through it: the proxy can see which servers Facebook talks
-   to (not the content, which stays encrypted), one safety check on download addresses is relaxed, and a proxy
-   that stops working blocks Facebook, sign-in included, until you clear the row. It is not part of settings
-   backup or import. Leave it blank unless you need it.
-2. The crash file is on by default, as upstream ships it. After a crash, a freeze or a memory kill, a report with
-   personal details removed goes to the phone's Download/Hushfacebook folder (at most 5 files). Since 0.24.0 it
-   also covers native crashes and freezes and starts on the login screen. Switch it off in settings if unwanted.
-3. Some new switches act for you, all off by default: "Next reel in background" (plays reels with the screen off,
-   so Meta records plays you did not watch), "Translate every comment" (taps Facebook's own See translation on
-   each comment), "Save all videos" in the download menu (up to 50 videos and 50 photos from one tap). Leave them
-   off to stay close to normal use.
-4. No new network destination, no new permission and no new exported component came with 0.24.0. Checked on the
-   patched app against the original Facebook: no Android permission added or removed, and the only added
-   components are the "Open in Facebook" share target and a file provider for photo search, both already in
-   0.23.0. One new patch, "Video buffer": applied by default, but it changes nothing until you pick a value.
+Nothing of upstream's was removed except "Unlock app icons" (point 4). Worth knowing before you install:
+1. "Share to Facebook chats" is a new patch, on by default, and it is the one open question. It adds an exported
+   share screen (`app.morphe.extension.facebook.chats.ShareToChats`) to the patched app. The screen is declared
+   disabled (`enabled="false"`) and does nothing until the switch of the same name in Hushfacebook settings is
+   turned on; the switch is off by default (a settings import that you choose could turn it on). When it is on, any
+   app on the phone can hand it photos, videos or text through Android's share sheet. It refuses file addresses and
+   Facebook's own files, and it does not pass the incoming intent on. Two weak points, both only while the switch is
+   on: it reads the shared list on the main thread with no limit on the number of items (a hostile app could make
+   Facebook hang for a while), and it does not require that the sender granted read access (it could copy a file
+   from a provider that Facebook itself may read). No P0 or P1 was found. Owner's choice: publish as upstream ships
+   it, or make the patch off by default (or drop it) as a Lynx change.
+2. "Chat background" is a new patch, on by default, local only. It saves the name of the last opened chat (and its
+   thread key) in Facebook's private settings every time a chat opens, even when no color is set. The name stays on
+   the phone and is left out of a settings export. It may cost a little jank, because the save is written at once.
+3. The battery fix (upstream issue 548) is in "Video buffer" (on by default; if its anchor is missing the patch
+   fails soft). The Play Store double-pick fix (issue 561) is extension-only. Both kept.
+4. "Unlock app icons" was removed by upstream on purpose (it got around a paid-app-icon check on the phone, a
+   takedown risk). A Plus icon picked under 0.24.0 should fall back to the default icon.
+5. Four new languages: Arabic, Bulgarian, Italian, Korean (the new tables hold text entries only).
+6. 13 new switches, all off by default (18 settings added, 2 removed, no existing default changed). The new "Mark
+   all notifications as read" row only acts when you tap it. 128 patches, 123 on by default (was 127 and 122).
+7. Still true from 0.24.0: the In-app proxy row is blank by default and does nothing while blank (if you type a
+   proxy, it can see which servers Facebook talks to, and a dead proxy blocks Facebook until you clear the row);
+   the crash file is on by default (Download/Hushfacebook, at most 5 files, personal details removed); the switches
+   that act for you ("Next reel in background", "Translate every comment", "Save all videos") are off by default.
+8. No new network destination and no new Android permission. The only new exported component is the share screen of
+   point 1 (checked on the patched app, see "What was tested").
 
 ## What was reviewed and what was not
 
-The 0.23.0 to 0.24.0 update was reviewed before it was committed: `upstream-src/_audit/hushfacebook-v0.24.0-review.md`
-(local, not in git; verdict: safe to build). Build files were read completely and every added line was scanned for
-13 risk categories (network, loading code, permissions and so on); network, proxy, download, crash and settings
-code was read closely, many layout and reels files only scanned. The first audit of the whole pack is
-`hushfacebook-report.md` in the same folder. The bundle was applied to the original Facebook 588.0.0.42.55 with
-Morphe Desktop 2.3.0 and `--validate`: of 127 patches (122 on by default) 122 applied, 0 failed, no warning. With
-the two off-by-default theme patches ("AMOLED black theme", "Material You theme", which use a looser matcher) on
-too: 124 applied, 0 failed. This proves the patches fit this build, not that every feature works on a phone.
-Tested signed in on a Galaxy S25 Ultra with Android 17 on 2026-11-23 (installed over the 0.23.0 build, the login
-was kept): the feed shows no sponsored or suggested posts over twelve screens, Reels are laid out correctly, the
-settings open and show 0.24.0-lynx.1, the In-app proxy row is blank, and there was no crash.
+The 0.24.0 to 0.25.0 update was reviewed before it was committed: `upstream-src/_audit/hushfacebook-v0.25.0-review.md`
+(local, not in git; verdict: safe to build, not clean for an unattended publish because of point 1 above and the one
+merge conflict). 248 files changed (+45,292 / -3,687 lines; about 33,000 of those lines are the four new translation
+tables). Three read-only reviewers (extension, patches, tests and docs) and the main session read it; of the build
+files only `gradle.properties` changed (the version), so no download was needed. A grep for network, socket,
+WebView, class loading, crypto and broadcast code over every added extension line found only the two content-reader
+calls of the share screen. Share screen, Chat background, Mark all read, Video buffer and the build files were read
+closely; many layout and reels files and the translation tables were only scanned. The first audit of the whole
+pack is `hushfacebook-report.md` in the same folder. The review found no confirmed P0 or P1.
+
+## What was tested (0.25.0-lynx.1, 2026-11-27)
+
+Run on the Lynx PC against the original Facebook 588.0.0.42.55 (build 707615136). Logs and files are in
+`C:\Users\thoma\Morpheapp\out\facebook\lynx-0.25.0\` (local, not in git).
+
+- Build: succeeded with Gradle dependency verification on (no checksum was added). Bundle
+  `patches-0.25.0-lynx.1.mpp`, 9,903,814 bytes, SHA-256
+  3922d4ed32725c3987a9d6149d4cc7a5b918dcffe960655756a8d5ff022e111f. The build rewrote the version line of the
+  tracked `patches-list.json`; it was restored and is not committed.
+- Unit tests: patch tests 1,758, 0 failed (539 skipped: the fixture tests, which need a folder of Facebook files
+  that is not set here). Extension tests 6,184, 45 failed. All 45 also failed in the 0.24.0 build on this PC
+  (46 there); none is new. They are in the font file, own emoji, ffmpeg join (Mp4Join), push state, crash report
+  undo and a few save tests, and were not analysed.
+- Morphe Desktop 2.3.0 with `--validate`: default set 123 applied, 0 failed, no warning (128 patches, 5 off by
+  default). With the two off-by-default theme patches ("AMOLED black theme", "Material You theme") on too: 125
+  applied, 0 failed. This proves the patches fit this build, not that every feature works on a phone.
+- Manifest of the patched app, compared with the 0.24.0-lynx.1 patched app: exactly one difference, the added
+  exported activity `app.morphe.extension.facebook.chats.ShareToChats`, `enabled="false"`, with a SEND filter
+  (image/*, video/*, text/plain) and a SEND_MULTIPLE filter (image/*, video/*), category DEFAULT only, no
+  permission attribute. No Android permission was added or removed. Compared with the original Facebook, the
+  difference is that activity, the "Open in Facebook" share target (already in 0.23.0) and the two Meta signature
+  permissions renamed to `app.hushfacebook.*` (unchanged since 0.24.0).
+- Hosts in the bundle (`tools/bundle_hosts.py`, against the published 0.24.0-lynx.1 bundle): 0 added, 0 removed.
+- Emulator start-up test (`tools/emu_smoke.py`, Android emulator, no sign-in): PASS. The original and the patched
+  app both come up on the logged-out welcome screen ("Get started", "I already have a profile") under Android's
+  notification permission dialog; no crash, no ANR, no class errors; the patched app logs 7 lines from the
+  Hushfacebook code at start.
+
+Not tested: anything signed in (feed, Reels, stories), the new switches (none was turned on), the share screen in
+use or even switched on, Chat background with a color set, any phone (no Galaxy S25 test of 0.25.0), whether the
+battery fix works, and an upgrade over an installed 0.24.0 build.
 
 ## Upstream documentation that does not apply to this build
 
@@ -83,17 +133,22 @@ The upstream README, docs and CONTRIBUTING still point at upstream's own source 
 the Lynx source (below), report at https://github.com/xhyxfxxc/lynx-patches/issues, and there is no Hush Unpacker.
 Ignore README.md lines 4, 12-13, 25, 27, 35 (badge, Ko-fi, upstream release and add-source links), 118 (upstream
 Discussions and forms), 149 (the release check reads upstream releases), 164 and 175-179 (Hush Unpacker, upstream
-checksums), docs/help.md lines 3, 13, 55, 135, and CONTRIBUTING.md (upstream tracker and release steps).
+checksums), docs/help.md lines 3, 13, 55, 135, and CONTRIBUTING.md (upstream tracker and release steps). Line
+numbers checked again on 2026-11-27: unchanged.
 
 ## Known problems that are not fixed
 
-- Upstream issue 551 (open, against 0.24.0 on a Galaxy S26 Ultra with Android 17): on Reels the layout sits too
-  low and the bottom bar covers the description and buttons. Lynx did not see this on a Galaxy S25 Ultra with
-  Android 17 and the default settings (four reels checked), so it may depend on which switches are on. Issue 552
-  (open): video stories can freeze, the seek bar sits low, and reel captions break when "Keep progress bar" and
-  "Keep the tab bar on reels" are both on. Lynx did not test stories.
-- Upstream issue 528 (open): a crash at launch on 0.23.0 with Android 17, cause unknown (the pack pauses itself
-  after three crashes in a minute). Issues 505 and 548 (on 0.23.0): double seek bar and battery drain, not analysed.
+- Open upstream issues on 0.25.0, none a confirmed P0 or P1: 587 (fullscreen after a reel, cosmetic), 575 and 556
+  (seek bar stays at 0:00, not reproduced), 593 (no sound, seen on 0.23.0 and 0.24.0), 570 (Home stops loading,
+  since 0.22), 568 (a Google sign-in prompt on calls after turning on Share to Facebook chats, unconfirmed). Fixed
+  upstream but not yet released: 589 (settings export loses number rows), 585 and 586 (cosmetic on a Galaxy S26
+  Ultra).
+- Reported against 0.24.0 and earlier, not re-checked for 0.25.0: issue 551 (on Reels the layout sits too low on a
+  Galaxy S26 Ultra with Android 17; Lynx did not see it on a Galaxy S25 Ultra), issue 552 (video stories can
+  freeze, the seek bar sits low, reel captions break when "Keep progress bar" and "Keep the tab bar on reels" are
+  both on), issue 528 (a crash at launch with Android 17, cause unknown; the pack pauses itself after three crashes
+  in a minute), issue 505 (double seek bar). Battery drain (issue 548) should be fixed by the 0.25.0 "Video buffer"
+  change; Lynx did not measure it.
 - Sign-in can loop on accounts that have a passkey (upstream issue 273, closed with a workaround): remove the
   passkey in Accounts Center, sign in, then add it again.
 - The re-signed Facebook accepts its own signing key in place of Meta's for the Meta apps on the phone, so it is
@@ -105,9 +160,9 @@ In Git Bash, from this folder (needs JDK 21, the Android SDK and a GitHub token 
 
     export JAVA_HOME="C:/Users/thoma/.jdks/temurin-21.0.13" ANDROID_HOME="C:/Users/thoma/Android/Sdk"
     export GITHUB_ACTOR=xhyxfxxc GITHUB_TOKEN="$(gh auth token)"
-    ./gradlew :patches:generatePatchesList :patches:buildAndroid -Pversion=0.24.0-lynx.1 --no-daemon
+    ./gradlew :patches:generatePatchesList :patches:buildAndroid -Pversion=0.25.0-lynx.1 --no-daemon
 
-The finished bundle is `patches/build/release/patches-0.24.0-lynx.1.mpp` (the copy in `patches/build/libs` is
+The finished bundle is `patches/build/release/patches-0.25.0-lynx.1.mpp` (the copy in `patches/build/libs` is
 an intermediate file). It is unsigned. Built inside the Lynx repository the bundle says its source state is
 "unknown", because the identity check only trusts a repository whose root is this folder. The build also changes
 the version line of the tracked `patches-list.json`; restore it with `git checkout -- patches-list.json`.
