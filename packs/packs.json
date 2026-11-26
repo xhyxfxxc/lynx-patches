@@ -5,7 +5,7 @@
       "title": "Hushfacebook (Lynx build)",
       "app": "com.facebook.katana",
       "upstream": "https://github.com/SysAdminDoc/HushFacebook",
-      "ref": "v0.24.0",
+      "ref": "v0.25.0",
       "exclude": [
         "patches-bundle.json",
         ".github/**"
@@ -17,7 +17,7 @@
         "output": "patches/build/release/patches-*.mpp",
         "args": ""
       },
-      "commit": "e82b05bbc7a0f663785cddd5fcaedeae642998f2"
+      "commit": "5e928c96d948585c1606382c3730d1d6c2a8b920"
     },
     "instagram": {
       "title": "HushGram (Lynx build)",
