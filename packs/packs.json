@@ -61,7 +61,7 @@
       "title": "Gboard patches (Lynx build)",
       "app": "com.google.android.inputmethod.latin",
       "upstream": "https://github.com/jasonwu1994/Gboard-patches",
-      "ref": "v4.4.0",
+      "ref": "v4.5.0",
       "exclude": [
         "patches-bundle.json",
         ".github/**"
@@ -73,7 +73,7 @@
         "output": "patches/build/libs/patches-*.mpp",
         "args": ""
       },
-      "commit": "0e76cab3bb37b7034bab6ef7a08aef399f346287"
+      "commit": "aa6cb2bba1a0b9d1662469dec4f21e39ef4eb790"
     },
     "waze": {
       "title": "bearinmind Waze patches (Lynx build)",
