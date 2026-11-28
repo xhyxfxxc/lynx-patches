@@ -52,6 +52,10 @@ and publishes it as its own Morphe source, so it is built from exactly this code
    denied on the Meta app that holds them, approved on Facebook), with the m.me exception and how to undo it.
    Checked on the owner's Galaxy S26 Ultra (Android 17, Facebook 588). On an upgrade, check it against the new
    build's manifest (`packs/PROCESS.md`, "Link handling of the Meta packs"). Still in place after the 0.25.0 merge.
+8. Tests (2026-11-28, owner rule: remove redundant tests, add needed ones; tests are not in the bundle):
+   `ShareToChatsDeclarationTest.kt` (new) pins that the share screen ships exported but switched off, with only the
+   photo, video and text share filters; `ReportProblemFormTest.java` keeps only its two address pins, because the
+   rest repeated `SettingsNavigationTest`.
 
 ## New in 0.25.0: what the review found
 
@@ -108,6 +112,15 @@ Run on the Lynx PC against the original Facebook 588.0.0.42.55 (build 707615136)
   that is not set here). Extension tests 6,184, 45 failed. All 45 also failed in the 0.24.0 build on this PC
   (46 there); none is new. They are in the font file, own emoji, ffmpeg join (Mp4Join), push state, crash report
   undo and a few save tests, and were not analysed.
+- Fixture tests (2026-11-28, `:patches:fixtureTest`, with only the arm64-v8a file of Facebook 588.0.0.42.55 in
+  `C:\Users\thoma\Morpheapp\fixtures\facebook`; the armeabi-v7a and Android 9 files are not on this PC): 711 run,
+  652 passed, 58 failed, 1 skipped (the Android 9 refusal test). All 58 failures are checks that every declared
+  build was seen, so they are about the missing files, not about the arm64 build: 45 "an ABI went unchecked", 11
+  "one fixture for each declared build" (`MaterialYouTokenFixtureTest`), 1 "one retained fixture for each declared
+  build" (`AppCompatibilitiesMatchFixturesTest`) and 1 "armeabi-v7a fixture missing" (`PushDiagnosticsFixtureTest`,
+  which stops before it reads any build). No fingerprint or patch check failed on the arm64 build. Upstream's
+  manifest test of the share screen (`ShareToChatsManifestTest`, 2 tests) passed. Log:
+  `out\facebook\lynx-0.25.0\test-fixtures.log`.
 - Morphe Desktop 2.3.0 with `--validate`: default set 123 applied, 0 failed, no warning (128 patches, 5 off by
   default). With the two off-by-default theme patches ("AMOLED black theme", "Material You theme") on too: 125
   applied, 0 failed. This proves the patches fit this build, not that every feature works on a phone.
