@@ -108,6 +108,8 @@ upstream's release; the Lynx bundle is unsigned) and CONTRIBUTING.md (upstream t
   export (off by default) writes the chat as plain text into the shared Download folder; the new "Select
   messages" in it can also copy or share chosen messages. Copy text (off by default) sends a screenshot of a
   reel or story to Google Lens. All were left in as upstream wrote them.
+- Unit test HushgramPauseTest `anExceptionSwallowedOffTheMainThreadPutsTheReportBack[30]` and `[37]` fail on this
+  Windows PC on JDK 21 and on JDK 25 alike (checked 2026-11-28), so they are not a JDK 21 issue.
 
 ## How to build
 

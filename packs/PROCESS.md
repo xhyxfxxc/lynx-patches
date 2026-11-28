@@ -129,9 +129,13 @@ crashes instead of falling back to the app's own behaviour. Fix P0 and P1; list 
    changes, and new behaviour a Lynx decision rests on, need; Lynx tests go in new files; an upstream test is
    deleted only when it is clearly redundant, and LYNX.md lists it; a failing or skipped test is not redundant:
    report it. Fixture tests run where the pack has them and the original app file is on the PC (facebook:
-   `HUSHFACEBOOK_FIXTURE_DIR=C:\Users\thoma\Morpheapp\fixtures\facebook`, task `:patches:fixtureTest`). Checksums
-   added to `gradle/verification-metadata.xml` must first be matched with the publisher's own SHA-256; verification
-   is never switched off. For facebook, instagram and threads, also do the link-handling check below.
+   `HUSHFACEBOOK_FIXTURE_DIR=C:\Users\thoma\Morpheapp\fixtures\facebook`, task `:patches:fixtureTest`). Run the
+   extension tests of the Hush packs on JDK 25 (`JAVA_HOME=C:/Users/thoma/.jdks/temurin-25.0.5.1`), as upstream
+   asks; bundles are still built with JDK 21. Some tests fail on this Windows PC on any JDK (file locks; facebook
+   and instagram list them in LYNX.md, Known problems): compare with that list and report only failures that are
+   not on it. Checksums added to `gradle/verification-metadata.xml` must first be matched with the publisher's own
+   SHA-256; verification is never switched off. For facebook, instagram and threads, also do the link-handling
+   check below.
 10. Read the build session's diff. Check any added checksum yourself.
 11. Emulator start-up test (`tools/emu_smoke.py`, section E): it is quick and catches a crash at launch. That
     is the test for an upgrade. A signed-in test on the S25 (section C) is run only when the owner asks for one,

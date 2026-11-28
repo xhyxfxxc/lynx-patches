@@ -111,7 +111,13 @@ Run on the Lynx PC against the original Facebook 588.0.0.42.55 (build 707615136)
 - Unit tests: patch tests 1,758, 0 failed (539 skipped: the fixture tests, which need a folder of Facebook files
   that is not set here). Extension tests 6,184, 45 failed. All 45 also failed in the 0.24.0 build on this PC
   (46 there); none is new. They are in the font file, own emoji, ffmpeg join (Mp4Join), push state, crash report
-  undo and a few save tests, and were not analysed.
+  undo and a few save tests. They were analysed on 2026-11-28: see the next line and the first entry under Known
+  problems.
+- Unit tests on JDK 25 (2026-11-28, temurin-25.0.5.1, the JDK that upstream's README asks for on Windows; the run
+  above used JDK 21, temurin-21.0.13): extension tests 6,184, 42 failed (45 on JDK 21). The four Mp4JoinTest tests
+  pass on JDK 25 only. FontFilePreferenceTest.aFullWorkerQueueLeavesTheRowsUsable fails on JDK 25 but is unstable
+  (it failed on JDK 21 with 0.24.0 and passed on JDK 21 with 0.25.0). The other 41 fail on both JDKs. Logs:
+  `out\facebook\lynx-0.25.0\test-extensions.log` (JDK 21), `test-extensions-jdk25.log` and `test-tmpdir-jdk25.log`.
 - Fixture tests (2026-11-28, `:patches:fixtureTest`, with only the arm64-v8a file of Facebook 588.0.0.42.55 in
   `C:\Users\thoma\Morpheapp\fixtures\facebook`; the armeabi-v7a and Android 9 files are not on this PC): 711 run,
   652 passed, 58 failed, 1 skipped (the Android 9 refusal test). All 58 failures are checks that every declared
@@ -151,6 +157,19 @@ numbers checked again on 2026-11-27: unchanged.
 
 ## Known problems that are not fixed
 
+- Unit tests that fail on the Windows PC Lynx builds on (checked 2026-11-28,
+  `:extensions:facebook:testDebugUnitTest`, 6,184 tests). 41 fail on JDK 21 and JDK 25 alike: FontFilePreferenceTest
+  12, OwnFontFileTest 8, PushStateStoreTest 6, JavaCrashReportTest 6, OwnEmojiTest 3, SaveFailureCauseTest 2,
+  MediaSaveTest 1, HeaderTextTest 1, DashJoinTest 1, ClearLogBufferPreferenceTest 1. One more,
+  FontFilePreferenceTest.aFullWorkerQueueLeavesTheRowsUsable, fails on JDK 25 only and is unstable (it failed on
+  JDK 21 with 0.24.0 and passed on JDK 21 with 0.25.0). The four Mp4JoinTest tests fail on JDK 21 and pass on
+  JDK 25. All are file operations: the font tests get
+  `FontFile$Refused: FileSystemException` from the atomic move in `FontFile.moveIn` right after a typeface loaded
+  the file, because Windows refuses to rename a file that is still open or mapped, while Android allows it. Other
+  tests fail because a second write through `android.util.AtomicFile` does not land, or because work files cannot
+  be deleted. They are not bugs on Android phones. Moving Java's temp folder out of AppData\Local (TMP, TEMP,
+  `-Djava.io.tmpdir`) changed nothing; antivirus settings were not tried and are not to be changed. A build
+  session compares its failures with this list: a failure that is not on it is new and is reported.
 - Open upstream issues on 0.25.0, none a confirmed P0 or P1: 587 (fullscreen after a reel, cosmetic), 575 and 556
   (seek bar stays at 0:00, not reproduced), 593 (no sound, seen on 0.23.0 and 0.24.0), 570 (Home stops loading,
   since 0.22), 568 (a Google sign-in prompt on calls after turning on Share to Facebook chats, unconfirmed). Fixed
