@@ -2,11 +2,11 @@
 
 ## Status
 
-Prepared on 2026-11-27 by the scheduled check. NOT published. It waits for the owner's decision on the new share
-screen of the default-on patch "Share to Facebook chats" (see "New in 0.25.0" below). The last published version
-stays 0.24.0-lynx.1: `patches-bundle.json` and the release `pack-facebook-v0.24.0-lynx.1` are unchanged, so adding
-the Lynx source in Morphe Manager still gives 0.24.0-lynx.1. Everything below describes 0.25.0-lynx.1 as it is
-prepared in this folder.
+Published on 2026-11-28 as 0.25.0-lynx.1, after the owner's decision on the new share screen of the default-on patch
+"Share to Facebook chats" (see "New in 0.25.0" below): it is kept as upstream ships it. The patch is on by default,
+and the share screen stays switched off and out of the share menu until "Share to Facebook chats" is turned on in
+Hushfacebook settings > Chats and Messenger. The release is `pack-facebook-v0.25.0-lynx.1`; the version before it is
+0.24.0-lynx.1.
 
 ## What this is
 
@@ -14,7 +14,7 @@ Patches for the Facebook app (package `com.facebook.katana`), made for use with 
 build only: 588.0.0.42.55, build 707615136 (the arm64-v8a bundle on APKMirror). The 32-bit build 707615135 was
 not tested by Lynx; other builds of 588 and all older versions are not supported. Upstream is Hushfacebook 0.25.0
 by SysAdminDoc (https://github.com/SysAdminDoc/HushFacebook), commit 5e928c9. The Lynx version is 0.25.0-lynx.1
-(prepared, not published yet). It needs Morphe Manager 2.7.0 or newer (Morphe Desktop 2.3.0 or newer on a PC).
+(published on 2026-11-28). It needs Morphe Manager 2.7.0 or newer (Morphe Desktop 2.3.0 or newer on a PC).
 Terms: a "patch" rewrites the Facebook app on a PC before it is installed; the "extension" is Java code the patches
 add that then runs inside the app; the "bundle" (a `.mpp` file) is the finished pack that Morphe applies.
 
@@ -56,7 +56,7 @@ and publishes it as its own Morphe source, so it is built from exactly this code
 ## New in 0.25.0: what the review found
 
 Nothing of upstream's was removed except "Unlock app icons" (point 4). Worth knowing before you install:
-1. "Share to Facebook chats" is a new patch, on by default, and it is the one open question. It adds an exported
+1. "Share to Facebook chats" is a new patch, on by default, and it was the one open question. It adds an exported
    share screen (`app.morphe.extension.facebook.chats.ShareToChats`) to the patched app. The screen is declared
    disabled (`enabled="false"`) and does nothing until the switch of the same name in Hushfacebook settings is
    turned on; the switch is off by default (a settings import that you choose could turn it on). When it is on, any
@@ -64,8 +64,8 @@ Nothing of upstream's was removed except "Unlock app icons" (point 4). Worth kno
    Facebook's own files, and it does not pass the incoming intent on. Two weak points, both only while the switch is
    on: it reads the shared list on the main thread with no limit on the number of items (a hostile app could make
    Facebook hang for a while), and it does not require that the sender granted read access (it could copy a file
-   from a provider that Facebook itself may read). No P0 or P1 was found. Owner's choice: publish as upstream ships
-   it, or make the patch off by default (or drop it) as a Lynx change.
+   from a provider that Facebook itself may read). No P0 or P1 was found. Owner's decision (2026-11-28): publish as
+   upstream ships it, with no Lynx change.
 2. "Chat background" is a new patch, on by default, local only. It saves the name of the last opened chat (and its
    thread key) in Facebook's private settings every time a chat opens, even when no color is set. The name stays on
    the phone and is left out of a settings export. It may cost a little jank, because the save is written at once.
