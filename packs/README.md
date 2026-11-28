@@ -229,7 +229,7 @@ install.
 
 | name | app (tested with) | upstream | upstream version | Lynx version | add |
 | --- | --- | --- | --- | --- | --- |
-| facebook | Facebook `com.facebook.katana`, 588.0.0.42.55 (build 707615136) | [SysAdminDoc/HushFacebook](https://github.com/SysAdminDoc/HushFacebook) | v0.25.0 | 0.25.0-lynx.1 (not published yet; last published 0.24.0-lynx.1) | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/facebook&name=Lynx%20Facebook) |
+| facebook | Facebook `com.facebook.katana`, 588.0.0.42.55 (build 707615136) | [SysAdminDoc/HushFacebook](https://github.com/SysAdminDoc/HushFacebook) | v0.25.0 | 0.25.0-lynx.1 | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/facebook&name=Lynx%20Facebook) |
 | instagram | Instagram `com.instagram.android`, 456.0.0.53.78 | [SysAdminDoc/HushGram](https://github.com/SysAdminDoc/HushGram) | v0.0.22 | 0.0.22-lynx.1 | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/instagram&name=Lynx%20Instagram) |
 | threads | Threads `com.instagram.barcelona`, 455.0.0.55.72 | [SysAdminDoc/HushThreads](https://github.com/SysAdminDoc/HushThreads) | v0.0.18 | 0.0.18-lynx.1 | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/threads&name=Lynx%20Threads) |
 | gboard | Gboard `com.google.android.inputmethod.latin`, 18.5.4.993608717 | [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches) | v4.4.0 | 4.4.0-lynx.1 | [Add to Morphe](https://morphe.software/add-source?github=xhyxfxxc/lynx-patches/tree/main/packs/gboard&name=Lynx%20Gboard) |
