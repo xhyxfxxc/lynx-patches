@@ -46,7 +46,7 @@ The descriptions of patches 1 to 3 carry a "Lynx:" sentence so you can see this 
 
 ## What is new in 4.5.0 (upstream)
 
-- The patches' settings page comes in 13 more languages.
+- The patches' settings page comes in 11 more languages (13 in total).
 - 9 new toolbar editing buttons; all are off by default.
 - An optional "Select All" in the clipboard edit mode; off by default.
 - Backup and restore of Gboard's own personal data as a ZIP file; you choose where it is saved and the app never
