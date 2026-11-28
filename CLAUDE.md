@@ -149,3 +149,6 @@ and the CI build of the same commit have byte-identical code (checked for v3.8.0
 
 Apply with Morphe Desktop, check fingerprints with `--validate`. Original APKs live in
 `C:\Users\thoma\Morpheapp\apks\` (outside the repo); never commit APKs.
+
+Tests (owner rule 2026-11-28): every change removes the tests it makes redundant and adds the tests it needs; a
+failing or skipped test is reported or fixed, not deleted. For packs see `packs/PROCESS.md` B9.

@@ -125,9 +125,13 @@ crashes instead of falling back to the app's own behaviour. Fix P0 and P1; list 
    `LYNX.md` (what is new, what the review found, what was not reviewed, known problems), build, run
    `--validate` for the default set and once more with any off-by-default patch a reviewer flagged, static
    checks on the patched app (permissions and exported components against the original, URL strings in the
-   extension), unit tests. Checksums added to `gradle/verification-metadata.xml` must first be matched with the
-   publisher's own SHA-256; verification is never switched off. For facebook, instagram and threads, also do the
-   link-handling check below.
+   extension), unit tests. Test review (owner rule 2026-11-28): remove redundant tests and add the tests that Lynx
+   changes, and new behaviour a Lynx decision rests on, need; Lynx tests go in new files; an upstream test is
+   deleted only when it is clearly redundant, and LYNX.md lists it; a failing or skipped test is not redundant:
+   report it. Fixture tests run where the pack has them and the original app file is on the PC (facebook:
+   `HUSHFACEBOOK_FIXTURE_DIR=C:\Users\thoma\Morpheapp\fixtures\facebook`, task `:patches:fixtureTest`). Checksums
+   added to `gradle/verification-metadata.xml` must first be matched with the publisher's own SHA-256; verification
+   is never switched off. For facebook, instagram and threads, also do the link-handling check below.
 10. Read the build session's diff. Check any added checksum yourself.
 11. Emulator start-up test (`tools/emu_smoke.py`, section E): it is quick and catches a crash at launch. That
     is the test for an upgrade. A signed-in test on the S25 (section C) is run only when the owner asks for one,
